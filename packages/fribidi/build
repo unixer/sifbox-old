@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. config/options
+
+export local_cflags="-DFRIBIDI_CHUNK_SIZE=4080"
+
+cd $BUILD/$1*
+do_configure \
+            --disable-debug \
+            --disable-deprecated \
+            --enable-malloc \
+            --enable-charsets \
+            --without-glib \
+
+make
+make_install
+cp -f $ROOT/$PACKAGES/$1/scripts/$1-config .install/usr/bin/$1-config

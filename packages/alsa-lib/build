@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. config/options
+
+export CFLAGS="$CFLAGS -D_FILE_OFFSET_BITS=32 -fPIC -DPIC"
+
+cd $BUILD/$1*
+do_configure \
+            --with-plugindir=/usr/lib/alsa \
+            --with-debug=no \
+            --with-versioned=no \
+            --disable-python \
+            --disable-dependency-tracking
+make
+make_install
+sed -i 's%.*~/\.asoundrc.*%%' .install/usr/share/alsa/alsa.conf

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install usr
+do_install etc
+cp -P $ROOT/$PACKAGES/$1/config/LCDd.conf $INSTALL/etc 

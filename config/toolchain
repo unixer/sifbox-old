@@ -1,0 +1,370 @@
+#############################
+# Define Toolchain Settings #
+#############################
+
+# determine architecture's family
+case $TARGET_ARCH in
+  i386)
+    GCC_FAST_PRECISION=yes
+    GCC_MARCH=yes
+    GCC_MTUNE=yes
+    ;;
+
+  x86_64)
+    GCC_FAST_PRECISION=yes
+    GCC_M64=yes
+    GCC_PIC=yes
+    GCC_MTUNE=yes
+    ;;
+
+  powerpc)
+    GCC_PIC=yes
+    GCC_MTUNE=yes
+    ;;
+
+  powerpc64)
+    GCC_MCPU=yes
+    GCC_M64=yes
+    GCC_PIC=yes
+    GCC_MTUNE=yes
+    ;;
+
+  arm)
+    TARGET_ABI=eabi
+    GCC_MARCH=yes
+    GCC_FAST_MATH=yes
+    GCC_PIC=yes
+    ;;
+
+  mips)
+    GCC_PIC=yes
+    GCC_MTUNE=yes
+    ;;
+esac
+
+[ -z "$TARGET_SUBARCH" ] && TARGET_SUBARCH=$TARGET_ARCH
+
+if [ "$TOOLCHAIN_TYPE" = codesourcery ]; then
+  if [ ! -d "$CODESOURCERY_ROOT" ]; then
+    echo "Cannot find CodeSourcery root \"$CODESOURCERY_ROOT\", aborting..."
+    exit 1
+  fi
+  TARGET_NAME=$TARGET_ARCH-none-linux-gnu$TARGET_ABI
+  TARGET_LIBC=codesourcery-libc
+  case "$TARGET_SUBARCH" in
+    armv4t)
+      CODESOURCERY_SYSROOT=$CODESOURCERY_ROOT/$TARGET_NAME/libc/armv4t
+      ;;
+
+    armv5|armv6)
+      CODESOURCERY_SYSROOT=$CODESOURCERY_ROOT/$TARGET_NAME/libc
+      ;;
+
+    armv7)
+      CODESOURCERY_SYSROOT=$CODESOURCERY_ROOT/$TARGET_NAME/libc/thumb2
+      ;;
+
+    powerpc)
+      TARGET_NAME=$TARGET_ARCH-linux-gnu
+      CODESOURCERY_SYSROOT=$CODESOURCERY_ROOT/$TARGET_NAME/libc
+      ;;
+
+    *)
+      echo "$TARGET_SUBARCH is not currently supported with CodeSourcery toolchain, aborting..."
+      exit 1
+  esac
+else
+  # determine target name
+  case $TARGET_LIBC in
+    uclibc)
+      TARGET_NAME=$TARGET_SUBARCH-openbricks-linux-uclibc$TARGET_ABI
+      ;;
+
+    glibc|eglibc)
+      TARGET_NAME=$TARGET_SUBARCH-openbricks-linux-gnu$TARGET_ABI
+      ;;
+  esac
+fi
+
+#####################
+# GCC optimizations #
+#####################
+
+case "$OPTIMIZATIONS" in
+  fastest)
+    GCC_FLAGS="-Ofast"
+    ;;
+
+  speed)
+    GCC_FLAGS="-O3"
+    ;;
+
+  default)
+    GCC_FLAGS="-O2"
+    ;;
+
+  size)
+    GCC_FLAGS="-Os"
+    ;;
+
+  none)
+    GCC_FLAGS="-O0"
+    ;;
+esac
+
+[ "$GCC_FAST_PRECISION" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -fexcess-precision=fast"
+
+[ "$GCC_M64" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -m64"
+
+MARCH=$TARGET_SUBARCH
+[ "$TARGET_SUBARCH" = armv7 ] && MARCH=armv7-a
+[ "$GCC_MARCH" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -march=$MARCH"
+
+[ "$GCC_MCPU" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -mcpu=$TARGET_CPU"
+
+[ "$GCC_MTUNE" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -mtune=$TARGET_CPU"
+
+[ "$GCC_FAST_MATH" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -ffast-math"
+
+[ "$GCC_PIC" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -fPIC"
+
+##########################
+# Graphite Optimizations #
+##########################
+
+[ "$TOOLCHAIN_GRAPHITE" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -fgraphite-identity"
+
+#####################
+# LTO Optimizations #
+#####################
+
+[ "$TOOLCHAIN_LTO" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -flto=$CONCURRENCY_MAKE_LEVEL"
+
+######################
+# Loop Optimizations #
+######################
+
+if [ "$TOOLCHAIN_LOOP" = yes ]; then
+  GCC_FLAGS="$GCC_FLAGS -ftree-loop-distribution"
+  GCC_FLAGS="$GCC_FLAGS -floop-interchange"
+  GCC_FLAGS="$GCC_FLAGS -floop-strip-mine"
+  GCC_FLAGS="$GCC_FLAGS -floop-block"
+fi
+
+###############
+# GOLD Linker #
+###############
+
+[ "$TOOLCHAIN_GOLD_LINKER" = yes ] && \
+  GCC_LINK="$GCC_LINK -fuse-linker-plugin"
+
+######################
+# SIMD Optimizations #
+######################
+
+SOFT_FP="-mfloat-abi=softfp"
+
+case "$FPU_OPTIMIZATIONS" in
+  vfp2)
+    GCC_FLAGS="$GCC_FLAGS $SOFT_FP -mfpu=vfp"
+    ;;
+
+  vfp3)
+    GCC_FLAGS="$GCC_FLAGS $SOFT_FP -mfpu=vfpv3"
+    ;;
+
+  vfp3-d16)
+    GCC_FLAGS="$GCC_FLAGS $SOFT_FP -mfpu=vfpv3-d16"
+    ;;
+
+  neon)
+    GCC_FLAGS="$GCC_FLAGS $SOFT_FP -mfpu=neon"
+    ;;
+
+  altivec)
+    GCC_FLAGS="$GCC_FLAGS -maltivec -mabi=altivec"
+    ;;
+
+  i387)
+    GCC_FLAGS="$GCC_FLAGS -mfpmath=387"
+    ;;
+
+  sse)
+    GCC_FLAGS="$GCC_FLAGS -mfpmath=sse"
+    ;;
+
+  avx)
+    GCC_FLAGS="$GCC_FLAGS -mavx -mfpmath=avx"
+    ;;
+esac
+
+[ "$THUMB" = yes ] && \
+  GCC_FLAGS="$GCC_FLAGS -mthumb"
+
+#####################
+# Default GCC flags #
+#####################
+
+GCC_FLAGS="$GCC_FLAGS -Wall"
+GCC_FLAGS="$GCC_FLAGS -pipe"
+GCC_FLAGS="$GCC_FLAGS -g"
+GCC_FLAGS="$GCC_FLAGS -D_FILE_OFFSET_BITS=64"
+GCC_FLAGS="$GCC_FLAGS -D_LARGEFILE_SOURCE"
+
+#################################
+# Dynamic build path definition #
+#################################
+
+if [ -z "$BUILD" ]; then
+  BUILD_BASE=build/build
+  BUILD=$BUILD_BASE.$TARGET_ARCH.$TARGET_LIBC
+  [ -n "$TARGET_PLATFORM" -a "$TARGET_PLATFORM" != generic ] && \
+    BUILD=$BUILD_BASE.$TARGET_PLATFORM.$TARGET_LIBC
+  [ -n "$TARGET_MACHINE" -a "$TARGET_MACHINE" != generic ] && \
+    BUILD=$BUILD_BASE.$TARGET_MACHINE.$TARGET_LIBC
+fi
+
+STAMPS=$BUILD/$STAMPS_NOARCH
+TOOLCHAIN=$BUILD/toolchain
+SYSROOT_PREFIX=$ROOT/$TOOLCHAIN/$TARGET_NAME/sysroot
+LIB_PREFIX=$SYSROOT_PREFIX/usr/local
+TARGET_PREFIX=$ROOT/$TOOLCHAIN/bin/$TARGET_NAME-
+ROOTFS=$ROOT/$BUILD/rootfs
+
+##################
+# Host toolchain #
+##################
+
+HOST_ARCH=`uname -m`
+
+HOST_AWK=gawk
+HOST_CC=$ROOT/$TOOLCHAIN/bin/host-gcc
+HOST_CXX=$ROOT/$TOOLCHAIN/bin/host-g++
+HOST_LD=ld
+HOST_AS=as
+HOST_AR=ar
+HOST_NM=nm
+HOST_RANLIB=ranlib
+HOST_OBJCOPY=objcopy
+HOST_STRIP=strip
+
+HOST_INCLUDES="$HOST_INCLUDES -I$ROOT/$TOOLCHAIN/include"
+HOST_LIBS="$HOST_LIBS -L$ROOT/$TOOLCHAIN/lib"
+
+HOST_CPPFLAGS=""
+HOST_CFLAGS="-O2 -Wall -pipe"
+HOST_CXXFLAGS="-O2 -Wall -pipe"
+# use -fPIC when necessary
+case "$HOST_ARCH" in
+  x86_64|ppc64|arm|armeb|armel)
+    HOST_CFLAGS="$HOST_CFLAGS -fPIC"
+    HOST_CXXFLAGS="$HOST_CXXFLAGS -fPIC"
+    ;;
+esac
+HOST_CFLAGS="$HOST_CFLAGS $HOST_INCLUDES"
+HOST_CXXFLAGS="$HOST_CFLAGS $HOST_INCLUDES"
+HOST_LDFLAGS="$HOST_LIBS -lm"
+
+####################
+# Target toolchain #
+####################
+
+TARGET_CC=${TARGET_PREFIX}gcc
+[ "$TOOLCHAIN_CXX" = yes ] && TARGET_CXX=${TARGET_PREFIX}g++
+TARGET_GNU_LD=${TARGET_PREFIX}ld.bfd
+TARGET_GO_LD=${TARGET_PREFIX}ld.gold
+
+[ "$TOOLCHAIN_GOLD_LINKER" = yes ] && \
+  TARGET_LD=${TARGET_GO_LD} || TARGET_LD=${TARGET_GNU_LD}
+
+TARGET_AS=${TARGET_PREFIX}as
+TARGET_AR=${TARGET_PREFIX}ar
+TARGET_NM=${TARGET_PREFIX}nm
+TARGET_RANLIB=${TARGET_PREFIX}ranlib
+TARGET_OBJCOPY=${TARGET_PREFIX}objcopy
+TARGET_STRIP=${TARGET_PREFIX}strip
+
+TARGET_QMAKE=$ROOT/$TOOLCHAIN/bin/qmake
+TARGET_MOC=$ROOT/$TOOLCHAIN/bin/moc
+TARGET_RCC=$ROOT/$TOOLCHAIN/bin/rcc
+TARGET_UIC=$ROOT/$TOOLCHAIN/bin/uic
+
+TARGET_INCLUDES="$TARGET_INCLUDES -I${LIB_PREFIX}/include"
+TARGET_INCLUDES="$TARGET_INCLUDES -I${SYSROOT_PREFIX}/usr/include"
+
+TARGET_LIBS="$TARGET_LIBS -L${SYSROOT_PREFIX}/lib"
+TARGET_LIBS="$TARGET_LIBS -L${SYSROOT_PREFIX}/usr/lib"
+TARGET_LIBS="$TARGET_LIBS -L${LIB_PREFIX}/lib"
+
+TARGET_CPPFLAGS=
+TARGET_CFLAGS="$GCC_FLAGS $TARGET_INCLUDES"
+[ "$TOOLCHAIN_CXX" = yes ] && TARGET_CXXFLAGS="$GCC_FLAGS $TARGET_INCLUDES"
+TARGET_LDFLAGS="$GCC_LINK $TARGET_LIBS"
+TARGET_ASFLAGS="$GCC_FLAGS $TARGET_INCLUDES"
+
+########################
+# ccache optimizations #
+########################
+
+set_ccache () {
+  [ "$BUILD" = "build/build.." ] && return 0
+  mkdir -p $ROOT/$BUILD/.ccache
+  export CCACHE_DIR=$ROOT/$BUILD/.ccache
+  [ -x $ROOT/$TOOLCHAIN/bin/ccache ] && \
+    $ROOT/$TOOLCHAIN/bin/ccache -M 10G    >/dev/null 2>&1
+  [ -x $ROOT/$TOOLCHAIN/bin/ccache ] && \
+    $ROOT/$TOOLCHAIN/bin/ccache -F 100000 >/dev/null 2>&1
+
+  # disabled so far
+  # device=$(df . | tail -n 1 | cut -d ' ' -f 1 | sed "s%/dev/\([a-z]*\)[0-9]*%\1%")
+  # echo 4096 | sudo tee -a /sys/block/$device/queue/nr_requests >/dev/null
+
+  return 0
+}
+
+########################################
+# Autodetect local compiler if not set #
+########################################
+
+cc_die () {
+  echo "System has supported an unsupported $1 version."
+  echo "OpenBricks need $1-4.4 for build to work on your system."
+  echo "Install by typing \"sudo apt-get install $1-4.4\" and try again."
+  exit 1
+}
+
+cc_workaround () {
+  LSB_RELEASE=$(which lsb_release 2>/dev/null) || true
+  if ! [ -z "$LSB_RELEASE" ]; then
+    DISTRO=$(lsb_release -s -c)
+    if [ "$DISTRO" = oneiric  -o "$DISTRO" = precise ]; then
+      CC_VERSION=$($LOCAL_CC --version | head -n 1 | sed "s%gcc (.*) \([0-9]\.[0-9]\).*%\1%")
+      if [ "$CC_VERSION" = 4.6 -o "$CC_VERSION" = 4.5 ]; then
+        CC_44=$(which gcc-4.4) || true
+        [ -z "$CC_44" ] && cc_die gcc || export LOCAL_CC=$CC_44
+      fi
+
+      CXX_VERSION=$($LOCAL_CXX --version | head -n 1 | sed "s%g++ (.*) \([0-9]\.[0-9]\).*%\1%")
+      if [ "$CXX_VERSION" = 4.6 -o "$CXX_VERSION" = 4.5 ]; then
+        CXX_44=$(which g++-4.4) || true
+        [ -z "$CXX_44" ] && cc_die g++ || export LOCAL_CXX=$CXX_44
+      fi
+    fi
+  fi
+}
+
+[ -z "$LOCAL_CC" ] && LOCAL_CC=`which gcc` || true
+[ -z "$LOCAL_CXX" ] && LOCAL_CXX=`which g++` || true
+
+cc_workaround
+
+return 0

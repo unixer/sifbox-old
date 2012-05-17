@@ -1,0 +1,774 @@
+From 5c33ad8518a97730dd2cc77f2a9d95544574176d Mon Sep 17 00:00:00 2001
+From: Gianluca Gennari <gennarone@gmail.com>
+Date: Sun, 8 Apr 2012 23:25:27 +0200
+Subject: [PATCH] af9035: backport new driver to 3.x kernels
+
+Backport the new tuner/frontend/dvb-usb drivers to old 3.x kernels:
+- fc0011 tuner;
+- tua9001 tuner;
+- af9033 demodulator;
+- af9035 USB bridge;
+
+Signed-off-by: Gianluca Gennari <gennarone@gmail.com>
+---
+ drivers/media/common/tuners/fc0011.c  |   43 +++++
+ drivers/media/common/tuners/tua9001.c |   78 +++++++++-
+ drivers/media/dvb/dvb-usb/af9035.c    |   64 +++++++
+ drivers/media/dvb/dvb-usb/af9035.h    |    5 +
+ drivers/media/dvb/frontends/af9033.c  |  294 +++++++++++++++++++++++++++++++++
+ drivers/media/dvb/frontends/af9033.h  |   12 ++
+ 6 files changed, 495 insertions(+), 1 deletions(-)
+
+diff --git a/drivers/media/common/tuners/fc0011.c b/drivers/media/common/tuners/fc0011.c
+index e488254..39340c9 100644
+--- a/drivers/media/common/tuners/fc0011.c
++++ b/drivers/media/common/tuners/fc0011.c
+@@ -21,8 +21,18 @@
+  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+  */
+ 
++#include <linux/version.h>
+ #include "fc0011.h"
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)) || ((defined V4L2_VERSION) && (V4L2_VERSION >= 197120))
++/* all DVB frontend drivers now work directly with the DVBv5
++ * structure. This warrants that all drivers will be
++ * getting/setting frontend parameters on a consistent way, in
++ * order to avoid copying data from/to the DVBv3 structs
++ * without need.
++ */
++#define V4L2_ONLY_DVB_V5
++#endif
+ 
+ /* Tuner registers */
+ enum {
+@@ -175,19 +185,44 @@ static int fc0011_vcocal_read(struct fc0011_priv *priv, u8 *value)
+ 	return 0;
+ }
+ 
++#ifdef V4L2_ONLY_DVB_V5
+ static int fc0011_set_params(struct dvb_frontend *fe)
+ {
+ 	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
++#else
++static int fc0011_set_params(struct dvb_frontend *fe,
++	struct dvb_frontend_parameters *p)
++{
++#endif
+ 	struct fc0011_priv *priv = fe->tuner_priv;
+ 	int err;
+ 	unsigned int i, vco_retries;
+ 	u32 freq = p->frequency / 1000;
++#ifdef V4L2_ONLY_DVB_V5
+ 	u32 bandwidth = p->bandwidth_hz / 1000;
++#else
++	u32 bandwidth;
++#endif
+ 	u32 fvco, xin, xdiv, xdivr;
+ 	u16 frac;
+ 	u8 fa, fp, vco_sel, vco_cal;
+ 	u8 regs[FC11_NR_REGS] = { };
+ 
++#ifndef V4L2_ONLY_DVB_V5
++	switch (p->u.ofdm.bandwidth) {
++	case BANDWIDTH_6_MHZ:
++		bandwidth = 6000;
++		break;
++	case BANDWIDTH_7_MHZ:
++		bandwidth = 7000;
++		break;
++	case BANDWIDTH_8_MHZ:
++	default:
++		bandwidth = 8000;
++		break;
++	}
++#endif
++
+ 	regs[FC11_REG_7] = 0x0F;
+ 	regs[FC11_REG_8] = 0x3E;
+ 	regs[FC11_REG_10] = 0xB8;
+@@ -449,7 +484,11 @@ static int fc0011_set_params(struct dvb_frontend *fe)
+ 		(unsigned int)bandwidth);
+ 
+ 	priv->frequency = p->frequency;
++#ifdef V4L2_ONLY_DVB_V5
+ 	priv->bandwidth = p->bandwidth_hz;
++#else
++	priv->bandwidth = bandwidth * 1000;
++#endif
+ 
+ 	return 0;
+ }
+@@ -463,12 +502,14 @@ static int fc0011_get_frequency(struct dvb_frontend *fe, u32 *frequency)
+ 	return 0;
+ }
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+ static int fc0011_get_if_frequency(struct dvb_frontend *fe, u32 *frequency)
+ {
+ 	*frequency = 0;
+ 
+ 	return 0;
+ }
++#endif
+ 
+ static int fc0011_get_bandwidth(struct dvb_frontend *fe, u32 *bandwidth)
+ {
+@@ -493,7 +534,9 @@ static const struct dvb_tuner_ops fc0011_tuner_ops = {
+ 	.set_params		= fc0011_set_params,
+ 
+ 	.get_frequency		= fc0011_get_frequency,
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+ 	.get_if_frequency	= fc0011_get_if_frequency,
++#endif
+ 	.get_bandwidth		= fc0011_get_bandwidth,
+ };
+ 
+diff --git a/drivers/media/common/tuners/tua9001.c b/drivers/media/common/tuners/tua9001.c
+index de26070..da0bc0a 100644
+--- a/drivers/media/common/tuners/tua9001.c
++++ b/drivers/media/common/tuners/tua9001.c
+@@ -18,9 +18,20 @@
+  *    51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+  */
+ 
++#include <linux/version.h>
+ #include "tua9001.h"
+ #include "tua9001_priv.h"
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)) || ((defined V4L2_VERSION) && (V4L2_VERSION >= 197120))
++/* all DVB frontend drivers now work directly with the DVBv5
++ * structure. This warrants that all drivers will be
++ * getting/setting frontend parameters on a consistent way, in
++ * order to avoid copying data from/to the DVBv3 structs
++ * without need.
++ */
++#define V4L2_ONLY_DVB_V5
++#endif
++
+ /* write register */
+ static int tua9001_wr_reg(struct tua9001_priv *priv, u8 reg, u16 val)
+ {
+@@ -96,6 +107,7 @@ static int tua9001_init(struct dvb_frontend *fe)
+ 	return ret;
+ }
+ 
++#ifdef V4L2_ONLY_DVB_V5
+ static int tua9001_set_params(struct dvb_frontend *fe)
+ {
+ 	struct tua9001_priv *priv = fe->tuner_priv;
+@@ -163,13 +175,76 @@ err:
+ 
+ 	return ret;
+ }
++#else
++static int tua9001_set_params(struct dvb_frontend *fe,
++	struct dvb_frontend_parameters *p)
++{
++	struct tua9001_priv *priv = fe->tuner_priv;
++	int ret, i;
++	u16 val;
++	u32 frequency;
++	struct reg_val data[2];
++
++	pr_debug("%s: frequency=%d bandwidth=%d\n", __func__,
++		 p->frequency, p->u.ofdm.bandwidth);
++
++	switch (p->u.ofdm.bandwidth) {
++	case BANDWIDTH_8_MHZ:
++		val  = 0x0000;
++		break;
++	case BANDWIDTH_7_MHZ:
++		val  = 0x1000;
++		break;
++	case BANDWIDTH_6_MHZ:
++		val  = 0x2000;
++		break;
++	case BANDWIDTH_5_MHZ:
++		val  = 0x3000;
++		break;
++	default:
++		ret = -EINVAL;
++		goto err;
++	}
++
++	data[0].reg = 0x04;
++	data[0].val = val;
++
++	frequency = (p->frequency - 150000000);
++	frequency /= 100;
++	frequency *= 48;
++	frequency /= 10000;
++
++	data[1].reg = 0x1f;
++	data[1].val = frequency;
++
++	if (fe->ops.i2c_gate_ctrl)
++		fe->ops.i2c_gate_ctrl(fe, 1); /* open i2c-gate */
++
++	for (i = 0; i < ARRAY_SIZE(data); i++) {
++		ret = tua9001_wr_reg(priv, data[i].reg, data[i].val);
++		if (ret < 0)
++			break;
++	}
++
++	if (fe->ops.i2c_gate_ctrl)
++		fe->ops.i2c_gate_ctrl(fe, 0); /* close i2c-gate */
++
++err:
++	if (ret < 0)
++		pr_debug("%s: failed=%d\n", __func__, ret);
++
++	return ret;
++}
++#endif
+ 
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+ static int tua9001_get_if_frequency(struct dvb_frontend *fe, u32 *frequency)
+ {
+ 	*frequency = 0; /* Zero-IF */
+ 
+ 	return 0;
+ }
++#endif
+ 
+ static const struct dvb_tuner_ops tua9001_tuner_ops = {
+ 	.info = {
+@@ -184,8 +259,9 @@ static const struct dvb_tuner_ops tua9001_tuner_ops = {
+ 
+ 	.init = tua9001_init,
+ 	.set_params = tua9001_set_params,
+-
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
+ 	.get_if_frequency = tua9001_get_if_frequency,
++#endif
+ };
+ 
+ struct dvb_frontend *tua9001_attach(struct dvb_frontend *fe,
+diff --git a/drivers/media/dvb/dvb-usb/af9035.c b/drivers/media/dvb/dvb-usb/af9035.c
+index 275db19..309d442 100644
+--- a/drivers/media/dvb/dvb-usb/af9035.c
++++ b/drivers/media/dvb/dvb-usb/af9035.c
+@@ -839,6 +839,7 @@ static int af9035_frontend_attach(struct dvb_usb_adapter *adap)
+ 	}
+ 
+ 	/* attach demodulator */
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 	adap->fe_adap[0].fe = dvb_attach(af9033_attach,
+ 			&af9035_af9033_config[adap->id], &adap->dev->i2c_adap);
+ 	if (adap->fe_adap[0].fe == NULL) {
+@@ -849,6 +850,17 @@ static int af9035_frontend_attach(struct dvb_usb_adapter *adap)
+ 	/* disable I2C-gate */
+ 	adap->fe_adap[0].fe->ops.i2c_gate_ctrl = NULL;
+ 	adap->fe_adap[0].fe->callback = af9035_frontend_callback;
++#else
++	adap->fe = dvb_attach(af9033_attach,
++		&af9035_af9033_config[adap->id], &adap->dev->i2c_adap);
++	if (adap->fe == NULL) {
++		ret = -ENODEV;
++		goto err;
++	}
++	/* disable I2C-gate */
++	adap->fe->ops.i2c_gate_ctrl = NULL;
++	adap->fe->callback = af9035_frontend_callback;
++#endif
+ 
+ 	return 0;
+ 
+@@ -925,11 +937,19 @@ static int af9035_tuner_attach(struct dvb_usb_adapter *adap)
+ 			goto err;
+ 
+ 		/* attach tuner */
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 		fe = dvb_attach(tua9001_attach, adap->fe_adap[0].fe,
++#else
++		fe = dvb_attach(tua9001_attach, adap->fe,
++#endif
+ 				&adap->dev->i2c_adap, &af9035_tua9001_config);
+ 		break;
+ 	case AF9033_TUNER_FC0011:
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 		fe = dvb_attach(fc0011_attach, adap->fe_adap[0].fe,
++#else
++		fe = dvb_attach(fc0011_attach, adap->fe,
++#endif
+ 				&adap->dev->i2c_adap, &af9035_fc0011_config);
+ 		break;
+ 	case AF9033_TUNER_MXL5007T:
+@@ -971,12 +991,20 @@ static int af9035_tuner_attach(struct dvb_usb_adapter *adap)
+ 			goto err;
+ 
+ 		/* attach tuner */
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 		fe = dvb_attach(mxl5007t_attach, adap->fe_adap[0].fe,
++#else
++		fe = dvb_attach(mxl5007t_attach, adap->fe,
++#endif
+ 				&adap->dev->i2c_adap, 0x60, &af9035_mxl5007t_config);
+ 		break;
+ 	case AF9033_TUNER_TDA18218:
+ 		/* attach tuner */
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 		fe = dvb_attach(tda18218_attach, adap->fe_adap[0].fe,
++#else
++		fe = dvb_attach(tda18218_attach, adap->fe,
++#endif
+ 				&adap->dev->i2c_adap, &af9035_tda18218_config);
+ 		break;
+ 	default:
+@@ -1077,9 +1105,11 @@ static struct dvb_usb_device_properties af9035_properties[] = {
+ 		.num_adapters = 1,
+ 		.adapter = {
+ 			{
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 				.num_frontends = 1,
+ 				.fe = {
+ 					{
++#endif
+ 						.frontend_attach = af9035_frontend_attach,
+ 						.tuner_attach = af9035_tuner_attach,
+ 						.stream = {
+@@ -1092,8 +1122,10 @@ static struct dvb_usb_device_properties af9035_properties[] = {
+ 								}
+ 							}
+ 						}
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 					}
+ 				}
++#endif
+ 			}
+ 		},
+ 
+@@ -1167,9 +1199,11 @@ static struct dvb_usb_device_properties af9035_properties[] = {
+ 		.num_adapters = 1,
+ 		.adapter = {
+ 			{
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 				.num_frontends = 1,
+ 				.fe = {
+ 					{
++#endif
+ 						.frontend_attach = af9035_frontend_attach,
+ 						.tuner_attach = af9035_tuner_attach,
+ 						.stream = {
+@@ -1182,8 +1216,10 @@ static struct dvb_usb_device_properties af9035_properties[] = {
+ 								}
+ 							}
+ 						}
++#ifdef V4L2_REFACTORED_MFE_CODE
+ 					}
+ 				}
++#endif
+ 			}
+ 		},
+ 
+@@ -1276,7 +1312,35 @@ static struct usb_driver af9035_usb_driver = {
+ 	.id_table = af9035_id,
+ };
+ 
++#ifdef module_usb_driver
+ module_usb_driver(af9035_usb_driver);
++#else
++/* module stuff */
++static int __init af9035_usb_module_init(void)
++{
++	int ret;
++
++	ret = usb_register(&af9035_usb_driver);
++	if (ret < 0)
++		goto err;
++
++	return 0;
++
++err:
++	pr_debug("%s: failed=%d\n", __func__, ret);
++
++	return ret;
++}
++
++static void __exit af9035_usb_module_exit(void)
++{
++	/* deregister this driver from the USB subsystem */
++	usb_deregister(&af9035_usb_driver);
++}
++
++module_init(af9035_usb_module_init);
++module_exit(af9035_usb_module_exit);
++#endif
+ 
+ MODULE_AUTHOR("Antti Palosaari <crope@iki.fi>");
+ MODULE_DESCRIPTION("Afatech AF9035 driver");
+diff --git a/drivers/media/dvb/dvb-usb/af9035.h b/drivers/media/dvb/dvb-usb/af9035.h
+index a325d87..7ce42c4 100644
+--- a/drivers/media/dvb/dvb-usb/af9035.h
++++ b/drivers/media/dvb/dvb-usb/af9035.h
+@@ -25,6 +25,7 @@
+ /* prefix for dvb-usb log writings */
+ #define DVB_USB_LOG_PREFIX "af9035"
+ 
++#include <linux/version.h>
+ #include "dvb-usb.h"
+ 
+ struct reg_val {
+@@ -106,4 +107,8 @@ u32 clock_lut_it9135[] = {
+ #define CMD_FW_DL_END               0x25
+ #define CMD_FW_SCATTER_WR           0x29
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)) || ((defined V4L2_VERSION) && (V4L2_VERSION >= 196608))
++#define V4L2_REFACTORED_MFE_CODE
++#endif
++
+ #endif
+diff --git a/drivers/media/dvb/frontends/af9033.c b/drivers/media/dvb/frontends/af9033.c
+index e50b84e..52563b2 100644
+--- a/drivers/media/dvb/frontends/af9033.c
++++ b/drivers/media/dvb/frontends/af9033.c
+@@ -403,6 +403,7 @@ static int af9033_get_tune_settings(struct dvb_frontend *fe,
+ 	return 0;
+ }
+ 
++#ifdef V4L2_ONLY_DVB_V5
+ static int af9033_set_frontend(struct dvb_frontend *fe)
+ {
+ 	struct af9033_state *state = fe->demodulator_priv;
+@@ -657,6 +658,294 @@ err:
+ 
+ 	return ret;
+ }
++#else
++static int af9033_set_frontend(struct dvb_frontend *fe,
++	struct dvb_frontend_parameters *p)
++{
++	struct af9033_state *state = fe->demodulator_priv;
++	int ret, i, spec_inv;
++	u8 tmp, buf[3], bandwidth_reg_val;
++	u32 if_frequency, freq_cw, adc_freq, bandwidth_hz;
++
++	pr_debug("%s: frequency=%d bandwidth=%d\n", __func__,
++		 p->frequency, p->u.ofdm.bandwidth);
++
++	/* check bandwidth */
++	switch (p->u.ofdm.bandwidth) {
++	case BANDWIDTH_6_MHZ:
++		bandwidth_hz = 6000000;
++		bandwidth_reg_val = 0x00;
++		break;
++	case BANDWIDTH_7_MHZ:
++		bandwidth_hz = 7000000;
++		bandwidth_reg_val = 0x01;
++		break;
++	case BANDWIDTH_8_MHZ:
++		bandwidth_hz = 8000000;
++		bandwidth_reg_val = 0x02;
++		break;
++	default:
++		pr_debug("%s: invalid bandwidth\n", __func__);
++		ret = -EINVAL;
++		goto err;
++	}
++
++	/* program tuner */
++	if (fe->ops.tuner_ops.set_params)
++		fe->ops.tuner_ops.set_params(fe, p);
++
++	/* program CFOE coefficients */
++	if (bandwidth_hz != state->bandwidth_hz) {
++		for (i = 0; i < ARRAY_SIZE(coeff_lut); i++) {
++			if (coeff_lut[i].clock == state->cfg.clock &&
++				coeff_lut[i].bandwidth_hz == bandwidth_hz) {
++				break;
++			}
++		}
++		ret =  af9033_wr_regs(state, 0x800001,
++				coeff_lut[i].val, sizeof(coeff_lut[i].val));
++	}
++
++	/* program frequency control */
++	if (bandwidth_hz != state->bandwidth_hz) {
++		spec_inv = state->cfg.spec_inv ? -1 : 1;
++
++		for (i = 0; i < ARRAY_SIZE(clock_adc_lut); i++) {
++			if (clock_adc_lut[i].clock == state->cfg.clock)
++				break;
++		}
++		adc_freq = clock_adc_lut[i].adc;
++
++		/* get used IF frequency */
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
++		if (fe->ops.tuner_ops.get_if_frequency)
++			fe->ops.tuner_ops.get_if_frequency(fe, &if_frequency);
++		else
++			if_frequency = 0;
++#else
++		/* with old kernels we have to use hardcoded IF values */
++		switch (state->cfg.tuner) {
++		case AF9033_TUNER_MXL5007T:
++			if_frequency = 4570000;
++			break;
++		case AF9033_TUNER_TDA18218:
++			switch (p->u.ofdm.bandwidth) {
++			case BANDWIDTH_6_MHZ:
++				if_frequency = 3000000;
++				break;
++			case BANDWIDTH_7_MHZ:
++				if_frequency = 3500000;
++				break;
++			case BANDWIDTH_8_MHZ:
++			default:
++				if_frequency = 4000000;
++				break;
++			}
++			break;
++		case AF9033_TUNER_TUA9001:
++		case AF9033_TUNER_FC0011:
++		default:
++			/* Zero IF */
++			if_frequency = 0;
++			break;
++		}
++#endif
++
++		while (if_frequency > (adc_freq / 2))
++			if_frequency -= adc_freq;
++
++		if (if_frequency >= 0)
++			spec_inv *= -1;
++		else
++			if_frequency *= -1;
++
++		freq_cw = af9033_div(if_frequency, adc_freq, 23ul);
++
++		if (spec_inv == -1)
++			freq_cw *= -1;
++
++		/* get adc multiplies */
++		ret = af9033_rd_reg(state, 0x800045, &tmp);
++		if (ret < 0)
++			goto err;
++
++		if (tmp == 1)
++			freq_cw /= 2;
++
++		buf[0] = (freq_cw >>  0) & 0xff;
++		buf[1] = (freq_cw >>  8) & 0xff;
++		buf[2] = (freq_cw >> 16) & 0x7f;
++		ret = af9033_wr_regs(state, 0x800029, buf, 3);
++		if (ret < 0)
++			goto err;
++
++		state->bandwidth_hz = bandwidth_hz;
++	}
++
++	ret = af9033_wr_reg_mask(state, 0x80f904, bandwidth_reg_val, 0x03);
++	if (ret < 0)
++		goto err;
++
++	ret = af9033_wr_reg(state, 0x800040, 0x00);
++	if (ret < 0)
++		goto err;
++
++	ret = af9033_wr_reg(state, 0x800047, 0x00);
++	if (ret < 0)
++		goto err;
++
++	ret = af9033_wr_reg_mask(state, 0x80f999, 0x00, 0x01);
++	if (ret < 0)
++		goto err;
++
++	if (p->frequency <= 230000000)
++		tmp = 0x00; /* VHF */
++	else
++		tmp = 0x01; /* UHF */
++
++	ret = af9033_wr_reg(state, 0x80004b, tmp);
++	if (ret < 0)
++		goto err;
++
++	ret = af9033_wr_reg(state, 0x800000, 0x00);
++	if (ret < 0)
++		goto err;
++
++	return 0;
++
++err:
++	pr_debug("%s: failed=%d\n", __func__, ret);
++
++	return ret;
++}
++
++static int af9033_get_frontend(struct dvb_frontend *fe,
++	struct dvb_frontend_parameters *p)
++{
++	struct af9033_state *state = fe->demodulator_priv;
++	int ret;
++	u8 buf[8];
++
++	pr_debug("%s\n", __func__);
++
++	/* read all needed registers */
++	ret = af9033_rd_regs(state, 0x80f900, buf, sizeof(buf));
++	if (ret < 0)
++		goto err;
++
++	switch ((buf[0] >> 0) & 3) {
++	case 0:
++		p->u.ofdm.transmission_mode = TRANSMISSION_MODE_2K;
++		break;
++	case 1:
++		p->u.ofdm.transmission_mode = TRANSMISSION_MODE_8K;
++		break;
++	}
++
++	switch ((buf[1] >> 0) & 3) {
++	case 0:
++		p->u.ofdm.guard_interval = GUARD_INTERVAL_1_32;
++		break;
++	case 1:
++		p->u.ofdm.guard_interval = GUARD_INTERVAL_1_16;
++		break;
++	case 2:
++		p->u.ofdm.guard_interval = GUARD_INTERVAL_1_8;
++		break;
++	case 3:
++		p->u.ofdm.guard_interval = GUARD_INTERVAL_1_4;
++		break;
++	}
++
++	switch ((buf[2] >> 0) & 7) {
++	case 0:
++		p->u.ofdm.hierarchy_information = HIERARCHY_NONE;
++		break;
++	case 1:
++		p->u.ofdm.hierarchy_information = HIERARCHY_1;
++		break;
++	case 2:
++		p->u.ofdm.hierarchy_information = HIERARCHY_2;
++		break;
++	case 3:
++		p->u.ofdm.hierarchy_information = HIERARCHY_4;
++		break;
++	}
++
++	switch ((buf[3] >> 0) & 3) {
++	case 0:
++		p->u.ofdm.constellation = QPSK;
++		break;
++	case 1:
++		p->u.ofdm.constellation = QAM_16;
++		break;
++	case 2:
++		p->u.ofdm.constellation = QAM_64;
++		break;
++	}
++
++	switch ((buf[4] >> 0) & 3) {
++	case 0:
++		p->u.ofdm.bandwidth = BANDWIDTH_6_MHZ;
++		break;
++	case 1:
++		p->u.ofdm.bandwidth = BANDWIDTH_7_MHZ;
++		break;
++	case 2:
++		p->u.ofdm.bandwidth = BANDWIDTH_8_MHZ;
++		break;
++	}
++
++	switch ((buf[6] >> 0) & 7) {
++	case 0:
++		p->u.ofdm.code_rate_HP = FEC_1_2;
++		break;
++	case 1:
++		p->u.ofdm.code_rate_HP = FEC_2_3;
++		break;
++	case 2:
++		p->u.ofdm.code_rate_HP = FEC_3_4;
++		break;
++	case 3:
++		p->u.ofdm.code_rate_HP = FEC_5_6;
++		break;
++	case 4:
++		p->u.ofdm.code_rate_HP = FEC_7_8;
++		break;
++	case 5:
++		p->u.ofdm.code_rate_HP = FEC_NONE;
++		break;
++	}
++
++	switch ((buf[7] >> 0) & 7) {
++	case 0:
++		p->u.ofdm.code_rate_LP = FEC_1_2;
++		break;
++	case 1:
++		p->u.ofdm.code_rate_LP = FEC_2_3;
++		break;
++	case 2:
++		p->u.ofdm.code_rate_LP = FEC_3_4;
++		break;
++	case 3:
++		p->u.ofdm.code_rate_LP = FEC_5_6;
++		break;
++	case 4:
++		p->u.ofdm.code_rate_LP = FEC_7_8;
++		break;
++	case 5:
++		p->u.ofdm.code_rate_HP = FEC_NONE;
++		break;
++	}
++
++	return 0;
++
++err:
++	pr_debug("%s: failed:%d\n", __func__, ret);
++
++	return ret;
++}
++#endif
+ 
+ static int af9033_read_status(struct dvb_frontend *fe, fe_status_t *status)
+ {
+@@ -940,9 +1229,14 @@ err:
+ EXPORT_SYMBOL(af9033_attach);
+ 
+ static struct dvb_frontend_ops af9033_ops = {
++#ifdef V4L2_ONLY_DVB_V5
+ 	.delsys = { SYS_DVBT },
++#endif
+ 	.info = {
+ 		.name = "Afatech AF9033 (DVB-T)",
++#ifndef V4L2_ONLY_DVB_V5
++		.type = FE_OFDM,
++#endif
+ 		.frequency_min = 174000000,
+ 		.frequency_max = 862000000,
+ 		.frequency_stepsize = 250000,
+diff --git a/drivers/media/dvb/frontends/af9033.h b/drivers/media/dvb/frontends/af9033.h
+index 9e302c3..40dc709 100644
+--- a/drivers/media/dvb/frontends/af9033.h
++++ b/drivers/media/dvb/frontends/af9033.h
+@@ -22,6 +22,8 @@
+ #ifndef AF9033_H
+ #define AF9033_H
+ 
++#include <linux/version.h>
++
+ struct af9033_config {
+ 	/*
+ 	 * I2C address
+@@ -72,4 +74,14 @@ static inline struct dvb_frontend *af9033_attach(
+ }
+ #endif
+ 
++#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)) || ((defined V4L2_VERSION) && (V4L2_VERSION >= 197120))
++/* all DVB frontend drivers now work directly with the DVBv5
++ * structure. This warrants that all drivers will be
++ * getting/setting frontend parameters on a consistent way, in
++ * order to avoid copying data from/to the DVBv3 structs
++ * without need.
++ */
++#define V4L2_ONLY_DVB_V5
++#endif
++
+ #endif /* AF9033_H */
+-- 
+1.7.0.4
+

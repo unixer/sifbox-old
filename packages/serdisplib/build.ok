@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. config/options
+cd $BUILD/$1*
+do_configure \
+	CFLAGS= -I/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/local/include/SDL \
+	--enable-libusb \
+do_configure \
+	--enable-libusb \
+	--host=${HOST} \
+	--build=${TARGET_ARCH} \
+	--target=${TARGET_ARCH} 
+	CFLAGS= -I/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/local/include/SDL 
+
+read enterKey
+make
+#make_install

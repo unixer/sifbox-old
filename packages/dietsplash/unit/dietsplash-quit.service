@@ -1,0 +1,8 @@
+[Unit]
+Description=Terminate dietsplash Boot Screen
+Before=xorg.service
+
+[Service]
+EnvironmentFile=/etc/dietsplash.conf
+ExecStart=/usr/bin/splash.sh $OFF
+Type=oneshot

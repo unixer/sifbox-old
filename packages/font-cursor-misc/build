@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+            --with-fontdir=$XORG_PATH_FONTS
+make
+make_install

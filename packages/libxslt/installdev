@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+cd objdir-host
+do_installdev usr/bin/xsltproc toolchain
+do_installdev usr/share/aclocal toolchain
+cd ..
+
+do_installdev usr/bin/xslt-config
+do_installdev usr/include
+do_installdev usr/lib

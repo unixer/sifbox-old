@@ -1,0 +1,10 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+            --with-xkb-config-root=$XORG_PATH_XKB \
+
+make
+make_install

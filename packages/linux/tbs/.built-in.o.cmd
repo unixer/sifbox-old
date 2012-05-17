@@ -1,0 +1,1 @@
+cmd_drivers/media/dvb/tbs/built-in.o :=  rm -f drivers/media/dvb/tbs/built-in.o; /root/openbricks/build/build.i386.eglibc/toolchain/bin/i686-openbricks-linux-gnu-ar rcsD drivers/media/dvb/tbs/built-in.o

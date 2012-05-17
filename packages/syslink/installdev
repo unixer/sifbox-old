@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*/syslink
+
+do_installdev usr/include/syslink
+do_installdev usr/lib

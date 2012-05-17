@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+export SENDMAIL=/bin/true
+
+do_configure \
+	--prefix=/usr \
+	--with-daemon_username=nobody \
+	--with-daemon_groupname=nogroup \
+	--with-jobdir=/var/spool/cron/atjobs \
+	--with-atspool=/var/spool/cron/atspool \
+	CXXFLAGS=-Wunused-function \ 
+	LDFLAGS=-Wunused-function \
+	CFLAGS=$CFLAGS 
+
+make -lfl
+#make_install

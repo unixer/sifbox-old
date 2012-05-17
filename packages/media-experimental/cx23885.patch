@@ -1,0 +1,165 @@
+--- media-experimental-media_build_experimental/linux/drivers/media/video/cx23885/cx23885-dvb.c.org	2012-04-25 11:02:46.142273021 +0200
++++ media-experimental-media_build_experimental/linux/drivers/media/video/cx23885/cx23885-dvb.c	2012-04-25 11:02:55.142273027 +0200
+@@ -61,10 +61,6 @@
+ #include "cx23885-f300.h"
+ #include "altera-ci.h"
+ #include "stv0367.h"
+-#include "tbs6980fe.h"
+-#include "tbs6981fe.h"
+-#include "tbs6921fe.h"
+-#include "tbsfe.h"
+ #include "drxk.h"
+ #include "mt2063.h"
+ 
+@@ -117,7 +113,7 @@
+ 	cx23885_free_buffer(q, (struct cx23885_buffer *)vb);
+ }
+ 
+-/*static int cx23885_dvb_set_frontend(struct dvb_frontend *fe); */
++static int cx23885_dvb_set_frontend(struct dvb_frontend *fe);
+ 
+ static void cx23885_dvb_gate_ctrl(struct cx23885_tsport  *port, int open)
+ {
+@@ -134,16 +130,11 @@
+ 	if (fe && fe->dvb.frontend && fe->dvb.frontend->ops.i2c_gate_ctrl)
+ 		fe->dvb.frontend->ops.i2c_gate_ctrl(fe->dvb.frontend, open);
+ 
+-int cx23885ctrl1(struct cx23885_dev *dev, int a)
+-{
+-	return cx_read(a);
+-}
+-
+-int cx23885ctrl2(struct cx23885_dev *dev, int a, int b)
+-{
+-	cx_write(a, b);
+-
+-	return 0;
++	/*
++	 * FIXME: Improve this path to avoid calling the
++	 * cx23885_dvb_set_frontend() every time it passes here.
++	 */
++	cx23885_dvb_set_frontend(fe->dvb.frontend);
+ }
+ 
+ static struct videobuf_queue_ops dvb_qops = {
+@@ -471,27 +462,6 @@
+ 	.demod_address = 0x55,
+ };
+ 
+-static struct tbs6980fe_config tbs6980_fe_config = {
+-	.tbs6980fe_address = 0x55,
+-
+-	.tbs6980_ctrl1 = cx23885ctrl1,
+-	.tbs6980_ctrl2 = cx23885ctrl2,
+-};
+-
+-static struct tbs6981fe_config tbs6981_fe_config = {
+-	.tbs6981fe_address = 0x55,
+-
+-	.tbs6981_ctrl1 = cx23885ctrl1,
+-	.tbs6981_ctrl2 = cx23885ctrl2,
+-};
+-
+-static struct tbs6921fe_config tbs6921_fe_config = {
+-	.tbs6921fe_address = 0x55,
+-
+-	.tbs6921_ctrl1 = cx23885ctrl1,
+-	.tbs6921_ctrl2 = cx23885ctrl2,
+-};
+-
+ static struct ds3000_config tevii_ds3000_config = {
+ 	.demod_address = 0x68,
+ };
+@@ -990,52 +960,6 @@
+ 			fe0->dvb.frontend->ops.set_voltage = f300_set_voltage;
+ 
+ 		break;
+-	case CX23885_BOARD_TBS_6921:
+-		i2c_bus = &dev->i2c_bus[1];
+-
+-		fe0->dvb.frontend = dvb_attach(tbs6921fe_attach,
+-					&tbs6921_fe_config,
+-					&i2c_bus->i2c_adap, 0);
+-		dvb_attach(tbsfe_attach, fe0->dvb.frontend);
+-		break;
+-	case CX23885_BOARD_TBS_6980:
+-		i2c_bus = &dev->i2c_bus[1];
+-
+-		switch (port->nr) {
+-		case 1:
+-			fe0->dvb.frontend = dvb_attach(tbs6980fe_attach,
+-				&tbs6980_fe_config,
+-				&i2c_bus->i2c_adap, 0);
+-			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
+-		break;
+-		case 2:
+-			fe0->dvb.frontend = dvb_attach(tbs6980fe_attach,
+-				&tbs6980_fe_config,
+-				&i2c_bus->i2c_adap, 1);
+-			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
+-		break;
+-		}
+-
+-		break;
+-	case CX23885_BOARD_TBS_6981:
+-		i2c_bus = &dev->i2c_bus[1];
+-
+-		switch (port->nr) {
+-		case 1:
+-			fe0->dvb.frontend = dvb_attach(tbs6981fe_attach,
+-				&tbs6981_fe_config,
+-				&i2c_bus->i2c_adap, 0);
+-			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
+-		break;
+-		case 2:
+-			fe0->dvb.frontend = dvb_attach(tbs6981fe_attach,
+-				&tbs6981_fe_config,
+-				&i2c_bus->i2c_adap, 1);
+-			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
+-		break;
+-		}
+-
+-		break;
+ 	case CX23885_BOARD_TEVII_S470:
+ 		i2c_bus = &dev->i2c_bus[1];
+ 
+@@ -1324,39 +1248,6 @@
+ 		memcpy(port->frontends.adapter.proposed_mac, eeprom + 0xa0, 6);
+ 		break;
+ 		}
+-	case CX23885_BOARD_TBS_6920: 
+-	case CX23885_BOARD_TBS_6921: {
+-		u8 eeprom[256]; /* 24C02 i2c eeprom */
+-
+-		cx23885_tbs(dev);
+-
+-		if (port->nr != 1)
+-			break;
+-
+-		/* Read entire EEPROM */
+-		dev->i2c_bus[0].i2c_client.addr = 0xa0 >> 1;
+-		tveeprom_read(&dev->i2c_bus[0].i2c_client, eeprom, sizeof(eeprom));
+-		printk(KERN_INFO "TurboSight TBS 692x MAC= "
+-				"%02X:%02X:%02X:%02X:%02X:%02X\n",
+-				eeprom[0xa0], eeprom[0xa1], eeprom[0xa2],
+-				eeprom[0xa3], eeprom[0xa4], eeprom[0xa5]);
+-		memcpy(port->frontends.adapter.proposed_mac, eeprom + 0xa0, 6);
+-		break;
+-		}
+-	case CX23885_BOARD_TBS_6980: 
+-	case CX23885_BOARD_TBS_6981: {
+-		u8 eeprom[256]; /* 24C02 i2c eeprom */
+-
+-		cx23885_tbs(dev);
+-
+-		/* Read entire EEPROM */
+-		dev->i2c_bus[0].i2c_client.addr = 0xa0 >> 1;
+-		tveeprom_read(&dev->i2c_bus[0].i2c_client, eeprom, sizeof(eeprom));
+-		memcpy(port->frontends.adapter.proposed_mac, eeprom + 0xa0 + 16*(port->nr - 1), 6);
+-		printk(KERN_INFO "TurboSight TBS698x Dual DVB-S2 card port%d MAC=%pM\n",
+-			(port->nr - 1), port->frontends.adapter.proposed_mac);
+-		break;
+-		}
+ 	}
+ 
+ 	return ret;

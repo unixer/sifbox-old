@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_autoconf
+do_configure \
+            --disable-bdjava \
+            --disable-examples \
+            --disable-debug \
+            --disable-doxygen-doc \
+
+make
+make_install

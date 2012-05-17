@@ -1,0 +1,10 @@
+--- libgcrypt-1.5.0/Makefile.org	2012-04-10 17:34:50.796853149 +0200
++++ libgcrypt-1.5.0/Makefile	2012-04-10 17:35:10.266853159 +0200
+@@ -172,6 +172,7 @@
+ INSTALL_PROGRAM = ${INSTALL}
+ INSTALL_SCRIPT = ${INSTALL}
+ INSTALL_STRIP_PROGRAM = $(install_sh) -c -s
++CXXFLAGS = -fpermissive
+ LD = /root/openbricks/build/build.i386.eglibc/toolchain/bin/i686-openbricks-linux-gnu-ld.bfd
+ LDFLAGS =   -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/lib -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/lib -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/local/lib 
+ LIBGCRYPT_CIPHERS = arcfour blowfish cast5 des aes twofish serpent rfc2268 seed camellia

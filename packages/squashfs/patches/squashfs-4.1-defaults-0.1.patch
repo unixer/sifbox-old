@@ -1,0 +1,39 @@
+diff -Naur a/squashfs-tools/Makefile b/squashfs-tools/Makefile
+--- a/squashfs-tools/Makefile	2011-02-28 21:04:15.000000000 +0100
++++ b/squashfs-tools/Makefile	2011-09-06 08:42:05.100846788 +0200
+@@ -78,7 +78,7 @@
+ # If your C library or build/target environment doesn't support XATTRs then
+ # comment out the next line to build Mksquashfs and Unsquashfs without XATTR
+ # support
+-XATTR_SUPPORT = 1
++#XATTR_SUPPORT = 1
+ 
+ # Select whether you wish xattrs to be stored by Mksquashfs and extracted
+ # by Unsquashfs by default.  If selected users can disable xattr support by
+@@ -86,7 +86,7 @@
+ #
+ # If unselected, Mksquashfs/Unsquashfs won't store and extract xattrs by
+ # default.  Users can enable xattrs by using the -xattrs option.
+-XATTR_DEFAULT = 1
++#XATTR_DEFAULT = 1
+ 
+ 
+ ###############################################
+@@ -199,7 +199,7 @@
+ all: mksquashfs unsquashfs
+ 
+ mksquashfs: $(MKSQUASHFS_OBJS)
+-	$(CC) $(LDFLAGS) $(EXTRA_LDFLAGS) $(MKSQUASHFS_OBJS) $(LIBS) -o $@
++	$(CC) $(CFLAGS) $(LDFLAGS) $(EXTRA_LDFLAGS) $(MKSQUASHFS_OBJS) $(LIBS) -o $@
+ 
+ mksquashfs.o: mksquashfs.c squashfs_fs.h mksquashfs.h sort.h squashfs_swap.h \
+ 	xattr.h pseudo.h compressor.h
+@@ -230,7 +230,7 @@
+ xz_wrapper.o: xz_wrapper.c compressor.h squashfs_fs.h
+ 
+ unsquashfs: $(UNSQUASHFS_OBJS)
+-	$(CC) $(LDFLAGS) $(EXTRA_LDFLAGS) $(UNSQUASHFS_OBJS) $(LIBS) -o $@
++	$(CC) $(CFLAGS) $(LDFLAGS) $(EXTRA_LDFLAGS) $(UNSQUASHFS_OBJS) $(LIBS) -o $@
+ 
+ unsquashfs.o: unsquashfs.h unsquashfs.c squashfs_fs.h squashfs_swap.h \
+ 	squashfs_compat.h xattr.h read_fs.h compressor.h

@@ -1,0 +1,221 @@
+#!/bin/sh
+
+. config/options
+
+NOGET=""
+
+do_md5sum () {
+ [ -z "$PKG_MD5" ] && return 0
+ echo -n "Computing MD5 check for $1 ... "
+ MD5=$(md5sum $1 | cut -d ' ' -f 1)
+ if [ "$MD5" != "$PKG_MD5" ]; then
+  echo "INVALID"
+  exit 1
+ else
+  echo "OK"
+ fi
+}
+
+do_sha256sum () {
+ [ -z "$PKG_SHA256" ] && return 0
+ echo -n "Computing SHA256 check for $1 ... "
+ SHA256=$(sha256sum $1 | cut -d ' ' -f 1)
+ if [ "$SHA256" != "$PKG_SHA256" ]; then
+  echo "INVALID"
+  exit 1
+ else
+  echo "OK"
+ fi
+}
+
+if [ -z "$1" ]; then
+  for i in $PACKAGES/*; do
+    GET=yes
+    for j in $NOGET; do
+      [ ${i##*/} = $j ] && GET=no break
+    done
+    if [ $GET = yes ]; then
+      $SCRIPTS/get ${i#$PACKAGES/} || echo ""
+    fi
+  done
+  exit 0
+fi
+
+mkdir -p $STAMPS_NOARCH/$1
+STAMP=$STAMPS_NOARCH/$1/get
+
+if [ -f $PACKAGE_URL ]; then
+  if [ -f $STAMP ]; then
+    [ ! $STAMP -ot $PACKAGE_URL ] && exit 0
+  fi
+  DL="yes"
+fi
+
+get_meta $1
+
+if [ -n "$PKG_URL" ]; then
+  if [ -f $STAMP ]; then
+    [ ! $STAMP -ot $PACKAGES/$1/meta ] && exit 0
+  fi
+  DL="yes"
+fi
+
+if [ "$DL" = yes ]; then
+  $SCRIPTS/checkdeps get || exit 1
+
+  rm -f $STAMP
+
+  printf "%${INDENT}c GET      $1\n" >&$SILENT_OUT
+  export INDENT=$((${INDENT:-1}+$INDENT_SIZE))
+
+  WGET_OPT="--no-check-certificate --passive-ftp --dns-timeout=5 --connect-timeout=5 --read-timeout=5 --tries=1 -c"
+  [ "$VERBOSE" != yes ] && WGET_OPT="$WGET_OPT -q"
+
+  mkdir -p $SOURCES/$1
+
+  [ -f $PACKAGE_URL ] && \
+    URLS=`cat $PACKAGE_URL`
+
+  [ -n "$PKG_URL" ] && \
+    URLS="$URLS `echo $PKG_URL`"
+
+  if [ -n "$PKG_URL_PROTO" ]; then
+    # count number of URLs we have
+    NURLS=0
+    for i in $URLS; do
+      NURLS=$(($NURLS+1))
+    done
+    if [ $NURLS != 1 ]; then
+      echo "Must have exactly one URL for fancy repository download, exit."
+      exit 1
+    fi
+
+    REPO_BASENAME=$PKG_NAME-$PKG_VERSION
+    REPO_ARCHIVE=$REPO_BASENAME.tar.bz2
+
+    # check for packages mirror usage
+    if [ "$MIRROR" = yes -a -n "$MIRROR_URL" ]; then
+      REPO_ARCHIVE_URL="$MIRROR_URL/$REPO_ARCHIVE"
+    else
+      REPO_ARCHIVE_URL="$DISTRO_SRCS/$REPO_ARCHIVE"
+    fi
+
+    until [ -f $STAMPS_NOARCH/$1/$REPO_BASENAME.ok ] || wget $WGET_OPT -P $SOURCES/$1 $REPO_ARCHIVE_URL; do
+      NBWGET=$(($NBWGET+1))
+      if [ $NBWGET -gt 10 ]; then
+        echo "\nCan't get $1 sources, falling back to repository"
+        rm -Rf $SOURCES/$1/$REPO_BASENAME
+        rm -f $SOURCES/$1/$REPO_ARCHIVE
+
+        case $PKG_URL_PROTO in
+          svn)
+            [ -n "$PKG_URL_REV" ] && SVNREV="-r $PKG_URL_REV"
+            svn export $SVNREV $PKG_URL $SOURCES/$1/$REPO_BASENAME
+            tar cpjf $SOURCES/$1/$REPO_ARCHIVE -C $SOURCES/$1 $REPO_BASENAME
+            ;;
+          git)
+            GITREV=HEAD
+            [ -n "$PKG_URL_REV" ] && GITREV="$PKG_URL_REV"
+            if [ -z `echo $PKG_URL | grep http` ]; then
+              GITDEPTH="--depth 50"
+            fi
+            git clone --recursive $GITDEPTH $PKG_URL $SOURCES/$1/$REPO_BASENAME
+            git --git-dir=$SOURCES/$1/$REPO_BASENAME/.git --work-tree=$SOURCES/$1/$REPO_BASENAME checkout $GITREV
+            (cd $SOURCES/$1/$REPO_BASENAME; $ROOT/$SCRIPTS/git-archive-all --prefix $REPO_BASENAME/ --rev $GITREV | bzip2 > ../$REPO_ARCHIVE )
+            ;;
+          hg)
+            [ -n "$PKG_URL_REV" ] && HGREV="-u $PKG_URL_REV"
+            hg clone $HGREV $PKG_URL $SOURCES/$1/$REPO_BASENAME
+            hg -R $SOURCES/$1/$REPO_BASENAME archive --prefix=$REPO_BASENAME/ $SOURCES/$1/$REPO_ARCHIVE
+            ;;
+          cvs)
+            CVSREV="-r HEAD"
+            [ -n "$PKG_URL_REV" ] && CVSREV="-r $PKG_URL_REV"
+            cvs -d$PKG_URL export $CVSREV -d $SOURCES/$1/$REPO_BASENAME $PKG_NAME
+            tar cpjf $SOURCES/$1/$REPO_ARCHIVE -C $SOURCES/$1 $REPO_BASENAME
+            ;;
+          *)
+            echo "Unsupported PKG_URL_PROTO '$PKG_URL_PROTO', exit."
+            exit 1
+            ;;
+        esac
+
+        rm -Rf $SOURCES/$1/$REPO_BASENAME
+        break;
+      fi
+    done
+    # do we need checksums on repositories?
+    # do_md5sum    "$SOURCES/$1/$REPO_BASENAME"
+    # do_sha256sum "$SOURCES/$1/$REPO_BASENAME"
+    touch $STAMPS_NOARCH/$1/$REPO_BASENAME.ok
+  else
+    for i in $URLS; do
+
+      i=$(eval echo $i)
+
+      NBWGET=1
+
+      PACKAGE_BASENAME=`basename $i`
+
+      if [ -f $MACHINE_PACKAGES/$1/$i ]; then
+        # machine-specific file is already here, just copy
+        echo "\nJust copying machine $i for $1 sources..."
+        cp $MACHINE_PACKAGES/$1/$i $SOURCES/$1
+      elif [ -f $PLATFORM_PACKAGES/$1/$i ]; then
+        # platform-specific file is already here, just copy
+        echo "\nJust copying platform $i for $1 sources..."
+        cp $PLATFORM_PACKAGES/$1/$i $SOURCES/$1
+      elif [ -f $FLAVOUR_PACKAGES/$1/$i ]; then
+        # flavour-specific file is already here, just copy
+        echo "\nJust copying flavour $i for $1 sources..."
+        cp $FLAVOUR_PACKAGES/$1/$i $SOURCES/$1
+      elif [ -f $PACKAGES/$1/$i ]; then
+        # file is already here, just copy
+        echo "\nJust copying $i for $1 sources..."
+        cp $PACKAGES/$1/$i $SOURCES/$1
+      else
+        # have to download
+
+        # check for packages mirror usage
+        [ "$MIRROR" = yes -a -n "$MIRROR_URL" ] \
+          && i="$MIRROR_URL/$PACKAGE_BASENAME"
+
+        until [ -f $STAMPS_NOARCH/$1/$PACKAGE_BASENAME.ok ] || wget $WGET_OPT -P $SOURCES/$1 $i; do
+          NBWGET=$(($NBWGET+1))
+          if [ $NBWGET -gt 10 ]; then
+            if [ "$MIRROR" = yes -a -n "$MIRROR_URL" ]; then
+              echo "\nCan't get $1 sources : $i\n Try later !!"
+              exit 1
+            else
+              echo "\nCan't get $1 sources, trying on OpenBricks server..."
+              until [ -f $STAMPS_NOARCH/$1/$PACKAGE_BASENAME.ok ] || wget $WGET_OPT -P $SOURCES/$1 $DISTRO_SRCS/$PACKAGE_BASENAME; do
+                NBWGET=$(($NBWGET+1))
+                if [ $NBWGET -gt 10 ]; then
+                  echo "\nCan't get $1 sources : $i\n Try later !!"
+                  exit 1
+                fi
+              done
+            fi
+
+            do_md5sum    "$SOURCES/$1/$PACKAGE_BASENAME"
+            do_sha256sum "$SOURCES/$1/$PACKAGE_BASENAME"
+            touch $STAMPS_NOARCH/$1/$PACKAGE_BASENAME.ok
+          fi
+        done
+      fi
+
+      do_md5sum    "$SOURCES/$1/$PACKAGE_BASENAME"
+      do_sha256sum "$SOURCES/$1/$PACKAGE_BASENAME"
+      touch $STAMPS_NOARCH/$1/$PACKAGE_BASENAME.ok
+    done
+  fi
+
+  [ -f $PACKAGE_URL ] && \
+    cp -p $PACKAGE_URL $STAMP
+
+  [ -n "$PKG_URL" ] && \
+    cp -p $PACKAGES/$1/meta $STAMP
+
+  rm -f $BUILD_BASE*/$STAMPS_NOARCH/$1/unpack
+  rm -f $BUILD_BASE*/$STAMPS_NOARCH/$1/build
+fi

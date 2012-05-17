@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. config/options
+
+mkdir -p $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+
+
+NAME="xvdr"
+mkdir -p $INSTALL/etc/vdr/plugins.d
+echo "PLUGIN=${NAME}" > $INSTALL/etc/vdr/plugins.d/50_$NAME
+echo "OPTIONS=\"-t 30\"" >> $INSTALL/etc/vdr/plugins.d/50_$NAME
+echo "ENABLED=yes" >> $INSTALL/etc/vdr/plugins.d/50_$NAME
+
+
+mkdir -p $INSTALL/etc/vdr/plugins/xvdr
+cp -P $BUILD/$1*/xvdr/allowed_hosts.conf $INSTALL/etc/vdr/plugins/xvdr
+echo '0.0.0.0/0' >> $INSTALL/etc/vdr/plugins/xvdr/allowed_hosts.conf
+#cp $ROOT/$PACKAGES/$1/config/plugin.xvdr.conf $INSTALL/etc/vdr/plugins

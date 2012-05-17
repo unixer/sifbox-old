@@ -1,0 +1,23 @@
+#!/bin/sh
+
+. config/options
+
+mkdir -p $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/lib$1*.so.* $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/systems/sc-conax/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/systems/sc-cryptoworks/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/systems/sc-irdeto/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/systems/sc-nagra/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/systems/sc-seca/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/systems/sc-viaccess/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+cp -a $BUILD/$1*/systems/sc-videoguard2/lib*.so.* $INSTALL/usr/lib/vdr/plugins
+NAME=`echo $1 | sed s/vdr-//`
+mkdir -p $INSTALL/etc/vdr/plugins.d
+echo "PLUGIN=${NAME}" > $INSTALL/etc/vdr/plugins.d/01_$NAME
+echo "OPTIONS=\"-B0 -B1\"" >> $INSTALL/etc/vdr/plugins.d/01_$NAME
+echo "ENABLED=no" >> $INSTALL/etc/vdr/plugins.d/01_$NAME
+
+
+mkdir -p $INSTALL/etc/vdr/plugins/sc
+cp $ROOT/$PACKAGES/$1/config/cardclient.conf $INSTALL/etc/vdr/plugins/sc
+

@@ -1,0 +1,7 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_install usr/lib
+cp -p .install/usr/lib/libncursesw.so /$SYSROOT_PREFIX/usr/lib

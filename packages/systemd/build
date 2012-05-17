@@ -1,0 +1,52 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+GCC_NO_LTO=1 GCC_NO_GOLD=1 \
+do_configure \
+            --disable-selinux \
+            --disable-tcpwrap \
+            --disable-pam \
+            --disable-audit \
+            --disable-acl \
+            --disable-libcryptsetup \
+            --disable-gtk \
+            --disable-binfmt \
+            --disable-hostnamed \
+            --disable-timedated \
+            --disable-localed \
+            --disable-plymouth \
+            --disable-vconsole \
+            --disable-xz \
+            --disable-quotacheck \
+            --disable-readahead \
+            --with-distro=other \
+            --with-dbussessionservicedir=/usr/share/dbus-1/services \
+            --with-dbussystemservicedir=/usr/share/dbus-1/system-services \
+            --with-dbusinterfacedir=/usr/share/dbus-1/interfaces \
+            --with-sysvinit-path= \
+            --with-sysvrcd-path= \
+            --with-pamlibdir= \
+            --with-rootprefix= \
+            --with-rootlibdir=/lib \
+
+make
+make_install
+
+SYSTEMD=.install/lib/systemd
+SYSUNITS=$SYSTEMD/system
+
+# we don't care about utmp (it's not even supported by our libc)
+rm -f $SYSTEMD/systemd-update-utmp
+rm -f $SYSUNITS/systemd-update-utmp-runlevel.service
+rm -f $SYSUNITS/systemd-update-utmp-shutdown.service
+rm -f $SYSUNITS/shutdown.target.wants/systemd-update-utmp-shutdown.service
+rm -f $SYSUNITS/runlevel?.target.wants/systemd-update-utmp-runlevel.service
+
+# enable tmpfs over /tmp mount
+ln -s ../tmp.mount $SYSUNITS/local-fs.target.wants/
+
+# boot to multi-user.target as fallback default
+ln -sf multi-user.target $SYSUNITS/default.target

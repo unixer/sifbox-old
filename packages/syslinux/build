@@ -1,0 +1,27 @@
+#!/bin/sh
+
+. config/options
+
+export CFLAGS="$CFLAGS -I`ls -d $ROOT/$BUILD/$1*`/libinstaller"
+export CFLAGS="$CFLAGS -I`ls -d $ROOT/$BUILD/$1*`/libfat"
+
+SUBDIRS="codepage core libinstaller mtools mbr extlinux"
+
+cd $BUILD/$1*
+make \
+     CC=$CC \
+     AR=$AR \
+     RANLIB=$RANLIB \
+     CFLAGS="$CFLAGS -fomit-frame-pointer -D_FILE_OFFSET_BITS=64" \
+     LDFLAGS="$LDFLAGS" \
+     BSUBDIRS="$SUBDIRS"
+
+make_install
+mkdir -p .install/boot
+cp -P \
+  core/isolinux.bin \
+  com32/menu/vesamenu.c32 \
+  core/pxelinux.0 \
+  .install/boot
+
+cp -P core/ldlinux.sys core/ldlinux.bss .install/usr/share/syslinux

@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+get_meta $1
+
+FONTS_DIR=$PKG_BUILD_DIR
+
+mkdir -p $FONTS_DIR/freefont-ttf
+$SCRIPTS/extract $1 "freefont-ttf*" $FONTS_DIR/freefont-ttf
+
+for i in FreeSans.ttf FreeSerif.ttf; do
+  mv $FONTS_DIR/freefont-ttf/freefont*/$i $FONTS_DIR
+done
+rm -rf $FONTS_DIR/freefont-ttf

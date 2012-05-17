@@ -1,0 +1,28 @@
+#!/bin/sh
+
+. config/options
+
+setup_toolchain host
+
+# workaround gcc 4.3.2 bug on x86_64 hosts
+# http://bugs.debian.org/cgi-bin/bugreport.cgi?bug=524472
+export CFLAGS="$CFLAGS -fno-strict-aliasing"
+
+cd $BUILD/$1*
+mkdir -p objdir
+cd objdir
+../configure --host=$HOST_NAME \
+             --build=$HOST_NAME \
+             --target=$TARGET_NAME \
+             --prefix=/usr \
+             --disable-shared \
+             --enable-static \
+             --enable-mpbsd \
+             --enable-cxx \
+
+make
+make check
+make_install toolchain
+[ -d .install/usr/lib64 ] && mv .install/usr/lib64 .install/usr/lib
+rm -rf ../.install
+mv .install ..

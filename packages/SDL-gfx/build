@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. config/options
+
+if [ "$TARGET_ARCH" = i386 ]; then
+  MMX_CONFIG="--enable-mmx"
+else
+  MMX_CONFIG="--disable-mmx"
+fi
+
+cd $BUILD/$1*
+do_configure \
+            $MMX_CONFIG \
+
+make
+make_install

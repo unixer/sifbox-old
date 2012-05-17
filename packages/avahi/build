@@ -1,0 +1,61 @@
+#!/bin/sh
+
+. config/options
+
+export py_cv_mod_gtk_=yes
+export py_cv_mod_dbus_=yes
+
+if pkg_uses $1 qt; then
+  export ac_cv_path_MOC_QT4=$MOC
+  export QT4_CFLAGS="-I$QT_PATH_INCLUDES"
+  OPT_QT="--enable-qt4"
+else
+  OPT_QT="--disable-qt4"
+fi
+
+cd $BUILD/$1*
+do_configure \
+  --with-distro=none \
+  --disable-glib \
+  --disable-gobject \
+  --disable-qt3 \
+  $OPT_QT \
+  --disable-gtk \
+  --disable-gtk3 \
+  --enable-dbus \
+  --disable-dbm \
+  --disable-gdbm \
+  --enable-libdaemon \
+  --disable-python \
+  --disable-pygtk \
+  --disable-python-dbus \
+  --disable-mono \
+  --disable-monodoc \
+  --enable-autoipd \
+  --disable-doxygen-doc \
+  --disable-doxygen-dot \
+  --disable-doxygen-man \
+  --disable-doxygen-rtf \
+  --disable-doxygen-xml \
+  --disable-doxygen-chm \
+  --disable-doxygen-chi \
+  --disable-doxygen-html \
+  --disable-doxygen-ps \
+  --disable-doxygen-pdf \
+  --disable-core-docs \
+  --disable-manpages \
+  --disable-xmltoman \
+  --disable-tests \
+  --disable-compat-libdns_sd \
+  --disable-compat-howl \
+  --with-xml=expat \
+  --with-avahi-user=root \
+  --with-avahi-group=root \
+  --with-autoipd-user=avahiautoipd \
+  --with-autoipd-group=avahiautoipd \
+
+make
+make_install
+
+mkdir -p .install/lib/systemd/system/multi-user.target.wants
+ln -s /lib/systemd/system/avahi-daemon.service .install/lib/systemd/system/multi-user.target.wants/avahi-daemon.service

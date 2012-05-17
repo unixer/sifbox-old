@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+export have_mtrr_h=yes
+
+cd $BUILD/$1*
+do_configure \
+            --with-pciids-path=/usr/share \
+            --with-zlib \
+
+make
+make_install

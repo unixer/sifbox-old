@@ -1,0 +1,635 @@
+source "../../config/Kconfig.version"
+
+# We use modules to mean opk packages
+config MODULES
+  bool
+  option modules
+  default y
+
+#######################################
+# Target flavour                      #
+#######################################
+source "../../config/Kconfig.flavours"
+
+#######################################
+menu "General setup"
+#######################################
+
+# Target architecture, platform and CPU options
+source "../../config/Kconfig.arch"
+
+choice OMAP_DISPLAY
+  prompt "Default OMAP Video Display"
+  depends on ( TARGET_PLATFORM_arm_omap4 )
+  default OMAP_DISPLAY_HDMI
+
+config OMAP_DISPLAY_HDMI
+  bool "HDMI"
+
+config OMAP_DISPLAY_DVI
+  bool "DVI-D"
+
+config OMAP_DISPLAY_DSI
+  bool "DSI (Serial LCD Display)"
+
+config OMAP_DISPLAY_DPI
+  bool "DPI (Parallel LCD Display)"
+
+endchoice
+
+choice FPU_OPTIMIZATIONS
+  prompt "FPU optimizations"
+  depends on ( TARGET_ARCH_i386 || TARGET_ARCH_x86_64 || TARGET_ARCH_arm || TARGET_ARCH_powerpc || TARGET_ARCH_powerpc64 )
+  default FPU_OPTIMIZATIONS_NEON if TARGET_SUBARCH_armv7
+  default FPU_OPTIMIZATIONS_NONE
+
+config FPU_OPTIMIZATIONS_VFP2
+  bool "VFPv2"
+  depends on ( TARGET_SUBARCH_armv5 || TARGET_SUBARCH_armv6 || TARGET_SUBARCH_armv7 )
+
+config FPU_OPTIMIZATIONS_VFP3
+  bool "VFPv3"
+  depends on TARGET_SUBARCH_armv7
+
+config FPU_OPTIMIZATIONS_NEON
+  bool "NEON"
+  depends on TARGET_SUBARCH_armv7
+
+config FPU_OPTIMIZATIONS_ALTIVEC
+  bool "AltiVec"
+  depends on ( TARGET_ARCH_powerpc || TARGET_ARCH_powerpc64)
+
+config FPU_OPTIMIZATIONS_387
+  bool "i387"
+  depends on ( TARGET_ARCH_i386 || TARGET_ARCH_x86_64 )
+
+config FPU_OPTIMIZATIONS_SSE
+  bool "SSE"
+  depends on ( TARGET_ARCH_i386 || TARGET_ARCH_x86_64 )
+
+config FPU_OPTIMIZATIONS_AVX
+  bool "AVX"
+  depends on ( TARGET_ARCH_i386 || TARGET_ARCH_x86_64 )
+
+config FPU_OPTIMIZATIONS_NONE
+  bool "none"
+
+endchoice
+
+config OPT_THUMB
+  bool "Enable Thumb-2 optimizations"
+  depends on TARGET_ARCH_arm
+  default n
+
+menu "Toolchain settings"
+
+choice TOOLCHAIN
+  prompt "Toolchain"
+  default TOOLCHAIN_openbricks
+
+config TOOLCHAIN_openbricks
+  bool "OpenBricks"
+
+config TOOLCHAIN_codesourcery
+  bool "CodeSourcery"
+  depends on ( TARGET_ARCH_arm || TARGET_ARCH_powerpc )
+  select OPT_THUMB if TARGET_SUBARCH_armv7
+
+config TOOLCHAIN_linaro
+  bool "Linaro"
+  depends on TARGET_ARCH_arm
+
+endchoice
+
+choice TARGET_LIBC
+  prompt "Target libc"
+  depends on ( TOOLCHAIN_openbricks || TOOLCHAIN_linaro )
+  default TARGET_LIBC_eglibc
+
+config TARGET_LIBC_eglibc
+  bool "eglibc"
+  select PKG_eglibc
+
+config TARGET_LIBC_uclibc
+  bool "uclibc"
+  select PKG_uclibc
+
+endchoice
+
+config OPT_TOOLCHAIN_CXX
+  bool "Support C++ in toolchain"
+  default y
+
+config OPT_TOOLCHAIN_GRAPHITE
+  bool "Support Graphite Optimization in toolchain"
+  default n
+
+config OPT_TOOLCHAIN_LOOP
+  bool "Support LoopTree optimizations in toolchain"
+  default n
+
+config OPT_TOOLCHAIN_LTO
+  bool "Support Link Time Optimization (LTO) in toolchain"
+  default n
+
+config OPT_TOOLCHAIN_GOLD_LINKER
+  bool "Support GOLD Linker optimization in toolchain"
+  default n
+
+config OPT_CODESOURCERY_ROOT
+  string "CodeSourcery install path"
+  depends on TOOLCHAIN_codesourcery
+  default ""
+
+config OPT_LOCAL_CC
+  string "Local gcc location"
+  depends on ( TOOLCHAIN_openbricks || TOOLCHAIN_linaro )
+  default ""
+  help
+    Need to point to your actual (host) gcc
+    If you have ccache installed, take care that LOCAL_CC doesn't point to it
+    Autodetected if left blank (default)
+
+config OPT_LOCAL_CXX
+  string "Local g++ location"
+  depends on ( TOOLCHAIN_openbricks || TOOLCHAIN_linaro )
+  default ""
+  help
+    Need to point to your actual (host) g++
+    If you have ccache installed, take care that LOCAL_CXX doesn't point to it
+    Autodetected if left blank (default)
+
+endmenu
+
+choice OPTIMIZATIONS
+  prompt "Build optimizations"
+  default OPTIMIZATIONS_DEFAULT
+  help
+    Build optimization settings
+
+config OPTIMIZATIONS_FASTEST
+  bool "fastest"
+  help
+    Build with "-Ofast", i.e. optimize for fastest operations.
+
+config OPTIMIZATIONS_SPEED
+  bool "speed"
+  help
+    Build with "-O3", i.e. optimize for speed.
+
+config OPTIMIZATIONS_DEFAULT
+  bool "normal"
+  help
+    Build with "-O2", i.e. default optimizations.
+
+config OPTIMIZATIONS_SIZE
+  bool "size"
+  help
+    Build with "-Os", i.e. optimize for size.
+
+config OPTIMIZATIONS_NONE
+  bool "none"
+  help
+    Build with "-O0", i.e. do not optimize.
+
+endchoice
+
+choice COMPRESSION_METHOD
+  prompt "Compression method"
+  default COMPRESSION_XZ if ( TARGET_ARCH_i386 || TARGET_ARCH_x86_64 )
+  default COMPRESSION_GZIP
+  help
+    XZ decreases image size but GZIP is way faster to decompress and boot.
+
+config COMPRESSION_XZ
+  bool "xz"
+
+config COMPRESSION_GZIP
+  bool "gzip"
+
+endchoice
+
+config OPT_DYNAMIC_SYSROOT
+  bool "Dynamic sysroot"
+  default n
+  help
+   Rebuild the sysroot from scratch at each package compilation. Makes build
+   slower but helps to catch wrong depends between packages.
+
+config OPT_VERBOSE
+  bool "Verbose build"
+  default y
+  help
+    If enabled, do not silence the packages build output.
+
+config OPT_CONCURRENCY_MAKE_LEVEL
+  int "Concurrency make level"
+  default 1
+  help
+    Concurrency make level (-j option)
+    Try values 1 (default) to 4 on single CPU computer, or more on
+    multi-processor computer (like hyperthreading SMP CPU)
+
+config OPT_MIRROR
+  bool "Use mirror server for packages download"
+  default n
+  help
+    If enabled, all packages will be downloaded from a master mirror server.
+
+config OPT_MIRROR_URL
+  string "Mirror URL"
+  depends on OPT_MIRROR
+  default ""
+  help
+    URL of the server to be used to retrieve all packages.
+
+config OPT_REPO
+  bool "Use server for binaries packages download"
+  default n
+  help
+    If enabled, all binaries packages will be downloaded from the given url.
+
+config OPT_REPO_URL
+  string "Repo URL"
+  depends on OPT_REPO
+  default ""
+  help
+    URL of the server to be used to retrieve all binaries packages.
+
+endmenu
+
+#######################################
+menu "Settings"
+#######################################
+
+menu "Target images"
+
+config OPT_TARGET_ISO
+  bool "ISO image"
+  default n if ( TARGET_ARCH_arm || TARGET_ARCH_mips )
+  default y
+
+config OPT_TARGET_FLAT
+  bool "Flat rootfs"
+  default y if ( TARGET_ARCH_arm || TARGET_ARCH_mips )
+  default n
+
+config OPT_TARGET_PXE
+  bool "PXE rootfs"
+  default n
+
+config OPT_TARGET_VMX
+  bool "VMware image"
+  depends on ( TARGET_ARCH_i386 || TARGET_ARCH_x86_64 )
+  default n
+
+config OPT_TARGET_OMAP_TARBALL
+  bool "OMAP Tarball Image"
+  depends on ( TARGET_PLATFORM_arm_omap3 || TARGET_PLATFORM_arm_omap4 )
+  default y
+
+config OPT_TARGET_TARBALL
+  bool "Flat rootfs tarball"
+  default n
+
+config OPT_TARGET_EXT2FS
+  bool "ext2 filesystem image"
+  default n
+
+config OPT_ROOTFS_SIZE
+  int "Root filesystem image size (in MB)"
+  depends on OPT_TARGET_EXT2FS
+  default 48
+
+config OPT_ROOTFS_MAXINODE
+  int "Maximum number of inodes in root filesystem"
+  depends on OPT_TARGET_EXT2FS
+  default 6000
+  help
+    Allows you to change the maximum number of inodes in the root filesystem
+
+config OPT_TARGET_INITRAMFS
+  bool "initramfs archive"
+  default n
+
+config OPT_TARGET_SNOWBALL_EMMC
+  bool "Snowball eMMC image"
+  depends on TARGET_MACHINE_arm_ux500_snowball
+  default y
+  help
+    Build a minimal image for the Snowball eMMC, with only the necessary
+    components to bringup the board and boot from the SD card.
+
+endmenu
+
+config OPT_PACKAGE_REPO
+  bool "opkg package repository"
+  default y
+  help
+    Build the necessary index files to be able to use 'opkg update' and
+    'opkg install' to install packages from the target on demand.
+
+config TIMEZONE
+  bool "Enable timezone support"
+  default n
+  select PKG_timezone-data if TARGET_LIBC_eglibc
+
+config OPT_INCLUDED_TIMEZONES
+  string "Included timezones"
+  depends on TIMEZONE && TARGET_LIBC_eglibc
+  default ""
+  help
+    Can be empty, "all" or a list of zoneinfo names
+    e.g. "Europe/Rome GMT Africa America/Kentucky"
+
+config OPT_TIMEZONE
+  string "Timezone"
+  depends on TIMEZONE
+  default ""
+  help
+    Timezone to use (empty disables timezone support)
+    if TARGET_LIBC=uclibc use a TZ environment string 
+    if TARGET_LIBC=eglibc use a zoneinfo name and remember 
+    to set INCLUDED_TIMEZONES accordingly
+
+choice KEYMAP
+  prompt "Keymap"
+  default KEYMAP_QWERTY
+
+config KEYMAP_QWERTY
+  bool "qwerty"
+
+config KEYMAP_AZERTY
+  bool "azerty"
+
+config KEYMAP_QWERTZ
+  bool "qwertz"
+
+endchoice
+
+config OPT_SUB_CHARSET
+  string "Subtitles charset"
+  depends on ( PKG_MPlayer || PKG_xine-lib || PKG_gstreamer || PKG_vlc )
+  default "en"
+
+config LOCALE
+  bool "Enable locale support"
+  depends on TARGET_LIBC_eglibc
+  select PKG_i18n-locales
+  default y
+
+config OPT_INCLUDED_LOCALES
+  string "Included locales"
+  depends on LOCALE
+  default "en_US.UTF-8"
+
+config OPT_DEFAULT_LOCALE
+  string "Default locale"
+  depends on LOCALE
+  default "en_US.UTF-8"
+
+endmenu
+
+#######################################
+menu "Features"
+#######################################
+
+config TAINT
+  bool "Enable non-free components"
+  default n
+  help
+    Allow the use of non-free components in build. Please note that non-free
+    stuff may have all sorts of crazy restrictions and will make the resulting
+    image/iso subject to them (and thus non-free).
+
+source "../../config/Kconfig.use"
+
+menu "Misc"
+
+config USE_devtools
+  bool "Enable development and testing tools"
+  default n
+
+config OPT_DEBUG
+  bool "Enable extra debugging features"
+  default n
+  help
+    This option enables extra debugging features in packages.
+
+endmenu
+
+menu "Network"
+
+config USE_network
+  bool "Networking support"
+  default y
+
+choice NETWORK_MANAGER
+  prompt "Network manager program"
+  depends on USE_network
+  default NM_CONNMAN
+  help
+    Choose which program will manage the network.
+
+config NM_CONNMAN
+  bool "ConnMan"
+  select PKG_connman
+  help
+    Intel Connection Manager daemon
+
+config NM_NONE
+  bool "none"
+  help
+    Nothing, i.e. fully manual network configuration
+
+endchoice
+
+config USE_bluetooth
+  bool "BlueTooth"
+  depends on USE_network
+  default n
+
+config USE_wifi
+  bool "WiFi"
+  depends on USE_network
+  default y
+
+config START_SERVICES
+  bool "Start network services by default"
+  depends on USE_network
+  default n
+
+config TELNET_SERVER
+  bool "Telnet server"
+  depends on USE_network
+  select PKG_busybox
+  default y
+
+config OPT_TELNET_SERVER
+  bool "Start at boot"
+  depends on TELNET_SERVER
+  default y if START_SERVICES
+  default n
+
+config SSH_SERVER
+  bool "SSH server"
+  depends on USE_network
+  select PKG_dropbear
+  default n
+
+config FTP_SERVER
+  bool "FTP server"
+  depends on USE_network
+  select PKG_bftpd
+  default y
+
+config OPT_FTP_SERVER
+  bool "Start at boot"
+  depends on FTP_SERVER
+  default y if START_SERVICES
+  default n
+
+config HTTP_SERVER
+  bool "HTTP server"
+  depends on USE_network
+  select PKG_busybox
+  default y
+
+config OPT_HTTP_SERVER
+  bool "Start at boot"
+  depends on HTTP_SERVER
+  default y if START_SERVICES
+  default n
+
+config OPT_SAMBA
+  bool "Samba client"
+  depends on USE_network
+  select PKG_samba-client
+  default y
+
+config SAMBA_SERVER
+  bool "Samba server"
+  depends on USE_network
+  select PKG_samba-server
+  default y
+
+config OPT_SAMBA_SERVER
+  bool "Start at boot"
+  depends on SAMBA_SERVER
+  default y if START_SERVICES
+  default n
+
+config AUTOMOUNTER_SMB
+  bool "SMB automounter"
+  depends on ( USE_network && OPT_SAMBA )
+  select PKG_automounter-smb
+  default y if START_SERVICES
+  default n
+
+config AUTOMOUNTER_NFS
+  bool "NFS automounter"
+  depends on USE_network
+  select PKG_automounter-nfs
+  default y if START_SERVICES
+  default n
+
+config AUTOMOUNTER_9P
+  bool "9p automounter"
+  depends on USE_network
+  select PKG_automounter-9p
+  default y if START_SERVICES
+  default n
+
+endmenu
+
+endmenu
+
+#######################################
+menu "Packages"
+#######################################
+  source "../../config/Kconfig.packages"
+endmenu
+
+#######################################
+# Autogenerated options               #
+#######################################
+
+config OPT_OPTIMIZATIONS
+  string
+  default "fastest" if OPTIMIZATIONS_FASTEST
+  default "speed" if OPTIMIZATIONS_SPEED
+  default "default" if OPTIMIZATIONS_DEFAULT
+  default "size" if OPTIMIZATIONS_SIZE
+  default "no" if OPTIMIZATIONS_NONE
+
+config OPT_OMAP_DISPLAY
+  string
+  default "hdmi" if OMAP_DISPLAY_HDMI
+  default "dvi" if OMAP_DISPLAY_DVI
+  default "lcd" if OMAP_DISPLAY_DSI
+  default "lcd2" if OMAP_DISPLAY_DPI
+
+config OPT_FPU_OPTIMIZATIONS
+  string
+  default "vfp2" if FPU_OPTIMIZATIONS_VFP2
+  default "vfp3-d16" if ( FPU_OPTIMIZATIONS_VFP3 && TARGET_PLATFORM_arm_tegra2 )
+  default "vfp3" if FPU_OPTIMIZATIONS_VFP3
+  default "neon" if FPU_OPTIMIZATIONS_NEON
+  default "altivec" if FPU_OPTIMIZATIONS_ALTIVEC
+  default "i387" if FPU_OPTIMIZATIONS_387
+  default "sse" if FPU_OPTIMIZATIONS_SSE
+  default "avx" if FPU_OPTIMIZATIONS_AVX
+  default "no" if FPU_OPTIMIZATIONS_NONE
+
+config OPT_TOOLCHAIN_TYPE
+  string
+  default "openbricks" if TOOLCHAIN_openbricks
+  default "codesourcery" if TOOLCHAIN_codesourcery
+  default "linaro" if TOOLCHAIN_linaro
+
+config OPT_COMPRESSION_METHOD
+  string
+  default "xz" if COMPRESSION_XZ
+  default "gzip" if COMPRESSION_GZIP
+
+config OPT_TARGET_LIBC
+  string
+  default "eglibc" if TARGET_LIBC_eglibc
+  default "uclibc" if TARGET_LIBC_uclibc
+
+config OPT_KEYMAP
+  string
+  default "qwerty" if KEYMAP_QWERTY
+  default "azerty" if KEYMAP_AZERTY
+  default "qwertz" if KEYMAP_QWERTZ
+
+config OPT_EGL_PROVIDER
+  string
+  default "mesa" if EGL_PROVIDER_MESA
+  default "sgx" if EGL_PROVIDER_SGX
+  default "tegra" if EGL_PROVIDER_TEGRA
+  default "imx5" if EGL_PROVIDER_IMX5
+  default "imx6" if EGL_PROVIDER_IMX6
+  default "mali" if EGL_PROVIDER_MALI
+
+config OPT_GLES_PROVIDER
+  string
+  default "mesa" if GLES_PROVIDER_MESA
+  default "sgx" if GLES_PROVIDER_SGX
+  default "tegra" if GLES_PROVIDER_TEGRA
+  default "imx5" if GLES_PROVIDER_IMX5
+  default "imx6" if GLES_PROVIDER_IMX6
+  default "mali" if OVG_PROVIDER_MALI
+
+config OPT_OVG_PROVIDER
+  string
+  default "mesa" if OVG_PROVIDER_MESA
+  default "sgx" if OVG_PROVIDER_SGX
+  default "imx5" if OVG_PROVIDER_IMX5
+  default "imx6" if OVG_PROVIDER_IMX6
+  default "mali" if OVG_PROVIDER_MALI
+
+config OPT_OMAX_PROVIDER
+  string
+  default "ti" if OMAX_PROVIDER_TI
+  default "tegra" if OMAX_PROVIDER_TEGRA

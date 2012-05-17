@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+mkdir -p $INSTALL/etc/opkg
+cp $ROOT/$PACKAGES/$1/config/opkg.conf $INSTALL/etc/opkg/
+cp $ROOT/$PACKAGES/$1/config/sifbox.conf $INSTALL/etc/opkg/
+sed -i -e 's|OPKG_REPO|'${OPKG_REPO}'|' $INSTALL/etc/opkg/sifbox.conf
+
+do_install usr/bin/opkg-cl
+ln -s opkg-cl $INSTALL/usr/bin/opkg
+
+mkdir -p $INSTALL/var/lib/opkg

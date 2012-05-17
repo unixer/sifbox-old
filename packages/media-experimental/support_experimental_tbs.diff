@@ -1,0 +1,6114 @@
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-core/dvb_frontend.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-core/dvb_frontend.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-core/dvb_frontend.h	2012-01-11 05:45:32.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-core/dvb_frontend.h	2012-04-19 22:00:26.000000000 +0200
+@@ -245,6 +245,7 @@
+ 	void (*set_params)(struct dvb_frontend *fe,
+ 			   struct analog_parameters *params);
+ 	int  (*has_signal)(struct dvb_frontend *fe);
++        int  (*is_stereo)(struct dvb_frontend *fe);
+ 	int  (*get_afc)(struct dvb_frontend *fe);
+ 	void (*tuner_status)(struct dvb_frontend *fe);
+ 	void (*standby)(struct dvb_frontend *fe);
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/Kconfig media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/Kconfig
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/Kconfig	2012-04-10 05:45:26.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/Kconfig	2012-04-18 22:15:31.000000000 +0200
+@@ -212,6 +212,66 @@
+ 	select MEDIA_TUNER_MT2060 if !MEDIA_TUNER_CUSTOMISE
+ 	help
+ 	  Say Y here to support the Hauppauge WinTV-NOVA-T usb2 DVB-T USB2.0 receiver.
++	  
++config DVB_USB_TBSQBOX
++	tristate "TurboSight QBOX DVB-S2 USB2.0 support"
++	depends on DVB_USB
++	select DVB_PLL if !DVB_FE_CUSTOMISE
++	select DVB_STV0299 if !DVB_FE_CUSTOMISE
++	select DVB_STV0288 if !DVB_FE_CUSTOMISE
++	select DVB_STB6000 if !DVB_FE_CUSTOMISE
++	help
++	  Say Y here to support the TurboSight QBOX DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOX2
++	tristate "TurboSight QBOX2 DVB-S2 USB2.0 support"
++	depends on DVB_USB
++	select DVB_STV090x if !DVB_FE_CUSTOMISE
++	select DVB_STB6100 if !DVB_FE_CUSTOMISE
++	select DVB_PLL if !DVB_FE_CUSTOMISE
++	help
++	  Say Y here to support the TurboSight QBOX2 DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOX2CI
++	tristate "TurboSight QBOX2 CI DVB-S2 USB2.0 support"
++	depends on DVB_USB
++	select DVB_STV090x if !DVB_FE_CUSTOMISE
++	select DVB_STB6100 if !DVB_FE_CUSTOMISE
++	select DVB_PLL if !DVB_FE_CUSTOMISE
++	help
++	  Say Y here to support the TurboSight QBOX2 CI DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOXS2
++	tristate "TurboSight QBOX2 DVB-S2 USB2.0 support"
++	depends on DVB_USB
++	select DVB_CX24116 if !DVB_FE_CUSTOMISE
++	select DVB_PLL if !DVB_FE_CUSTOMISE
++	help
++	  Say Y here to support the TurboSight QBOX2 DVB-S USB2.0 receivers
++	  
++config DVB_USB_TBSQBOXS3
++	tristate "TurboSight QBOX3 DVB-S2 USB2.0 support"
++	depends on DVB_USB
++	select DVB_TBS5921FE if !DVB_FE_CUSTOMISE
++	select DVB_PLL if !DVB_FE_CUSTOMISE
++	help
++	  Say Y here to support the TurboSight QBOX3 DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOX22
++	tristate "TurboSight QBOX22 DVB-S2 USB2.0 support"
++	depends on DVB_USB
++	select DVB_TBS5922FE if !DVB_FE_CUSTOMISE
++	select DVB_PLL if !DVB_FE_CUSTOMISE
++	help
++	  Say Y here to support the TurboSight QBOX22 DVB-S USB2.0 receivers
++
++config DVB_USB_TBS5880
++	tristate "TurboSight TBS5880 DVB-S2 USB2.0 support"
++	depends on DVB_USB
++	select DVB_TBS5880FE if !DVB_FE_CUSTOMISE
++	select DVB_PLL if !DVB_FE_CUSTOMISE
++	help
++	  Say Y here to support the TurboSight TBS5880 DVB-S USB2.0 receivers
+ 
+ config DVB_USB_TTUSB2
+ 	tristate "Pinnacle 400e DVB-S USB2.0 support"
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/Makefile media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/Makefile
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/Makefile	2012-04-10 05:45:26.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/Makefile	2012-04-18 22:15:31.000000000 +0200
+@@ -45,6 +45,27 @@
+ dvb-usb-cxusb-objs = cxusb.o
+ obj-$(CONFIG_DVB_USB_CXUSB) += dvb-usb-cxusb.o
+ 
++dvb-usb-tbsqbox-objs = tbs-qbox.o
++obj-$(CONFIG_DVB_USB_TBSQBOX) += dvb-usb-tbsqbox.o
++
++dvb-usb-tbsqbox2-objs = tbs-qbox2.o
++obj-$(CONFIG_DVB_USB_TBSQBOX2) += dvb-usb-tbsqbox2.o
++
++dvb-usb-tbsqbox2ci-objs = tbs-qbox2ci.o
++obj-$(CONFIG_DVB_USB_TBSQBOX2CI) += dvb-usb-tbsqbox2ci.o
++
++dvb-usb-tbsqboxs2-objs = tbs-qboxs2.o
++obj-$(CONFIG_DVB_USB_TBSQBOXS2) += dvb-usb-tbsqboxs2.o
++
++dvb-usb-tbsqboxs3-objs = tbs-qboxs3.o tbs5921ctrl.o
++obj-$(CONFIG_DVB_USB_TBSQBOXS3) += dvb-usb-tbsqboxs3.o
++
++dvb-usb-tbsqbox22-objs = tbs-qbox22.o tbs5922ctrl.o
++obj-$(CONFIG_DVB_USB_TBSQBOX22) += dvb-usb-tbsqbox22.o
++
++dvb-usb-tbs5880-objs = tbs5880.o tbs5880ctrl.o
++obj-$(CONFIG_DVB_USB_TBS5880) += dvb-usb-tbs5880.o
++
+ dvb-usb-ttusb2-objs = ttusb2.o
+ obj-$(CONFIG_DVB_USB_TTUSB2) += dvb-usb-ttusb2.o
+ 
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5880.c media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5880.c
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5880.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5880.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,751 @@
++/*
++ * TurboSight TBS 5880 CI driver
++ *
++ * Copyright (c) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation, version 2.
++ *
++ */
++
++#include <linux/version.h>
++#include "tbs5880.h"
++#include "tbs5880fe.h"
++#include "tbs5880ctrl.h"
++
++#include "dvb_ca_en50221.h"
++
++#ifndef USB_PID_TBS5880
++#define USB_PID_TBS5880 0x5880
++#endif
++
++#define TBS5880_READ_MSG 0
++#define TBS5880_WRITE_MSG 1
++
++#define TBS5880_RC_QUERY (0x1a00)
++
++struct tbs5880_state {
++	struct dvb_ca_en50221 ca;
++	struct mutex ca_mutex;
++
++	u32 last_key_pressed;
++};
++
++/*struct tbs5880_rc_keys {
++	u32 keycode;
++	u32 event;
++};*/
++
++/* debug */
++static int dvb_usb_tbs5880_debug;
++module_param_named(debug, dvb_usb_tbs5880_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
++							DVB_USB_DEBUG_STATUS);
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++static int tbs5880_op_rw(struct usb_device *dev, u8 request, u16 value,
++				u16 index, u8 * data, u16 len, int flags)
++{
++	int ret;
++	u8 u8buf[len];
++
++	unsigned int pipe = (flags == TBS5880_READ_MSG) ?
++			usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
++	u8 request_type = (flags == TBS5880_READ_MSG) ? USB_DIR_IN : 
++								USB_DIR_OUT;
++
++	if (flags == TBS5880_WRITE_MSG)
++		memcpy(u8buf, data, len);
++	ret = usb_control_msg(dev, pipe, request, request_type | 
++			USB_TYPE_VENDOR, value, index , u8buf, len, 2000);
++
++	if (flags == TBS5880_READ_MSG)
++		memcpy(data, u8buf, len);
++	return ret;
++}
++
++static int tbs5880_read_attribute_mem(struct dvb_ca_en50221 *ca,
++                                                	int slot, int address)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	u8 buf[4], rbuf[3];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 0;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++
++	//msleep(10);
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbs5880_op_rw(d->udev, 0xa4, 0, 0,
++						buf, 4, TBS5880_WRITE_MSG);
++
++	//msleep(1);
++
++	ret = tbs5880_op_rw(d->udev, 0xa5, 0, 0,
++						rbuf, 1, TBS5880_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return rbuf[0];
++}
++
++static int tbs5880_write_attribute_mem(struct dvb_ca_en50221 *ca,
++						int slot, int address, u8 value)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	u8 buf[5];//, rbuf[1];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 0;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++	buf[4] = value;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbs5880_op_rw(d->udev, 0xa2, 0, 0,
++						buf, 5, TBS5880_WRITE_MSG);
++
++	//msleep(1);
++
++	//ret = tbs5880_op_rw(d->udev, 0xa5, 0, 0,
++	//					rbuf, 1, TBS5880_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++
++static int tbs5880_read_cam_control(struct dvb_ca_en50221 *ca, int slot, 
++								u8 address)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	u8 buf[4], rbuf[1];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 1;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbs5880_op_rw(d->udev, 0xa4, 0, 0,
++						buf, 4, TBS5880_WRITE_MSG);
++
++	//msleep(10);
++
++	ret = tbs5880_op_rw(d->udev, 0xa5, 0, 0,
++						rbuf, 1, TBS5880_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return rbuf[0];
++}
++
++static int tbs5880_write_cam_control(struct dvb_ca_en50221 *ca, int slot, 
++							u8 address, u8 value)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	u8 buf[5];//, rbuf[1];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 1;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++	buf[4] = value;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbs5880_op_rw(d->udev, 0xa2, 0, 0,
++						buf, 5, TBS5880_WRITE_MSG);
++
++	//msleep(1);
++
++	//ret = tbs5880_op_rw(d->udev, 0xa5, 0, 0,
++	//					rbuf, 1, TBS5880_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++
++static int tbs5880_set_video_port(struct dvb_ca_en50221 *ca, 
++							int slot, int enable)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	u8 buf[2];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 2;
++	buf[1] = enable;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbs5880_op_rw(d->udev, 0xa6, 0, 0,
++						buf, 2, TBS5880_WRITE_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	if (enable != buf[1]) {
++		err("CI not %sabled.", enable ? "en" : "dis");
++		return -EIO;
++	}
++
++	info("CI %sabled.", enable ? "en" : "dis");
++	return 0;
++}
++
++static int tbs5880_slot_shutdown(struct dvb_ca_en50221 *ca, int slot)
++{
++	return tbs5880_set_video_port(ca, slot, /* enable */ 0);
++}
++
++static int tbs5880_slot_ts_enable(struct dvb_ca_en50221 *ca, int slot)
++{
++	return tbs5880_set_video_port(ca, slot, /* enable */ 1);
++}
++
++static int tbs5880_slot_reset(struct dvb_ca_en50221 *ca, int slot)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	u8 buf[2];
++	int ret;
++
++	if (0 != slot) {
++		return -EINVAL;
++	}
++
++	buf[0] = 1;
++	buf[1] = 0;
++
++	mutex_lock (&state->ca_mutex);
++
++	ret = tbs5880_op_rw(d->udev, 0xa6, 0, 0,
++						buf, 2, TBS5880_WRITE_MSG);
++
++	msleep (400);
++
++	buf[1] = 1;
++
++	ret = tbs5880_op_rw(d->udev, 0xa6, 0, 0,
++						buf, 2, TBS5880_WRITE_MSG);
++
++	msleep (1200);
++
++	mutex_unlock (&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++
++static int tbs5880_poll_slot_status(struct dvb_ca_en50221 *ca,
++							int slot, int open)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	u8 buf[3];
++
++	if (0 != slot)
++		return -EINVAL;
++
++	mutex_lock(&state->ca_mutex);
++
++	tbs5880_op_rw(d->udev, 0xa8, 0, 0,
++					buf, 3, TBS5880_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if ((1 == buf[2]) && (1 == buf[1]) && (0xa9 == buf[0])) {
++				return (DVB_CA_EN50221_POLL_CAM_PRESENT |
++						DVB_CA_EN50221_POLL_CAM_READY);
++	} else {
++		return 0;
++	}
++}
++
++static void tbs5880_uninit(struct dvb_usb_device *d)
++{
++	struct tbs5880_state *state;
++
++	if (NULL == d)
++		return;
++
++	state = (struct tbs5880_state *)d->priv;
++	if (NULL == state)
++		return;
++
++	if (NULL == state->ca.data)
++		return;
++
++	/* Error ignored. */
++	tbs5880_set_video_port(&state->ca, /* slot */ 0, /* enable */ 0);
++
++	dvb_ca_en50221_release(&state->ca);
++
++	memset(&state->ca, 0, sizeof(state->ca));
++}
++
++static int tbs5880_init(struct dvb_usb_adapter *a)
++{
++
++	struct dvb_usb_device *d = a->dev;
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	int ret;
++
++	state->ca.owner = THIS_MODULE;
++	state->ca.read_attribute_mem = tbs5880_read_attribute_mem;
++	state->ca.write_attribute_mem = tbs5880_write_attribute_mem;
++	state->ca.read_cam_control = tbs5880_read_cam_control;
++	state->ca.write_cam_control = tbs5880_write_cam_control;
++	state->ca.slot_reset = tbs5880_slot_reset;
++	state->ca.slot_shutdown = tbs5880_slot_shutdown;
++	state->ca.slot_ts_enable = tbs5880_slot_ts_enable;
++	state->ca.poll_slot_status = tbs5880_poll_slot_status;
++	state->ca.data = d;
++
++	ret = dvb_ca_en50221_init (&a->dvb_adap, &state->ca,
++						/* flags */ 0, /* n_slots */ 1);
++
++	if (0 != ret) {
++		err ("Cannot initialize CI: Error %d.", ret);
++		memset (&state->ca, 0, sizeof (state->ca));
++		return ret;
++	}
++
++	info ("CI initialized.");
++
++	ret = tbs5880_poll_slot_status(&state->ca, 0, 0);
++	if (0 == ret)
++		tbs5880_set_video_port(&state->ca, /* slot */ 0, /* enable */ 0);
++
++	return 0;
++}
++
++/* I2C */
++static int tbs5880_i2c_transfer(struct i2c_adapter *adap, 
++					struct i2c_msg msg[], int num)
++{
++	struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	struct tbs5880_state *state = (struct tbs5880_state *)d->priv;
++	int i = 0;
++	u8 buf6[20];
++	u8 inbuf[20];
++
++	if (!d)
++		return -ENODEV;
++
++	mutex_lock(&state->ca_mutex);
++
++	if (mutex_lock_interruptible(&d->i2c_mutex) < 0)
++		return -EAGAIN;
++
++	switch (num) {
++	case 2:
++		buf6[0]=msg[1].len;//lenth
++		buf6[1]=msg[0].addr<<1;//demod addr
++		//register
++		buf6[2] = msg[0].buf[0];
++
++		tbs5880_op_rw(d->udev, 0x90, 0, 0,
++					buf6, 3, TBS5880_WRITE_MSG);
++		//msleep(5);
++		tbs5880_op_rw(d->udev, 0x91, 0, 0,
++					inbuf, 1, TBS5880_READ_MSG);
++		memcpy(msg[1].buf, inbuf, msg[1].len);
++		break;
++	case 1:
++		switch (msg[0].addr) {
++		case 0x6c:
++		case 0x6e:
++		case 0x61:
++		case 0x60:
++			if (msg[0].flags == 0) {
++				buf6[0] = msg[0].len+1;//lenth
++				buf6[1] = msg[0].addr<<1;//addr
++				for(i=0;i<msg[0].len;i++) {
++					buf6[2+i] = msg[0].buf[i];//register
++				}
++				tbs5880_op_rw(d->udev, 0x80, 0, 0,
++					buf6, msg[0].len+2, TBS5880_WRITE_MSG);
++			} else {
++				buf6[0] = msg[0].len;//length
++				buf6[1] = msg[0].addr<<1;//addr
++				buf6[2] = 0x00;
++				tbs5880_op_rw(d->udev, 0x90, 0, 0,
++						buf6, 3, TBS5880_WRITE_MSG);
++				//msleep(5);
++				tbs5880_op_rw(d->udev, 0x91, 0, 0,
++					inbuf, buf6[0], TBS5880_READ_MSG);
++				memcpy(msg[0].buf, inbuf, msg[0].len);
++			}
++			//msleep(3);
++			break;
++		case (TBS5880_RC_QUERY):
++			tbs5880_op_rw(d->udev, 0xb8, 0, 0,
++					buf6, 4, TBS5880_READ_MSG);
++			msg[0].buf[0] = buf6[2];
++			msg[0].buf[1] = buf6[3];
++			//msleep(3);
++			//info("TBS5880_RC_QUERY %x %x %x %x\n",
++			//		buf6[0],buf6[1],buf6[2],buf6[3]);
++			break;
++		}
++
++		break;
++	}
++
++	mutex_unlock(&d->i2c_mutex);
++	mutex_unlock(&state->ca_mutex);
++	return num;
++}
++
++static u32 tbs5880_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++static struct tbs5880fe_config tbs5880fe_config = {
++	.tbs5880fe_address = 0x6c,
++
++	.tbs5880_ctrl = tbs5880ctrl,
++};
++
++static struct i2c_algorithm tbs5880_i2c_algo = {
++	.master_xfer = tbs5880_i2c_transfer,
++	.functionality = tbs5880_i2c_func,
++};
++
++static int tbs5880_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
++{
++	int i,ret;
++	u8 ibuf[3] = {0, 0,0};
++	u8 eeprom[256], eepromline[16];
++
++	for (i = 0; i < 256; i++) {
++		ibuf[0]=1;//lenth
++		ibuf[1]=0xa0;//eeprom addr
++		ibuf[2]=i;//register
++		ret = tbs5880_op_rw(d->udev, 0x90, 0, 0,
++					ibuf, 3, TBS5880_WRITE_MSG);
++		ret = tbs5880_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBS5880_READ_MSG);
++			if (ret < 0) {
++				err("read eeprom failed.");
++				return -1;
++			} else {
++				eepromline[i%16] = ibuf[0];
++				eeprom[i] = ibuf[0];
++			}
++			
++			if ((i % 16) == 15) {
++				deb_xfer("%02x: ", i - 15);
++				debug_dump(eepromline, 16, deb_xfer);
++			}
++	}
++	memcpy(mac, eeprom + 16, 6);
++	return 0;
++};
++
++static struct dvb_usb_device_properties tbs5880_properties;
++
++static int tbs5880_frontend_attach(struct dvb_usb_adapter *d)
++{
++	struct dvb_usb_device *u = d->dev;
++	struct tbs5880_state *state = (struct tbs5880_state *)u->priv;
++	u8 buf[20];
++
++	mutex_init(&state->ca_mutex);
++
++	if (tbs5880_properties.adapter[0].fe[0].tuner_attach == NULL) {
++		d->fe_adap[0].fe = dvb_attach(tbs5880fe_attach, &tbs5880fe_config,
++			&d->dev->i2c_adap);
++		if (d->fe_adap[0].fe != NULL) {
++			info("Attached TBS5880FE!\n");
++
++			buf[0] = 7;
++			buf[1] = 1;
++			tbs5880_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBS5880_WRITE_MSG);
++
++			tbs5880_init(d);
++			return 0;
++		}
++	}
++
++	return -EIO;
++}
++
++static void tbs58802_usb_disconnect (struct usb_interface * intf)
++{
++	struct dvb_usb_device *d = usb_get_intfdata (intf);
++	
++	tbs5880_uninit (d);
++	dvb_usb_device_exit (intf);
++}
++
++static struct rc_map_table tbs5880_rc_keys[] = {
++	{ 0xff84, KEY_POWER2 },
++	{ 0xff94, KEY_MUTE },
++	{ 0xff87, KEY_1 },
++	{ 0xff86, KEY_2 },
++	{ 0xff85, KEY_3 },
++	{ 0xff8b, KEY_4 },
++	{ 0xff8a, KEY_5 },
++	{ 0xff89, KEY_6 },
++	{ 0xff8f, KEY_7 },
++	{ 0xff8e, KEY_8 },
++	{ 0xff8d, KEY_9 },
++	{ 0xff92, KEY_0 },
++	{ 0xff96, KEY_CHANNELUP },
++	{ 0xff91, KEY_CHANNELDOWN },
++	{ 0xff93, KEY_VOLUMEUP },
++	{ 0xff8c, KEY_VOLUMEDOWN },
++	{ 0xff83, KEY_RECORD },
++	{ 0xff98, KEY_PAUSE  },
++	{ 0xff99, KEY_OK },
++	{ 0xff9a, KEY_SHUFFLE },
++	{ 0xff81, KEY_UP },
++	{ 0xff90, KEY_LEFT },
++	{ 0xff82, KEY_RIGHT },
++	{ 0xff88, KEY_DOWN },
++	{ 0xff95, KEY_FAVORITES },
++	{ 0xff97, KEY_SUBTITLE },
++	{ 0xff9d, KEY_ZOOM },
++	{ 0xff9f, KEY_EXIT },
++	{ 0xff9e, KEY_MENU },
++	{ 0xff9c, KEY_EPG },
++	{ 0xff80, KEY_PREVIOUS },
++	{ 0xff9b, KEY_MODE }
++};
++
++static int tbs5880_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
++{
++	struct rc_map_table *keymap = d->props.rc.legacy.rc_map_table;
++	int keymap_size = d->props.rc.legacy.rc_map_size;
++
++	struct tbs5880_state *st = d->priv;
++	u8 key[2];
++	struct i2c_msg msg[] = {
++		{.addr = TBS5880_RC_QUERY, .flags = I2C_M_RD, .buf = key,
++		.len = 2},
++	};
++	int i;
++
++	*state = REMOTE_NO_KEY_PRESSED;
++	if (tbs5880_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
++		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
++		for (i = 0; i < keymap_size; i++) {
++			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
++				*state = REMOTE_KEY_PRESSED;
++				*event = keymap[i].keycode;
++				st->last_key_pressed =
++					keymap[i].keycode;
++				break;
++			}
++		st->last_key_pressed = 0;
++		}
++	}
++	 
++	return 0;
++}
++
++static struct usb_device_id tbs5880_table[] = {
++	{USB_DEVICE(0x734c, 0x5880)},
++	{ }
++};
++
++MODULE_DEVICE_TABLE(usb, tbs5880_table);
++
++static int tbs5880_load_firmware(struct usb_device *dev,
++			const struct firmware *frmwr)
++{
++	u8 *b, *p;
++	int ret = 0, i;
++	u8 reset;
++	const struct firmware *fw;
++	const char *filename = "dvb-usb-tbsqbox-id5880.fw";
++	switch (dev->descriptor.idProduct) {
++	case 0x5880:
++		ret = request_firmware(&fw, filename, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename);
++			return ret;
++		}
++		break;
++	default:
++		fw = frmwr;
++		break;
++	}
++	info("start downloading TBS5880 CI firmware");
++	p = kmalloc(fw->size, GFP_KERNEL);
++	reset = 1;
++	/*stop the CPU*/
++	tbs5880_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBS5880_WRITE_MSG);
++	tbs5880_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBS5880_WRITE_MSG);
++
++	if (p != NULL) {
++		memcpy(p, fw->data, fw->size);
++		for (i = 0; i < fw->size; i += 0x40) {
++			b = (u8 *) p + i;
++			if (tbs5880_op_rw(dev, 0xa0, i, 0, b , 0x40,
++					TBS5880_WRITE_MSG) != 0x40) {
++				err("error while transferring firmware");
++				ret = -EINVAL;
++				break;
++			}
++		}
++		/* restart the CPU */
++		reset = 0;
++		if (ret || tbs5880_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1,
++					TBS5880_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++		if (ret || tbs5880_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1,
++					TBS5880_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++
++		msleep(100);
++		kfree(p);
++	}
++	return ret;
++}
++
++static struct dvb_usb_device_properties tbs5880_properties = {
++	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++	.usb_ctrl = DEVICE_SPECIFIC,
++	.firmware = "dvb-usb-tbsqbox-id5880.fw",
++	.size_of_priv = sizeof(struct tbs5880_state),
++	.no_reconnect = 1,
++
++	.i2c_algo = &tbs5880_i2c_algo,
++	.rc.legacy = {
++		.rc_map_table = tbs5880_rc_keys,
++		.rc_map_size = ARRAY_SIZE(tbs5880_rc_keys),
++		.rc_interval = 450,
++		.rc_query = tbs5880_rc_query,
++	},
++
++	.generic_bulk_ctrl_endpoint = 0x81,
++	/* parameter for the MPEG2-data transfer */
++	.num_adapters = 1,
++	.download_firmware = tbs5880_load_firmware,
++	.read_mac_address = tbs5880_read_mac_address,
++		.adapter = {
++		{
++			.num_frontends = 1,
++			.fe = {{
++				.frontend_attach = tbs5880_frontend_attach,
++				.streaming_ctrl = NULL,
++				.tuner_attach = NULL,
++				.stream = {
++					.type = USB_BULK,
++					.count = 8,
++					.endpoint = 0x82,
++					.u = {
++						.bulk = {
++							.buffersize = 4096,
++						}
++					}
++				},
++			}}
++		}
++	},
++	.num_device_descs = 1,
++	.devices = {
++		{"TBS 5880 CI USB2.0",
++			{&tbs5880_table[0], NULL},
++			{NULL},
++		}
++	}
++};
++
++static int tbs5880_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	if (0 == dvb_usb_device_init(intf, &tbs5880_properties,
++			THIS_MODULE, NULL, adapter_nr)) {
++		return 0;
++	}
++	return -ENODEV;
++}
++
++static struct usb_driver tbs5880_driver = {
++	.name = "tbs5880",
++	.probe = tbs5880_probe,
++	.disconnect = tbs58802_usb_disconnect,
++	.id_table = tbs5880_table,
++};
++
++static int __init tbs5880_module_init(void)
++{
++	int ret =  usb_register(&tbs5880_driver);
++	if (ret)
++		err("usb_register failed. Error number %d", ret);
++
++	return ret;
++}
++
++static void __exit tbs5880_module_exit(void)
++{
++	usb_deregister(&tbs5880_driver);
++}
++
++module_init(tbs5880_module_init);
++module_exit(tbs5880_module_exit);
++
++MODULE_AUTHOR("Konstantin Dimitrov <kosio.dimitrov@gmail.com>");
++MODULE_DESCRIPTION("TurboSight TBS 5880 CI driver");
++MODULE_VERSION("1.0");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5880ctrl.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5880ctrl.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5880ctrl.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5880ctrl.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,13 @@
++/*
++    TurboSight TBS 5880 DVB-T/T2/C controls
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS5880CTRL_H
++#define TBS5880CTRL_H
++
++extern int tbs5880ctrl(struct usb_device *dev, u8 *a);
++
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5880.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5880.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5880.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5880.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,8 @@
++#ifndef _TBS5880_H_
++#define _TBS5880_H_
++
++#define DVB_USB_LOG_PREFIX "tbs5880"
++#include "dvb-usb.h"
++
++#define deb_xfer(args...) dprintk(dvb_usb_tbs5880_debug, 0x02, args)
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5921ctrl.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5921ctrl.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5921ctrl.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5921ctrl.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,13 @@
++/*
++    TurboSight TBS 5921 DVB-S/S2 controls
++    Copyright (C) 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2010 TurboSight.com
++*/
++
++#ifndef TBS5921CTRL_H
++#define TBS5921CTRL_H
++
++extern int tbs5921ctrl(struct usb_device *dev, u8 *a);
++
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5922ctrl.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5922ctrl.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs5922ctrl.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs5922ctrl.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,13 @@
++/*
++    TurboSight TBS 5922 DVB-S/S2 controls
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS5922CTRL_H
++#define TBS5922CTRL_H
++
++extern int tbs5922ctrl(struct usb_device *dev, u8 *a);
++
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox22.c media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox22.c
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox22.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox22.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,456 @@
++/* DVB USB framework compliant Linux driver for the
++*	TBS QBOX
++*
++* Copyright (C) 2008 Bob Liu (Bob@Turbosight.com)
++* Igor M. Liplianin (liplianin@me.by)
++*
++*	This program is free software; you can redistribute it and/or modify it
++*	under the terms of the GNU General Public License as published by the
++*	Free Software Foundation, version 2.
++*
++* see Documentation/dvb/README.dvb-usb for more information
++*/
++
++/* 
++* History:
++*
++* December 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++* remove QBOXS3 support
++* add QBOX22 support
++*/
++
++#include <linux/version.h>
++#include "tbs-qbox22.h"
++#include "tbs5922fe.h"
++#include "tbs5922ctrl.h"
++#include "tbsfe.h"
++
++#ifndef USB_PID_TBSQBOX_1
++#define USB_PID_TBSQBOX_1 0x5922
++#endif
++
++#define TBSQBOX_READ_MSG 0
++#define TBSQBOX_WRITE_MSG 1
++
++/* on my own*/
++#define TBSQBOX_VOLTAGE_CTRL (0x1800)
++#define TBSQBOX_RC_QUERY (0x1a00)
++
++struct tbsqbox22_state {
++	u32 last_key_pressed;
++};
++struct tbsqbox22_rc_keys {
++	u32 keycode;
++	u32 event;
++};
++
++/* debug */
++static int dvb_usb_tbsqbox22_debug;
++module_param_named(debug, dvb_usb_tbsqbox22_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." DVB_USB_DEBUG_STATUS);
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++static int tbsqbox22_op_rw(struct usb_device *dev, u8 request, u16 value,
++			u16 index, u8 * data, u16 len, int flags)
++{
++	int ret;
++	u8 u8buf[len];
++
++	unsigned int pipe = (flags == TBSQBOX_READ_MSG) ?
++				usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
++	u8 request_type = (flags == TBSQBOX_READ_MSG) ? USB_DIR_IN : USB_DIR_OUT;
++
++	if (flags == TBSQBOX_WRITE_MSG)
++		memcpy(u8buf, data, len);
++	ret = usb_control_msg(dev, pipe, request, request_type | USB_TYPE_VENDOR,
++				value, index, u8buf, len, 2000);
++
++	if (flags == TBSQBOX_READ_MSG)
++		memcpy(data, u8buf, len);
++	return ret;
++}
++
++/* I2C */
++static int tbsqbox22_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg msg[],
++		int num)
++{
++struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	int i = 0;
++	u8 ibuf[1], obuf[3];
++	u8 buf6[20];
++
++	if (!d)
++		return -ENODEV;
++	if (mutex_lock_interruptible(&d->i2c_mutex) < 0)
++		return -EAGAIN;
++
++	switch (num) {
++	case 2: {
++		/* read */
++		obuf[0] = msg[0].len;
++		obuf[1] = msg[0].addr<<1;
++		obuf[2] = msg[0].buf[0];
++
++		tbsqbox22_op_rw(d->udev, 0x90, 0, 0,
++					obuf, 3, TBSQBOX_WRITE_MSG);
++		msleep(5);
++		tbsqbox22_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++		memcpy(msg[1].buf, ibuf, msg[1].len);
++		break;
++	}
++	case 1:
++		switch (msg[0].addr) {
++		case 0x68: {
++				/* write to register */
++				buf6[0] = msg[0].len+1;//lenth
++				buf6[1] = msg[0].addr<<1;//demod addr
++				for(i=0;i<msg[0].len;i++) {
++				buf6[2+i] = msg[0].buf[i];//register
++				}
++				tbsqbox22_op_rw(d->udev, 0x80, 0, 0,
++							buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++				//msleep(3);
++			break;
++		}
++		case 0x63: {
++			/* write to register */
++			buf6[0] = msg[0].len+1;//lenth
++			buf6[1] = msg[0].addr<<1;//demod addr
++			for(i=0;i<msg[0].len;i++) {
++				buf6[2+i] = msg[0].buf[i];//register
++			}
++			tbsqbox22_op_rw(d->udev, 0x80, 0, 0,
++						buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++			msleep(3);
++
++			break;
++		}
++		case (TBSQBOX_RC_QUERY): {
++			tbsqbox22_op_rw(d->udev, 0xb8, 0, 0,
++					buf6, 4, TBSQBOX_READ_MSG);
++			msg[0].buf[0] = buf6[2];
++			msg[0].buf[1] = buf6[3];
++			msleep(3);
++			//info("TBSQBOX_RC_QUERY %x %x %x %x\n",buf6[0],buf6[1],buf6[2],buf6[3]);
++			break;
++		}
++		case (TBSQBOX_VOLTAGE_CTRL): {
++			break;
++		}
++		}
++
++		break;
++	}
++
++	mutex_unlock(&d->i2c_mutex);
++	return num;
++}
++
++static u32 tbsqbox22_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++
++
++static struct i2c_algorithm tbsqbox22_i2c_algo = {
++	.master_xfer = tbsqbox22_i2c_transfer,
++	.functionality = tbsqbox22_i2c_func,
++};
++
++static struct tbs5922fe_config tbs5922_fe_config = {
++	.tbs5922fe_address = 0x68,
++
++	.tbs5922_ctrl = tbs5922ctrl,
++};
++
++static int tbsqbox22_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
++{
++	int i,ret;
++	u8 ibuf[3] = {0, 0,0};
++	u8 eeprom[256], eepromline[16];
++
++	for (i = 0; i < 256; i++) {
++		ibuf[0]=1;//lenth
++		ibuf[1]=0xa0;//eeprom addr
++		ibuf[2]=i;//register
++		ret = tbsqbox22_op_rw(d->udev, 0x90, 0, 0,
++					ibuf, 3, TBSQBOX_WRITE_MSG);
++		ret = tbsqbox22_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++			if (ret < 0) {
++				err("read eeprom failed");
++				return -1;
++			} else {
++				eepromline[i%16] = ibuf[0];
++				eeprom[i] = ibuf[0];
++			}
++			
++			if ((i % 16) == 15) {
++				deb_xfer("%02x: ", i - 15);
++				debug_dump(eepromline, 16, deb_xfer);
++			}
++	}
++	memcpy(mac, eeprom + 16, 6);
++	return 0;
++};
++
++static struct dvb_usb_device_properties tbsqbox22_properties;
++
++static int tbsqbox22_frontend_attach(struct dvb_usb_adapter *d)
++{
++	u8 buf[20];
++	
++        if ((d->fe_adap[0].fe = dvb_attach(tbs5922fe_attach, &tbs5922_fe_config,
++                                        &d->dev->i2c_adap)) != NULL) {
++			printk("QBOX22: TBS5922FE attached.\n");
++			dvb_attach(tbsfe_attach, d->fe_adap[0].fe);
++
++			buf[0] = 7;
++			buf[1] = 1;
++			tbsqbox22_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			buf[0] = 1;
++			buf[1] = 1;
++			tbsqbox22_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			buf[0] = 6;     
++			buf[1] = 1;
++			tbsqbox22_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			return 0;
++	}
++
++	return -EIO;
++}
++
++
++
++static struct rc_map_table tbsqbox22_rc_keys[] = {
++	{ 0xff84, KEY_POWER2 },		/*power*/
++	{ 0xff94, KEY_MUTE },		/*mute*/
++	{ 0xff87, KEY_1 },
++	{ 0xff86, KEY_2 },
++	{ 0xff85, KEY_3 },
++	{ 0xff8b, KEY_4 },
++	{ 0xff8a, KEY_5 },
++	{ 0xff89, KEY_6 },
++	{ 0xff8f, KEY_7 },
++	{ 0xff8e, KEY_8 },
++	{ 0xff8d, KEY_9 },
++	{ 0xff92, KEY_0 },
++	{ 0xff96, KEY_CHANNELUP },	/*ch+*/
++	{ 0xff91, KEY_CHANNELDOWN },	/*ch-*/
++	{ 0xff93, KEY_VOLUMEUP },		/*vol+*/
++	{ 0xff8c, KEY_VOLUMEDOWN },		/*vol-*/
++	{ 0xff83, KEY_RECORD },		/*rec*/
++	{ 0xff98, KEY_PAUSE  },		/*pause*/
++	{ 0xff99, KEY_OK },	/*ok*/
++	{ 0xff9a, KEY_SHUFFLE },		  /* snapshot */
++	{ 0xff81, KEY_UP },
++	{ 0xff90, KEY_LEFT },
++	{ 0xff82, KEY_RIGHT },
++	{ 0xff88, KEY_DOWN },
++	{ 0xff95, KEY_FAVORITES },
++	{ 0xff97, KEY_SUBTITLE },
++	{ 0xff9d, KEY_ZOOM },
++	{ 0xff9f, KEY_EXIT },
++	{ 0xff9e, KEY_MENU },
++	{ 0xff9c, KEY_EPG },
++	{ 0xff80, KEY_PREVIOUS },
++	{ 0xff9b, KEY_MODE }
++
++
++};
++
++
++
++static int tbsqbox22_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
++{
++	struct rc_map_table *keymap = d->props.rc.legacy.rc_map_table;
++	int keymap_size = d->props.rc.legacy.rc_map_size;
++	
++	struct tbsqbox22_state *st = d->priv;
++	u8 key[2];
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_RC_QUERY, .flags = I2C_M_RD, .buf = key,
++		.len = 2},
++	};
++	int i;
++
++	*state = REMOTE_NO_KEY_PRESSED;
++	if (tbsqbox22_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
++		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
++		for (i = 0; i < keymap_size; i++) {
++			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
++				*state = REMOTE_KEY_PRESSED;
++				*event = keymap[i].keycode;
++				st->last_key_pressed =
++					keymap[i].keycode;
++				break;
++			}
++		st->last_key_pressed = 0;
++		}
++	}
++	 
++	return 0;
++}
++
++static struct usb_device_id tbsqbox22_table[] = {
++	{USB_DEVICE(0x734c, 0x5922)},
++	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX_1)},
++	{ }
++};
++
++MODULE_DEVICE_TABLE(usb, tbsqbox22_table);
++
++static int tbsqbox22_load_firmware(struct usb_device *dev,
++			const struct firmware *frmwr)
++{
++	u8 *b, *p;
++	int ret = 0, i;
++	u8 reset;
++	const struct firmware *fw;
++	const char *filename = "dvb-usb-tbsqbox-id5922.fw";
++	switch (dev->descriptor.idProduct) {
++	case 0x5922:
++		ret = request_firmware(&fw, filename, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename);
++			return ret;
++		}
++		break;
++	default:
++		fw = frmwr;
++		break;
++	}
++	info("start downloading TBSQBOX firmware");
++	p = kmalloc(fw->size, GFP_KERNEL);
++	reset = 1;
++	/*stop the CPU*/
++	tbsqbox22_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++	tbsqbox22_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++
++	if (p != NULL) {
++		memcpy(p, fw->data, fw->size);
++		for (i = 0; i < fw->size; i += 0x40) {
++			b = (u8 *) p + i;
++			if (tbsqbox22_op_rw(dev, 0xa0, i, 0, b , 0x40,
++					TBSQBOX_WRITE_MSG) != 0x40) {
++				err("error while transferring firmware");
++				ret = -EINVAL;
++				break;
++			}
++		}
++		/* restart the CPU */
++		reset = 0;
++		if (ret || tbsqbox22_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++		if (ret || tbsqbox22_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++
++		msleep(100);
++		kfree(p);
++	}
++	return ret;
++}
++
++static struct dvb_usb_device_properties tbsqbox22_properties = {
++	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++	.usb_ctrl = DEVICE_SPECIFIC,
++	.firmware = "dvb-usb-tbsqbox-id5922.fw",
++	.size_of_priv = sizeof(struct tbsqbox22_state),
++	.no_reconnect = 1,
++
++	.i2c_algo = &tbsqbox22_i2c_algo,
++	.rc.legacy = {
++		.rc_map_table = tbsqbox22_rc_keys,
++		.rc_map_size = ARRAY_SIZE(tbsqbox22_rc_keys),
++		.rc_interval = 150,
++		.rc_query = tbsqbox22_rc_query,
++	},
++
++	.generic_bulk_ctrl_endpoint = 0x81,
++	/* parameter for the MPEG2-data transfer */
++	.num_adapters = 1,
++	.download_firmware = tbsqbox22_load_firmware,
++	.read_mac_address = tbsqbox22_read_mac_address,
++		.adapter = {
++		{
++			.num_frontends = 1,
++			.fe = {{
++				.frontend_attach = tbsqbox22_frontend_attach,
++				.streaming_ctrl = NULL,
++				.stream = {
++					.type = USB_BULK,
++					.count = 8,
++					.endpoint = 0x82,
++					.u = {
++						.bulk = {
++							.buffersize = 4096,
++						}
++					}
++				},
++			}}
++		}
++	},
++	.num_device_descs = 1,
++	.devices = {
++		{"TBS QBOX22 DVBS2 USB2.0",
++			{&tbsqbox22_table[0], NULL},
++			{NULL},
++		}
++	}
++};
++
++static int tbsqbox22_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	if (0 == dvb_usb_device_init(intf, &tbsqbox22_properties,
++			THIS_MODULE, NULL, adapter_nr)) {
++		return 0;
++	}
++	return -ENODEV;
++}
++
++static struct usb_driver tbsqbox22_driver = {
++	.name = "tbsqbox22",
++	.probe = tbsqbox22_probe,
++	.disconnect = dvb_usb_device_exit,
++	.id_table = tbsqbox22_table,
++};
++
++static int __init tbsqbox22_module_init(void)
++{
++	int ret =  usb_register(&tbsqbox22_driver);
++	if (ret)
++		err("usb_register failed. Error number %d", ret);
++
++	return ret;
++}
++
++static void __exit tbsqbox22_module_exit(void)
++{
++	usb_deregister(&tbsqbox22_driver);
++}
++
++module_init(tbsqbox22_module_init);
++module_exit(tbsqbox22_module_exit);
++
++MODULE_AUTHOR("Bob Liu <Bob@turbosight.com>");
++MODULE_DESCRIPTION("Driver for TBS QBOX22");
++MODULE_VERSION("0.2");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox22.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox22.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox22.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox22.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,8 @@
++#ifndef _TBSQBOX22_H_
++#define _TBSQBOX22_H_
++
++#define DVB_USB_LOG_PREFIX "tbsqbox22"
++#include "dvb-usb.h"
++
++#define deb_xfer(args...) dprintk(dvb_usb_tbsqbox22_debug, 0x02, args)
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2.c media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2.c
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,506 @@
++/* DVB USB framework compliant Linux driver for the
++*	TBS QBOX
++*
++* Copyright (C) 2008 Bob Liu (Bob@Turbosight.com)
++* Igor M. Liplianin (liplianin@me.by)
++*
++* Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++* 	August 2009
++* 	Add QBOX II STV0903 support
++*
++*	This program is free software; you can redistribute it and/or modify it
++*	under the terms of the GNU General Public License as published by the
++*	Free Software Foundation, version 2.
++*
++* see Documentation/dvb/README.dvb-usb for more information
++*/
++#include <linux/version.h>
++#include "tbs-qbox2.h"
++#include "stv6110x.h"
++#include "stv090x.h"
++#include "stb6100.h"
++#include "stb6100_cfg.h"
++
++
++#ifndef USB_PID_TBSQBOX
++#define USB_PID_TBSQBOX 0x2601
++#endif
++
++#ifndef USB_PID_TBSQBOX_1
++#define USB_PID_TBSQBOX_1 0x5920
++#endif
++
++#define TBSQBOX_READ_MSG 0
++#define TBSQBOX_WRITE_MSG 1
++
++/* on my own*/
++#define TBSQBOX_VOLTAGE_CTRL (0x1800)
++#define TBSQBOX_RC_QUERY (0x1a00)
++
++struct tbsqbox2_state {
++	u32 last_key_pressed;
++};
++struct tbsqbox2_rc_keys {
++	u32 keycode;
++	u32 event;
++};
++
++/* debug */
++static int dvb_usb_tbsqbox2_debug;
++module_param_named(debug, dvb_usb_tbsqbox2_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." DVB_USB_DEBUG_STATUS);
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++static int tbsqbox2_op_rw(struct usb_device *dev, u8 request, u16 value,
++			u16 index, u8 * data, u16 len, int flags)
++{
++	int ret;
++	u8 u8buf[len];
++
++	unsigned int pipe = (flags == TBSQBOX_READ_MSG) ?
++				usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
++	u8 request_type = (flags == TBSQBOX_READ_MSG) ? USB_DIR_IN : USB_DIR_OUT;
++
++	if (flags == TBSQBOX_WRITE_MSG)
++		memcpy(u8buf, data, len);
++	ret = usb_control_msg(dev, pipe, request, request_type | USB_TYPE_VENDOR,
++				value, index , u8buf, len, 2000);
++
++	if (flags == TBSQBOX_READ_MSG)
++		memcpy(data, u8buf, len);
++	return ret;
++}
++
++/* I2C */
++static int tbsqbox2_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg msg[],
++		int num)
++{
++struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	int i = 0;
++	u8 buf6[20];
++	u8 inbuf[20];
++
++	if (!d)
++		return -ENODEV;
++	if (mutex_lock_interruptible(&d->i2c_mutex) < 0)
++		return -EAGAIN;
++
++	switch (num) {
++	case 2:
++		buf6[0]=msg[1].len;//lenth
++		buf6[1]=msg[0].addr<<1;//demod addr
++		//register
++		buf6[2] = msg[0].buf[0];
++		buf6[3] = msg[0].buf[1];
++
++		tbsqbox2_op_rw(d->udev, 0x92, 0, 0,
++					buf6, 4, TBSQBOX_WRITE_MSG);
++		//msleep(5);
++		tbsqbox2_op_rw(d->udev, 0x91, 0, 0,
++					inbuf, 1, TBSQBOX_READ_MSG);
++		memcpy(msg[1].buf, inbuf, msg[1].len);
++		break;
++	case 1:
++		switch (msg[0].addr) {
++		case 0x6a:
++		case 0x61:
++		case 0x60:
++			if (msg[0].flags == 0) {
++				buf6[0] = msg[0].len+1;//lenth
++				buf6[1] = msg[0].addr<<1;//addr
++				for(i=0;i<msg[0].len;i++) {
++					buf6[2+i] = msg[0].buf[i];//register
++				}
++				tbsqbox2_op_rw(d->udev, 0x80, 0, 0,
++							buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++			} else {
++				buf6[0] = msg[0].len;//length
++				buf6[1] = msg[0].addr<<1;//addr
++				buf6[2] = 0x00;
++				tbsqbox2_op_rw(d->udev, 0x90, 0, 0,
++							buf6, 3, TBSQBOX_WRITE_MSG);
++				//msleep(5);
++				tbsqbox2_op_rw(d->udev, 0x91, 0, 0,
++							inbuf, buf6[0], TBSQBOX_READ_MSG);
++				memcpy(msg[0].buf, inbuf, msg[0].len);
++			}
++			//msleep(3);
++			break;
++		case (TBSQBOX_RC_QUERY):
++			tbsqbox2_op_rw(d->udev, 0xb8, 0, 0,
++					buf6, 4, TBSQBOX_READ_MSG);
++			msg[0].buf[0] = buf6[2];
++			msg[0].buf[1] = buf6[3];
++			msleep(3);
++			//info("TBSQBOX_RC_QUERY %x %x %x %x\n",buf6[0],buf6[1],buf6[2],buf6[3]);
++			break;
++		case (TBSQBOX_VOLTAGE_CTRL):
++			buf6[0] = 3;
++			buf6[1] = msg[0].buf[0];
++			tbsqbox2_op_rw(d->udev, 0x8a, 0, 0,
++					buf6, 2, TBSQBOX_WRITE_MSG);
++			
++			break;
++		}
++
++		break;
++	}
++
++	mutex_unlock(&d->i2c_mutex);
++	return num;
++}
++
++static u32 tbsqbox2_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++static struct stv090x_config earda_config = {
++	.device         = STV0903,
++	.demod_mode     = STV090x_SINGLE,
++	.clk_mode       = STV090x_CLK_EXT,
++
++	.xtal           = 27000000,
++	.address        = 0x6a,
++
++	.ts1_mode       = STV090x_TSMODE_DVBCI,
++	.ts2_mode       = STV090x_TSMODE_DVBCI,
++	
++	.repeater_level         = STV090x_RPTLEVEL_16,
++
++	.tuner_get_frequency    = stb6100_get_frequency,
++	.tuner_set_frequency    = stb6100_set_frequency,
++	.tuner_set_bandwidth    = stb6100_set_bandwidth,
++	.tuner_get_bandwidth    = stb6100_get_bandwidth,
++};
++
++static struct stb6100_config qbox2_stb6100_config = {
++	.tuner_address  = 0x60,
++	.refclock       = 27000000,
++};
++
++static struct i2c_algorithm tbsqbox2_i2c_algo = {
++	.master_xfer = tbsqbox2_i2c_transfer,
++	.functionality = tbsqbox2_i2c_func,
++};
++
++static int tbsqbox2_earda_tuner_attach(struct dvb_usb_adapter *adap)
++{
++	dvb_attach(stb6100_attach, adap->fe_adap[0].fe, &qbox2_stb6100_config,
++		&adap->dev->i2c_adap);
++
++	return 0;
++}
++static int tbsqbox2_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
++{
++	int i,ret;
++	u8 ibuf[3] = {0, 0,0};
++	u8 eeprom[256], eepromline[16];
++
++	for (i = 0; i < 256; i++) {
++		ibuf[0]=1;//lenth
++		ibuf[1]=0xa0;//eeprom addr
++		ibuf[2]=i;//register
++		ret = tbsqbox2_op_rw(d->udev, 0x90, 0, 0,
++					ibuf, 3, TBSQBOX_WRITE_MSG);
++		ret = tbsqbox2_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++			if (ret < 0) {
++				err("read eeprom failed.");
++				return -1;
++			} else {
++				eepromline[i%16] = ibuf[0];
++				eeprom[i] = ibuf[0];
++			}
++			
++			if ((i % 16) == 15) {
++				deb_xfer("%02x: ", i - 15);
++				debug_dump(eepromline, 16, deb_xfer);
++			}
++	}
++	memcpy(mac, eeprom + 16, 6);
++	return 0;
++};
++
++static int tbsqbox2_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
++{
++	static u8 command_13v[1] = {0x00};
++	static u8 command_18v[1] = {0x01};
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_VOLTAGE_CTRL, .flags = 0,
++			.buf = command_13v, .len = 1},
++	};
++	
++	struct dvb_usb_adapter *udev_adap =
++		(struct dvb_usb_adapter *)(fe->dvb->priv);
++	if (voltage == SEC_VOLTAGE_18)
++		msg[0].buf = command_18v;
++	//info("tbsqbox2_set_voltage %d",voltage);
++	i2c_transfer(&udev_adap->dev->i2c_adap, msg, 1);
++	return 0;
++}
++
++static struct dvb_usb_device_properties tbsqbox2_properties;
++
++static int tbsqbox2_frontend_attach(struct dvb_usb_adapter *d)
++{
++	u8 buf[20];
++
++	if (tbsqbox2_properties.adapter[0].fe[0].tuner_attach == &tbsqbox2_earda_tuner_attach) {
++		d->fe_adap[0].fe = dvb_attach(stv090x_attach, &earda_config,
++					&d->dev->i2c_adap, STV090x_DEMODULATOR_0);
++		if (d->fe_adap[0].fe != NULL) {
++			d->fe_adap[0].fe->ops.set_voltage = tbsqbox2_set_voltage;
++			info("Attached stv0903!\n");
++
++			buf[0] = 7;
++			buf[1] = 1;
++			tbsqbox2_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			return 0;
++		}
++	}
++
++	return -EIO;
++}
++
++
++
++static struct rc_map_table tbsqbox2_rc_keys[] = {
++	{ 0xff84, KEY_POWER2 },		/*power*/
++	{ 0xff94, KEY_MUTE },		/*mute*/
++	{ 0xff87, KEY_1 },
++	{ 0xff86, KEY_2 },
++	{ 0xff85, KEY_3 },
++	{ 0xff8b, KEY_4 },
++	{ 0xff8a, KEY_5 },
++	{ 0xff89, KEY_6 },
++	{ 0xff8f, KEY_7 },
++	{ 0xff8e, KEY_8 },
++	{ 0xff8d, KEY_9 },
++	{ 0xff92, KEY_0 },
++	{ 0xff96, KEY_CHANNELUP },	/*ch+*/
++	{ 0xff91, KEY_CHANNELDOWN },	/*ch-*/
++	{ 0xff93, KEY_VOLUMEUP },		/*vol+*/
++	{ 0xff8c, KEY_VOLUMEDOWN },		/*vol-*/
++	{ 0xff83, KEY_RECORD },		/*rec*/
++	{ 0xff98, KEY_PAUSE  },		/*pause*/
++	{ 0xff99, KEY_OK },	/*ok*/
++	{ 0xff9a, KEY_SHUFFLE },		  /* snapshot */
++	{ 0xff81, KEY_UP },
++	{ 0xff90, KEY_LEFT },
++	{ 0xff82, KEY_RIGHT },
++	{ 0xff88, KEY_DOWN },
++	{ 0xff95, KEY_FAVORITES },
++	{ 0xff97, KEY_SUBTITLE },
++	{ 0xff9d, KEY_ZOOM },
++	{ 0xff9f, KEY_EXIT },
++	{ 0xff9e, KEY_MENU },
++	{ 0xff9c, KEY_EPG },
++	{ 0xff80, KEY_PREVIOUS },
++	{ 0xff9b, KEY_MODE }
++
++
++};
++
++
++
++static int tbsqbox2_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
++{
++	struct rc_map_table *keymap = d->props.rc.legacy.rc_map_table;
++	int keymap_size = d->props.rc.legacy.rc_map_size;
++	
++	struct tbsqbox2_state *st = d->priv;
++	u8 key[2];
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_RC_QUERY, .flags = I2C_M_RD, .buf = key,
++		.len = 2},
++	};
++	int i;
++
++	*state = REMOTE_NO_KEY_PRESSED;
++	if (tbsqbox2_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
++		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
++		for (i = 0; i < keymap_size; i++) {
++			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
++				*state = REMOTE_KEY_PRESSED;
++				*event = keymap[i].keycode;
++				st->last_key_pressed =
++					keymap[i].keycode;
++				break;
++			}
++		st->last_key_pressed = 0;
++		}
++	}
++	 
++	return 0;
++}
++
++static struct usb_device_id tbsqbox2_table[] = {
++	{USB_DEVICE(0x734c, 0x2601)},
++	{USB_DEVICE(0x734c, 0x5920)},
++	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX)},
++	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX_1)},
++	{ }
++};
++
++MODULE_DEVICE_TABLE(usb, tbsqbox2_table);
++
++static int tbsqbox2_load_firmware(struct usb_device *dev,
++			const struct firmware *frmwr)
++{
++	u8 *b, *p;
++	int ret = 0, i;
++	u8 reset;
++	const struct firmware *fw;
++	const char *filename = "dvb-usb-tbsqbox-id2601.fw";
++	const char *filename1 = "dvb-usb-tbsqbox-id5920.fw";
++	switch (dev->descriptor.idProduct) {
++	case 0x2601:
++		ret = request_firmware(&fw, filename, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename);
++			return ret;
++		}
++		break;
++	case 0x5920:
++		ret = request_firmware(&fw, filename1, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename1);
++			return ret;
++		}
++		break;
++	default:
++		fw = frmwr;
++		break;
++	}
++	info("start downloading TBSQBOX2 firmware");
++	p = kmalloc(fw->size, GFP_KERNEL);
++	reset = 1;
++	/*stop the CPU*/
++	tbsqbox2_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++	tbsqbox2_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++
++	if (p != NULL) {
++		memcpy(p, fw->data, fw->size);
++		for (i = 0; i < fw->size; i += 0x40) {
++			b = (u8 *) p + i;
++			if (tbsqbox2_op_rw(dev, 0xa0, i, 0, b , 0x40,
++					TBSQBOX_WRITE_MSG) != 0x40) {
++				err("error while transferring firmware");
++				ret = -EINVAL;
++				break;
++			}
++		}
++		/* restart the CPU */
++		reset = 0;
++		if (ret || tbsqbox2_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++		if (ret || tbsqbox2_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++
++		msleep(100);
++		kfree(p);
++	}
++	return ret;
++}
++
++static struct dvb_usb_device_properties tbsqbox2_properties = {
++	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++	.usb_ctrl = DEVICE_SPECIFIC,
++	.firmware = "dvb-usb-tbsqbox-id5920.fw",
++	.size_of_priv = sizeof(struct tbsqbox2_state),
++	.no_reconnect = 1,
++
++	.i2c_algo = &tbsqbox2_i2c_algo,
++	.rc.legacy = {
++		.rc_map_table = tbsqbox2_rc_keys,
++		.rc_map_size = ARRAY_SIZE(tbsqbox2_rc_keys),
++		.rc_interval = 150,
++		.rc_query = tbsqbox2_rc_query,
++	},
++
++	.generic_bulk_ctrl_endpoint = 0x81,
++	/* parameter for the MPEG2-data transfer */
++	.num_adapters = 1,
++	.download_firmware = tbsqbox2_load_firmware,
++	.read_mac_address = tbsqbox2_read_mac_address,
++		.adapter = {
++		{
++			.num_frontends = 1,
++			.fe = {{
++				.frontend_attach = tbsqbox2_frontend_attach,
++				.streaming_ctrl = NULL,
++				.tuner_attach = tbsqbox2_earda_tuner_attach,
++				.stream = {
++					.type = USB_BULK,
++					.count = 8,
++					.endpoint = 0x82,
++					.u = {
++						.bulk = {
++							.buffersize = 4096,
++						}
++					}
++				},
++			}}
++		}
++	},
++	.num_device_descs = 1,
++	.devices = {
++		{"TBS QBOX2 DVBS USB2.0",
++			{&tbsqbox2_table[1], NULL},
++			{NULL},
++		}
++	}
++};
++
++static int tbsqbox2_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	if (0 == dvb_usb_device_init(intf, &tbsqbox2_properties,
++			THIS_MODULE, NULL, adapter_nr)) {
++		return 0;
++	}
++	return -ENODEV;
++}
++
++static struct usb_driver tbsqbox2_driver = {
++	.name = "tbsqbox2",
++	.probe = tbsqbox2_probe,
++	.disconnect = dvb_usb_device_exit,
++	.id_table = tbsqbox2_table,
++};
++
++static int __init tbsqbox2_module_init(void)
++{
++	int ret =  usb_register(&tbsqbox2_driver);
++	if (ret)
++		err("usb_register failed. Error number %d", ret);
++
++	return ret;
++}
++
++static void __exit tbsqbox2_module_exit(void)
++{
++	usb_deregister(&tbsqbox2_driver);
++}
++
++module_init(tbsqbox2_module_init);
++module_exit(tbsqbox2_module_exit);
++
++MODULE_AUTHOR("Bob Liu <Bob@turbosight.com>");
++MODULE_DESCRIPTION("Driver for TBS QBOX2 STV0903");
++MODULE_VERSION("0.3");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.c media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.c
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,818 @@
++/*
++ * TurboSight (TBS) Qbox DVB-S2 CI driver
++ *
++ * Copyright (c) 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++ *
++ * This program is free software; you can redistribute it and/or modify it
++ * under the terms of the GNU General Public License as published by the
++ * Free Software Foundation, version 2.
++ *
++ */
++
++#include <linux/version.h>
++#include "tbs-qbox2ci.h"
++#include "stv6110x.h"
++#include "stv090x.h"
++#include "stb6100.h"
++#include "stb6100_cfg.h"
++
++#include "dvb_ca_en50221.h"
++
++#ifndef USB_PID_TBSQBOX
++#define USB_PID_TBSQBOX 0x5980
++#endif
++
++#define TBSQBOX_READ_MSG 0
++#define TBSQBOX_WRITE_MSG 1
++
++/* on my own*/
++#define TBSQBOX_VOLTAGE_CTRL (0x1800)
++#define TBSQBOX_RC_QUERY (0x1a00)
++
++struct tbsqbox2ci_state {
++	struct dvb_ca_en50221 ca;
++	struct mutex ca_mutex;
++
++	u32 last_key_pressed;
++};
++
++/*struct tbsqbox2ci_rc_keys {
++	u32 keycode;
++	u32 event;
++};*/
++
++/* debug */
++static int dvb_usb_tbsqbox2ci_debug;
++module_param_named(debug, dvb_usb_tbsqbox2ci_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." 
++							DVB_USB_DEBUG_STATUS);
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++static int tbsqbox2ci_op_rw(struct usb_device *dev, u8 request, u16 value,
++				u16 index, u8 * data, u16 len, int flags)
++{
++	int ret;
++	u8 u8buf[len];
++
++	unsigned int pipe = (flags == TBSQBOX_READ_MSG) ?
++			usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
++	u8 request_type = (flags == TBSQBOX_READ_MSG) ? USB_DIR_IN : 
++								USB_DIR_OUT;
++
++	if (flags == TBSQBOX_WRITE_MSG)
++		memcpy(u8buf, data, len);
++	ret = usb_control_msg(dev, pipe, request, request_type | 
++			USB_TYPE_VENDOR, value, index , u8buf, len, 2000);
++
++	if (flags == TBSQBOX_READ_MSG)
++		memcpy(data, u8buf, len);
++	return ret;
++}
++
++static int tbsqbox2ci_read_attribute_mem(struct dvb_ca_en50221 *ca,
++                                                	int slot, int address)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	u8 buf[4], rbuf[3];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 0;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++
++	//msleep(10);
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa4, 0, 0,
++						buf, 4, TBSQBOX_WRITE_MSG);
++
++	//msleep(1);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa5, 0, 0,
++						rbuf, 1, TBSQBOX_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return rbuf[0];
++}
++
++static int tbsqbox2ci_write_attribute_mem(struct dvb_ca_en50221 *ca,
++						int slot, int address, u8 value)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	u8 buf[5];//, rbuf[1];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 0;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++	buf[4] = value;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa2, 0, 0,
++						buf, 5, TBSQBOX_WRITE_MSG);
++
++	//msleep(1);
++
++	//ret = tbsqbox2ci_op_rw(d->udev, 0xa5, 0, 0,
++	//					rbuf, 1, TBSQBOX_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++
++static int tbsqbox2ci_read_cam_control(struct dvb_ca_en50221 *ca, int slot, 
++								u8 address)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	u8 buf[4], rbuf[1];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 1;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa4, 0, 0,
++						buf, 4, TBSQBOX_WRITE_MSG);
++
++	//msleep(10);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa5, 0, 0,
++						rbuf, 1, TBSQBOX_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return rbuf[0];
++}
++
++static int tbsqbox2ci_write_cam_control(struct dvb_ca_en50221 *ca, int slot, 
++							u8 address, u8 value)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	u8 buf[5];//, rbuf[1];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 1;
++	buf[1] = 1;
++	buf[2] = (address >> 8) & 0x0f;
++	buf[3] = address;
++	buf[4] = value;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa2, 0, 0,
++						buf, 5, TBSQBOX_WRITE_MSG);
++
++	//msleep(1);
++
++	//ret = tbsqbox2ci_op_rw(d->udev, 0xa5, 0, 0,
++	//					rbuf, 1, TBSQBOX_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++
++static int tbsqbox2ci_set_video_port(struct dvb_ca_en50221 *ca, 
++							int slot, int enable)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	u8 buf[2];
++	int ret;
++
++	if (0 != slot)
++		return -EINVAL;
++
++	buf[0] = 2;
++	buf[1] = enable;
++
++	mutex_lock(&state->ca_mutex);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa6, 0, 0,
++						buf, 2, TBSQBOX_WRITE_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	if (enable != buf[1]) {
++		err("CI not %sabled.", enable ? "en" : "dis");
++		return -EIO;
++	}
++
++	info("CI %sabled.", enable ? "en" : "dis");
++	return 0;
++}
++
++static int tbsqbox2ci_slot_shutdown(struct dvb_ca_en50221 *ca, int slot)
++{
++	return tbsqbox2ci_set_video_port(ca, slot, /* enable */ 0);
++}
++
++static int tbsqbox2ci_slot_ts_enable(struct dvb_ca_en50221 *ca, int slot)
++{
++	return tbsqbox2ci_set_video_port(ca, slot, /* enable */ 1);
++}
++
++static int tbsqbox2ci_slot_reset(struct dvb_ca_en50221 *ca, int slot)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	u8 buf[2];
++	int ret;
++
++	if (0 != slot) {
++		return -EINVAL;
++	}
++
++	buf[0] = 1;
++	buf[1] = 0;
++
++	mutex_lock (&state->ca_mutex);
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa6, 0, 0,
++						buf, 2, TBSQBOX_WRITE_MSG);
++
++	msleep (400);
++
++	buf[1] = 1;
++
++	ret = tbsqbox2ci_op_rw(d->udev, 0xa6, 0, 0,
++						buf, 2, TBSQBOX_WRITE_MSG);
++
++	msleep (900);
++
++	mutex_unlock (&state->ca_mutex);
++
++	if (ret < 0)
++		return ret;
++
++	return 0;
++}
++
++static int tbsqbox2ci_poll_slot_status(struct dvb_ca_en50221 *ca,
++							int slot, int open)
++{
++	struct dvb_usb_device *d = (struct dvb_usb_device *)ca->data;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	u8 buf[3];
++
++	if (0 != slot)
++		return -EINVAL;
++
++	mutex_lock(&state->ca_mutex);
++
++	tbsqbox2ci_op_rw(d->udev, 0xa8, 0, 0,
++					buf, 3, TBSQBOX_READ_MSG);
++
++	mutex_unlock(&state->ca_mutex);
++
++	if ((1 == buf[2]) && (1 == buf[1]) && (0xa9 == buf[0])) {
++				return (DVB_CA_EN50221_POLL_CAM_PRESENT |
++						DVB_CA_EN50221_POLL_CAM_READY);
++	} else {
++		return 0;
++	}
++}
++
++static void tbsqbox2ci_uninit(struct dvb_usb_device *d)
++{
++	struct tbsqbox2ci_state *state;
++
++	if (NULL == d)
++		return;
++
++	state = (struct tbsqbox2ci_state *)d->priv;
++	if (NULL == state)
++		return;
++
++	if (NULL == state->ca.data)
++		return;
++
++	/* Error ignored. */
++	tbsqbox2ci_set_video_port(&state->ca, /* slot */ 0, /* enable */ 0);
++
++	dvb_ca_en50221_release(&state->ca);
++
++	memset(&state->ca, 0, sizeof(state->ca));
++}
++
++static int tbsqbox2ci_init(struct dvb_usb_adapter *a)
++{
++
++	struct dvb_usb_device *d = a->dev;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	int ret;
++
++	state->ca.owner = THIS_MODULE;
++	state->ca.read_attribute_mem = tbsqbox2ci_read_attribute_mem;
++	state->ca.write_attribute_mem = tbsqbox2ci_write_attribute_mem;
++	state->ca.read_cam_control = tbsqbox2ci_read_cam_control;
++	state->ca.write_cam_control = tbsqbox2ci_write_cam_control;
++	state->ca.slot_reset = tbsqbox2ci_slot_reset;
++	state->ca.slot_shutdown = tbsqbox2ci_slot_shutdown;
++	state->ca.slot_ts_enable = tbsqbox2ci_slot_ts_enable;
++	state->ca.poll_slot_status = tbsqbox2ci_poll_slot_status;
++	state->ca.data = d;
++
++	ret = dvb_ca_en50221_init (&a->dvb_adap, &state->ca,
++						/* flags */ 0, /* n_slots */ 1);
++
++	if (0 != ret) {
++		err ("Cannot initialize CI: Error %d.", ret);
++		memset (&state->ca, 0, sizeof (state->ca));
++		return ret;
++	}
++
++	info ("CI initialized.");
++
++	ret = tbsqbox2ci_poll_slot_status(&state->ca, 0, 0);
++	if (0 == ret)
++		tbsqbox2ci_set_video_port(&state->ca, /* slot */ 0, /* enable */ 0);
++
++	return 0;
++}
++
++/* I2C */
++static int tbsqbox2ci_i2c_transfer(struct i2c_adapter *adap, 
++					struct i2c_msg msg[], int num)
++{
++	struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)d->priv;
++	int i = 0;
++	u8 buf6[20];
++	u8 inbuf[20];
++
++	if (!d)
++		return -ENODEV;
++
++	mutex_lock(&state->ca_mutex);
++
++	if (mutex_lock_interruptible(&d->i2c_mutex) < 0)
++		return -EAGAIN;
++
++	switch (num) {
++	case 2:
++		buf6[0]=msg[1].len;//lenth
++		buf6[1]=msg[0].addr<<1;//demod addr
++		//register
++		buf6[2] = msg[0].buf[0];
++		buf6[3] = msg[0].buf[1];
++
++		tbsqbox2ci_op_rw(d->udev, 0x92, 0, 0,
++					buf6, 4, TBSQBOX_WRITE_MSG);
++		//msleep(5);
++		tbsqbox2ci_op_rw(d->udev, 0x91, 0, 0,
++					inbuf, 1, TBSQBOX_READ_MSG);
++		memcpy(msg[1].buf, inbuf, msg[1].len);
++		break;
++	case 1:
++		switch (msg[0].addr) {
++		case 0x6a:
++		case 0x61:
++		case 0x60:
++			if (msg[0].flags == 0) {
++				buf6[0] = msg[0].len+1;//lenth
++				buf6[1] = msg[0].addr<<1;//addr
++				for(i=0;i<msg[0].len;i++) {
++					buf6[2+i] = msg[0].buf[i];//register
++				}
++				tbsqbox2ci_op_rw(d->udev, 0x80, 0, 0,
++					buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++			} else {
++				buf6[0] = msg[0].len;//length
++				buf6[1] = msg[0].addr<<1;//addr
++				buf6[2] = 0x00;
++				tbsqbox2ci_op_rw(d->udev, 0x90, 0, 0,
++						buf6, 3, TBSQBOX_WRITE_MSG);
++				//msleep(5);
++				tbsqbox2ci_op_rw(d->udev, 0x91, 0, 0,
++					inbuf, buf6[0], TBSQBOX_READ_MSG);
++				memcpy(msg[0].buf, inbuf, msg[0].len);
++			}
++			//msleep(3);
++			break;
++		case (TBSQBOX_RC_QUERY):
++			tbsqbox2ci_op_rw(d->udev, 0xb8, 0, 0,
++					buf6, 4, TBSQBOX_READ_MSG);
++			msg[0].buf[0] = buf6[2];
++			msg[0].buf[1] = buf6[3];
++			//msleep(3);
++			//info("TBSQBOX_RC_QUERY %x %x %x %x\n",
++			//		buf6[0],buf6[1],buf6[2],buf6[3]);
++			break;
++		case (TBSQBOX_VOLTAGE_CTRL):
++			buf6[0] = 3;
++			buf6[1] = msg[0].buf[0];
++			tbsqbox2ci_op_rw(d->udev, 0x8a, 0, 0,
++					buf6, 2, TBSQBOX_WRITE_MSG);
++			
++			break;
++		}
++
++		break;
++	}
++
++	mutex_unlock(&d->i2c_mutex);
++	mutex_unlock(&state->ca_mutex);
++	return num;
++}
++
++static u32 tbsqbox2ci_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++static struct stv090x_config earda_config = {
++	.device         = STV0903,
++	.demod_mode     = STV090x_SINGLE,
++	.clk_mode       = STV090x_CLK_EXT,
++
++	.xtal           = 27000000,
++	.address        = 0x6a,
++
++	.ts1_mode       = STV090x_TSMODE_DVBCI,
++	.ts2_mode       = STV090x_TSMODE_SERIAL_CONTINUOUS,
++	
++	.repeater_level         = STV090x_RPTLEVEL_16,
++
++	.tuner_get_frequency    = stb6100_get_frequency,
++	.tuner_set_frequency    = stb6100_set_frequency,
++	.tuner_set_bandwidth    = stb6100_set_bandwidth,
++	.tuner_get_bandwidth    = stb6100_get_bandwidth,
++};
++
++static struct stb6100_config qbox2_stb6100_config = {
++	.tuner_address  = 0x60,
++	.refclock       = 27000000,
++};
++
++static struct i2c_algorithm tbsqbox2ci_i2c_algo = {
++	.master_xfer = tbsqbox2ci_i2c_transfer,
++	.functionality = tbsqbox2ci_i2c_func,
++};
++
++static int tbsqbox2ci_earda_tuner_attach(struct dvb_usb_adapter *adap)
++{
++	dvb_attach(stb6100_attach, adap->fe_adap[0].fe, &qbox2_stb6100_config,
++		&adap->dev->i2c_adap);
++
++	return 0;
++}
++static int tbsqbox2ci_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
++{
++	int i,ret;
++	u8 ibuf[3] = {0, 0,0};
++	u8 eeprom[256], eepromline[16];
++
++	for (i = 0; i < 256; i++) {
++		ibuf[0]=1;//lenth
++		ibuf[1]=0xa0;//eeprom addr
++		ibuf[2]=i;//register
++		ret = tbsqbox2ci_op_rw(d->udev, 0x90, 0, 0,
++					ibuf, 3, TBSQBOX_WRITE_MSG);
++		ret = tbsqbox2ci_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++			if (ret < 0) {
++				err("read eeprom failed.");
++				return -1;
++			} else {
++				eepromline[i%16] = ibuf[0];
++				eeprom[i] = ibuf[0];
++			}
++			
++			if ((i % 16) == 15) {
++				deb_xfer("%02x: ", i - 15);
++				debug_dump(eepromline, 16, deb_xfer);
++			}
++	}
++	memcpy(mac, eeprom + 16, 6);
++	return 0;
++};
++
++static int tbsqbox2ci_set_voltage(struct dvb_frontend *fe, 
++						fe_sec_voltage_t voltage)
++{
++	static u8 command_13v[1] = {0x00};
++	static u8 command_18v[1] = {0x01};
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_VOLTAGE_CTRL, .flags = 0,
++			.buf = command_13v, .len = 1},
++	};
++	
++	struct dvb_usb_adapter *udev_adap =
++		(struct dvb_usb_adapter *)(fe->dvb->priv);
++	if (voltage == SEC_VOLTAGE_18)
++		msg[0].buf = command_18v;
++	//info("tbsqbox2ci_set_voltage %d",voltage);
++	i2c_transfer(&udev_adap->dev->i2c_adap, msg, 1);
++	return 0;
++}
++
++static struct dvb_usb_device_properties tbsqbox2ci_properties;
++
++static int tbsqbox2ci_frontend_attach(struct dvb_usb_adapter *d)
++{
++	struct dvb_usb_device *u = d->dev;
++	struct tbsqbox2ci_state *state = (struct tbsqbox2ci_state *)u->priv;
++	u8 buf[20];
++
++	mutex_init(&state->ca_mutex);
++
++	if (tbsqbox2ci_properties.adapter[0].fe[0].tuner_attach == \
++				&tbsqbox2ci_earda_tuner_attach) {
++		d->fe_adap[0].fe = dvb_attach(stv090x_attach, &earda_config,
++				&d->dev->i2c_adap, STV090x_DEMODULATOR_0);
++		if (d->fe_adap[0].fe != NULL) {
++			d->fe_adap[0].fe->ops.set_voltage = tbsqbox2ci_set_voltage;
++			info("Attached stv0903!\n");
++
++			buf[0] = 7;
++			buf[1] = 1;
++			tbsqbox2ci_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			buf[0] = 1;
++			buf[1] = 1;
++			tbsqbox2ci_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++			
++			buf[0] = 6;
++			buf[1] = 1;
++			tbsqbox2ci_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			tbsqbox2ci_init(d);
++			return 0;
++		}
++	}
++
++	return -EIO;
++}
++
++static void tbsqbox2ci2_usb_disconnect (struct usb_interface * intf)
++{
++	struct dvb_usb_device *d = usb_get_intfdata (intf);
++	
++	tbsqbox2ci_uninit (d);
++	dvb_usb_device_exit (intf);
++}
++
++static struct rc_map_table tbsqbox2ci_rc_keys[] = {
++	{ 0xff84, KEY_POWER2 },
++	{ 0xff94, KEY_MUTE },
++	{ 0xff87, KEY_1 },
++	{ 0xff86, KEY_2 },
++	{ 0xff85, KEY_3 },
++	{ 0xff8b, KEY_4 },
++	{ 0xff8a, KEY_5 },
++	{ 0xff89, KEY_6 },
++	{ 0xff8f, KEY_7 },
++	{ 0xff8e, KEY_8 },
++	{ 0xff8d, KEY_9 },
++	{ 0xff92, KEY_0 },
++	{ 0xff96, KEY_CHANNELUP },
++	{ 0xff91, KEY_CHANNELDOWN },
++	{ 0xff93, KEY_VOLUMEUP },
++	{ 0xff8c, KEY_VOLUMEDOWN },
++	{ 0xff83, KEY_RECORD },
++	{ 0xff98, KEY_PAUSE  },
++	{ 0xff99, KEY_OK },
++	{ 0xff9a, KEY_SHUFFLE },
++	{ 0xff81, KEY_UP },
++	{ 0xff90, KEY_LEFT },
++	{ 0xff82, KEY_RIGHT },
++	{ 0xff88, KEY_DOWN },
++	{ 0xff95, KEY_FAVORITES },
++	{ 0xff97, KEY_SUBTITLE },
++	{ 0xff9d, KEY_ZOOM },
++	{ 0xff9f, KEY_EXIT },
++	{ 0xff9e, KEY_MENU },
++	{ 0xff9c, KEY_EPG },
++	{ 0xff80, KEY_PREVIOUS },
++	{ 0xff9b, KEY_MODE }
++};
++
++static int tbsqbox2ci_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
++{
++	struct rc_map_table *keymap = d->props.rc.legacy.rc_map_table;
++	int keymap_size = d->props.rc.legacy.rc_map_size;
++
++	struct tbsqbox2ci_state *st = d->priv;
++	u8 key[2];
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_RC_QUERY, .flags = I2C_M_RD, .buf = key,
++		.len = 2},
++	};
++	int i;
++
++	*state = REMOTE_NO_KEY_PRESSED;
++	if (tbsqbox2ci_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
++		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
++		for (i = 0; i < keymap_size; i++) {
++			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
++				*state = REMOTE_KEY_PRESSED;
++				*event = keymap[i].keycode;
++				st->last_key_pressed =
++					keymap[i].keycode;
++				break;
++			}
++		st->last_key_pressed = 0;
++		}
++	}
++	 
++	return 0;
++}
++
++static struct usb_device_id tbsqbox2ci_table[] = {
++	{USB_DEVICE(0x734c, 0x5980)},
++	{ }
++};
++
++MODULE_DEVICE_TABLE(usb, tbsqbox2ci_table);
++
++static int tbsqbox2ci_load_firmware(struct usb_device *dev,
++			const struct firmware *frmwr)
++{
++	u8 *b, *p;
++	int ret = 0, i;
++	u8 reset;
++	const struct firmware *fw;
++	const char *filename = "dvb-usb-tbsqbox-id5980.fw";
++	switch (dev->descriptor.idProduct) {
++	case 0x5980:
++		ret = request_firmware(&fw, filename, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename);
++			return ret;
++		}
++		break;
++	default:
++		fw = frmwr;
++		break;
++	}
++	info("start downloading TBSQBOX2CI firmware");
++	p = kmalloc(fw->size, GFP_KERNEL);
++	reset = 1;
++	/*stop the CPU*/
++	tbsqbox2ci_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++	tbsqbox2ci_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++
++	if (p != NULL) {
++		memcpy(p, fw->data, fw->size);
++		for (i = 0; i < fw->size; i += 0x40) {
++			b = (u8 *) p + i;
++			if (tbsqbox2ci_op_rw(dev, 0xa0, i, 0, b , 0x40,
++					TBSQBOX_WRITE_MSG) != 0x40) {
++				err("error while transferring firmware");
++				ret = -EINVAL;
++				break;
++			}
++		}
++		/* restart the CPU */
++		reset = 0;
++		if (ret || tbsqbox2ci_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++		if (ret || tbsqbox2ci_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++
++		msleep(100);
++		kfree(p);
++	}
++	return ret;
++}
++
++static struct dvb_usb_device_properties tbsqbox2ci_properties = {
++	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++	.usb_ctrl = DEVICE_SPECIFIC,
++	.firmware = "dvb-usb-tbsqbox-id5980.fw",
++	.size_of_priv = sizeof(struct tbsqbox2ci_state),
++	.no_reconnect = 1,
++
++	.i2c_algo = &tbsqbox2ci_i2c_algo,
++	.rc.legacy = {
++		.rc_map_table = tbsqbox2ci_rc_keys,
++		.rc_map_size = ARRAY_SIZE(tbsqbox2ci_rc_keys),
++		.rc_interval = 450,
++		.rc_query = tbsqbox2ci_rc_query,
++	},
++
++	.generic_bulk_ctrl_endpoint = 0x81,
++	/* parameter for the MPEG2-data transfer */
++	.num_adapters = 1,
++	.download_firmware = tbsqbox2ci_load_firmware,
++	.read_mac_address = tbsqbox2ci_read_mac_address,
++		.adapter = {
++		{
++			.num_frontends = 1,
++			.fe = {{
++				.frontend_attach = tbsqbox2ci_frontend_attach,
++				.streaming_ctrl = NULL,
++				.tuner_attach = tbsqbox2ci_earda_tuner_attach,
++				.stream = {
++					.type = USB_BULK,
++					.count = 8,
++					.endpoint = 0x82,
++					.u = {
++						.bulk = {
++							.buffersize = 4096,
++						}
++					}
++				},
++			}}
++		}
++	},
++	.num_device_descs = 1,
++	.devices = {
++		{"TBS Qbox DVB-S2 CI USB2.0",
++			{&tbsqbox2ci_table[0], NULL},
++			{NULL},
++		}
++	}
++};
++
++static int tbsqbox2ci_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	if (0 == dvb_usb_device_init(intf, &tbsqbox2ci_properties,
++			THIS_MODULE, NULL, adapter_nr)) {
++		return 0;
++	}
++	return -ENODEV;
++}
++
++static struct usb_driver tbsqbox2ci_driver = {
++	.name = "tbsqbox2ci",
++	.probe = tbsqbox2ci_probe,
++	.disconnect = tbsqbox2ci2_usb_disconnect,
++	.id_table = tbsqbox2ci_table,
++};
++
++static int __init tbsqbox2ci_module_init(void)
++{
++	int ret =  usb_register(&tbsqbox2ci_driver);
++	if (ret)
++		err("usb_register failed. Error number %d", ret);
++
++	return ret;
++}
++
++static void __exit tbsqbox2ci_module_exit(void)
++{
++	usb_deregister(&tbsqbox2ci_driver);
++}
++
++module_init(tbsqbox2ci_module_init);
++module_exit(tbsqbox2ci_module_exit);
++
++MODULE_AUTHOR("Konstantin Dimitrov <kosio.dimitrov@gmail.com>");
++MODULE_DESCRIPTION("TurboSight (TBS) Qbox DVB-S2 CI driver");
++MODULE_VERSION("1.0");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2ci.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,8 @@
++#ifndef _TBSQBOX2CI_H_
++#define _TBSQBOX2CI_H_
++
++#define DVB_USB_LOG_PREFIX "tbsqbox2ci"
++#include "dvb-usb.h"
++
++#define deb_xfer(args...) dprintk(dvb_usb_tbsqbox2ci_debug, 0x02, args)
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox2.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox2.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,8 @@
++#ifndef _TBSQBOX2_H_
++#define _TBSQBOX2_H_
++
++#define DVB_USB_LOG_PREFIX "tbsqbox2"
++#include "dvb-usb.h"
++
++#define deb_xfer(args...) dprintk(dvb_usb_tbsqbox2_debug, 0x02, args)
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox.c media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox.c
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,487 @@
++/* DVB USB framework compliant Linux driver for the
++*	TBS QBOX
++*
++* Copyright (C) 2008 Bob Liu (Bob@Turbosight.com)
++* Igor M. Liplianin (liplianin@me.by)
++*
++* Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++* 	June 2009
++* 	Some fixes and improvements.
++*
++*	This program is free software; you can redistribute it and/or modify it
++*	under the terms of the GNU General Public License as published by the
++*	Free Software Foundation, version 2.
++*
++* see Documentation/dvb/README.dvb-usb for more information
++*/
++#include <linux/version.h>
++#include "tbs-qbox.h"
++#include "stv0299.h"
++#include "stv0288.h"
++#include "stb6000.h"
++
++
++#ifndef USB_PID_TBSQBOX
++#define USB_PID_TBSQBOX 0x2601
++#endif
++
++#ifndef USB_PID_TBSQBOX_1
++#define USB_PID_TBSQBOX_1 0x5910
++#endif
++
++#define TBSQBOX_READ_MSG 0
++#define TBSQBOX_WRITE_MSG 1
++
++/* on my own*/
++#define TBSQBOX_VOLTAGE_CTRL (0x1800)
++#define TBSQBOX_RC_QUERY (0x1a00)
++
++struct tbsqboxs1_state {
++	u32 last_key_pressed;
++};
++struct tbsqboxs1_rc_keys {
++	u32 keycode;
++	u32 event;
++};
++
++/* debug */
++static int dvb_usb_tbsqboxs1_debug;
++module_param_named(debug, dvb_usb_tbsqboxs1_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." DVB_USB_DEBUG_STATUS);
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++static int tbsqboxs1_op_rw(struct usb_device *dev, u8 request, u16 value,
++			u16 index, u8 * data, u16 len, int flags)
++{
++	int ret;
++	u8 u8buf[len];
++
++	unsigned int pipe = (flags == TBSQBOX_READ_MSG) ?
++				usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
++	u8 request_type = (flags == TBSQBOX_READ_MSG) ? USB_DIR_IN : USB_DIR_OUT;
++
++	if (flags == TBSQBOX_WRITE_MSG)
++		memcpy(u8buf, data, len);
++	ret = usb_control_msg(dev, pipe, request, request_type | USB_TYPE_VENDOR,
++				value, index , u8buf, len, 2000);
++
++	if (flags == TBSQBOX_READ_MSG)
++		memcpy(data, u8buf, len);
++	return ret;
++}
++
++/* I2C */
++static int tbsqboxs1_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg msg[],
++		int num)
++{
++struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	int i = 0;
++	u8 buf6[20];
++	u8 inbuf[20];
++
++	if (!d)
++		return -ENODEV;
++	if (mutex_lock_interruptible(&d->i2c_mutex) < 0)
++		return -EAGAIN;
++
++	switch (num) {
++	case 2:
++		
++		buf6[0]=msg[1].len;//lenth
++		buf6[1]=msg[0].addr<<1;//demod addr
++		buf6[2]=msg[0].buf[0];//register
++		
++		tbsqboxs1_op_rw(d->udev, 0x90, 0, 0,
++					buf6, 3, TBSQBOX_WRITE_MSG);
++		msleep(5);
++		tbsqboxs1_op_rw(d->udev, 0x91, 0, 0,
++					inbuf, 1, TBSQBOX_READ_MSG);
++		memcpy(msg[1].buf, inbuf, msg[1].len);
++		break;
++	case 1:
++		switch (msg[0].addr) {
++		case 0x68:
++			/* write to stv0299 register */
++			buf6[0] = msg[0].len+1;//lenth
++			buf6[1] = msg[0].addr<<1;//demod addr
++			for(i=0;i<msg[0].len;i++)
++				{
++				buf6[2+i] = msg[0].buf[i];//register
++				}
++			tbsqboxs1_op_rw(d->udev, 0x80, 0, 0,
++					buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++			msleep(3);
++			break;
++		case 0x61:
++		case 0x60:
++			if (msg[0].flags == 0) {
++			/* write to tuner pll */
++				buf6[0] = msg[0].len+1;//lenth
++				buf6[1] = msg[0].addr<<1;//tuner addr
++				for(i=0;i<msg[0].len;i++)
++				{
++				buf6[2+i] = msg[0].buf[i];//register
++				}
++				tbsqboxs1_op_rw(d->udev, 0x80, 0, 0,
++						buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++			} 
++			msleep(3);
++			break;
++		case (TBSQBOX_RC_QUERY):
++			tbsqboxs1_op_rw(d->udev, 0xb8, 0, 0,
++					buf6, 4, TBSQBOX_READ_MSG);
++			msg[0].buf[0] = buf6[2];
++			msg[0].buf[1] = buf6[3];
++			msleep(3);
++			//info("TBSQBOX_RC_QUERY %x %x %x %x\n",buf6[0],buf6[1],buf6[2],buf6[3]);
++			break;
++		case (TBSQBOX_VOLTAGE_CTRL):
++			buf6[0] = 3;
++			buf6[1] = msg[0].buf[0];
++			tbsqboxs1_op_rw(d->udev, 0x8a, 0, 0,
++					buf6, 2, TBSQBOX_WRITE_MSG);
++			
++			break;
++		}
++
++		break;
++	}
++
++	mutex_unlock(&d->i2c_mutex);
++	return num;
++}
++
++static u32 tbsqboxs1_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++static struct stv0288_config earda_config = {
++	.demod_address = 0x68,
++};
++
++static struct i2c_algorithm tbsqboxs1_i2c_algo = {
++	.master_xfer = tbsqboxs1_i2c_transfer,
++	.functionality = tbsqboxs1_i2c_func,
++};
++
++static int tbsqboxs1_earda_tuner_attach(struct dvb_usb_adapter *adap)
++{
++	dvb_attach(stb6000_attach, adap->fe_adap[0].fe, 0x61,
++		&adap->dev->i2c_adap);
++
++	return 0;
++}
++static int tbsqboxs1_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
++{
++	int i,ret;
++	u8 ibuf[3] = {0, 0,0};
++	u8 eeprom[256], eepromline[16];
++
++	for (i = 0; i < 256; i++) {
++		ibuf[0]=1;//lenth
++		ibuf[1]=0xa0;//eeprom addr
++		ibuf[2]=i;//register
++		ret = tbsqboxs1_op_rw(d->udev, 0x90, 0, 0,
++					ibuf, 3, TBSQBOX_WRITE_MSG);
++		ret = tbsqboxs1_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++			if (ret < 0) {
++				err("read eeprom failed.");
++				return -1;
++			} else {
++				eepromline[i%16] = ibuf[0];
++				eeprom[i] = ibuf[0];
++			}
++			
++			if ((i % 16) == 15) {
++				deb_xfer("%02x: ", i - 15);
++				debug_dump(eepromline, 16, deb_xfer);
++			}
++	}
++	memcpy(mac, eeprom + 16, 6);
++	return 0;
++};
++
++static int tbsqboxs1_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
++{
++	static u8 command_13v[1] = {0x00};
++	static u8 command_18v[1] = {0x01};
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_VOLTAGE_CTRL, .flags = 0,
++			.buf = command_13v, .len = 1},
++	};
++	
++	struct dvb_usb_adapter *udev_adap =
++		(struct dvb_usb_adapter *)(fe->dvb->priv);
++	if (voltage == SEC_VOLTAGE_18)
++		msg[0].buf = command_18v;
++	//info("tbsqboxs1_set_voltage %d",voltage);
++	i2c_transfer(&udev_adap->dev->i2c_adap, msg, 1);
++	return 0;
++}
++
++static struct dvb_usb_device_properties tbsqboxs1_properties;
++
++static int tbsqboxs1_frontend_attach(struct dvb_usb_adapter *d)
++{
++	u8 buf[20];
++
++	if (tbsqboxs1_properties.adapter[0].fe[0].tuner_attach == &tbsqboxs1_earda_tuner_attach) {
++		d->fe_adap[0].fe = dvb_attach(stv0288_attach, &earda_config,
++					&d->dev->i2c_adap);
++		if (d->fe_adap[0].fe != NULL) {
++			d->fe_adap[0].fe->ops.set_voltage = tbsqboxs1_set_voltage;
++			info("Attached stv0288!\n");
++
++			buf[0] = 7;
++			buf[1] = 1;
++			tbsqboxs1_op_rw(d->dev->udev, 0x8a, 0, 0,
++					 buf, 2, TBSQBOX_WRITE_MSG);
++
++			return 0;
++		}
++	}
++
++	return -EIO;
++}
++
++
++
++static struct rc_map_table tbsqboxs1_rc_keys[] = {
++	{ 0xff84, KEY_POWER2 },		/*power*/
++	{ 0xff94, KEY_MUTE },		/*mute*/
++	{ 0xff87, KEY_1 },
++	{ 0xff86, KEY_2 },
++	{ 0xff85, KEY_3 },
++	{ 0xff8b, KEY_4 },
++	{ 0xff8a, KEY_5 },
++	{ 0xff89, KEY_6 },
++	{ 0xff8f, KEY_7 },
++	{ 0xff8e, KEY_8 },
++	{ 0xff8d, KEY_9 },
++	{ 0xff92, KEY_0 },
++	{ 0xff96, KEY_CHANNELUP },	/*ch+*/
++	{ 0xff91, KEY_CHANNELDOWN },	/*ch-*/
++	{ 0xff93, KEY_VOLUMEUP },		/*vol+*/
++	{ 0xff8c, KEY_VOLUMEDOWN },		/*vol-*/
++	{ 0xff83, KEY_RECORD },		/*rec*/
++	{ 0xff98, KEY_PAUSE  },		/*pause*/
++	{ 0xff99, KEY_OK },	/*ok*/
++	{ 0xff9a, KEY_SHUFFLE },		  /* snapshot */
++	{ 0xff81, KEY_UP },
++	{ 0xff90, KEY_LEFT },
++	{ 0xff82, KEY_RIGHT },
++	{ 0xff88, KEY_DOWN },
++	{ 0xff95, KEY_FAVORITES },
++	{ 0xff97, KEY_SUBTITLE },
++	{ 0xff9d, KEY_ZOOM },
++	{ 0xff9f, KEY_EXIT },
++	{ 0xff9e, KEY_MENU },
++	{ 0xff9c, KEY_EPG },
++	{ 0xff80, KEY_PREVIOUS },
++	{ 0xff9b, KEY_MODE }
++
++
++};
++
++
++
++static int tbsqboxs1_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
++{
++	struct rc_map_table *keymap = d->props.rc.legacy.rc_map_table;
++	int keymap_size = d->props.rc.legacy.rc_map_size;
++	
++	struct tbsqboxs1_state *st = d->priv;
++	u8 key[2];
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_RC_QUERY, .flags = I2C_M_RD, .buf = key,
++		.len = 2},
++	};
++	int i;
++
++	*state = REMOTE_NO_KEY_PRESSED;
++	if (tbsqboxs1_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
++		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
++		for (i = 0; i < keymap_size; i++) {
++			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
++				*state = REMOTE_KEY_PRESSED;
++				*event = keymap[i].keycode;
++				st->last_key_pressed =
++					keymap[i].keycode;
++				break;
++			}
++		st->last_key_pressed = 0;
++		}
++	}
++	 
++	return 0;
++}
++
++static struct usb_device_id tbsqboxs1_table[] = {
++	{USB_DEVICE(0x734c, 0x2601)},
++	{USB_DEVICE(0x734c, 0x5910)},
++	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX)},
++	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX_1)},
++	{ }
++};
++
++MODULE_DEVICE_TABLE(usb, tbsqboxs1_table);
++
++static int tbsqboxs1_load_firmware(struct usb_device *dev,
++			const struct firmware *frmwr)
++{
++	u8 *b, *p;
++	int ret = 0, i;
++	u8 reset;
++	const struct firmware *fw;
++	const char *filename = "dvb-usb-tbsqbox-id2601.fw";
++	const char *filename1 = "dvb-usb-tbsqbox-id5910.fw";
++	switch (dev->descriptor.idProduct) {
++	case 0x2601:
++		ret = request_firmware(&fw, filename, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename);
++			return ret;
++		}
++		break;
++	case 0x5910:
++		ret = request_firmware(&fw, filename1, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename1);
++			return ret;
++		}
++		break;
++	default:
++		fw = frmwr;
++		break;
++	}
++	info("start downloading TBSQBOX firmware");
++	p = kmalloc(fw->size, GFP_KERNEL);
++	reset = 1;
++	/*stop the CPU*/
++	tbsqboxs1_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++	tbsqboxs1_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++
++	if (p != NULL) {
++		memcpy(p, fw->data, fw->size);
++		for (i = 0; i < fw->size; i += 0x40) {
++			b = (u8 *) p + i;
++			if (tbsqboxs1_op_rw(dev, 0xa0, i, 0, b , 0x40,
++					TBSQBOX_WRITE_MSG) != 0x40) {
++				err("error while transferring firmware");
++				ret = -EINVAL;
++				break;
++			}
++		}
++		/* restart the CPU */
++		reset = 0;
++		if (ret || tbsqboxs1_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++		if (ret || tbsqboxs1_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++
++		msleep(100);
++		kfree(p);
++	}
++	return ret;
++}
++
++static struct dvb_usb_device_properties tbsqboxs1_properties = {
++	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++	.usb_ctrl = DEVICE_SPECIFIC,
++	.firmware = "dvb-usb-tbsqbox-id5910.fw",
++	.size_of_priv = sizeof(struct tbsqboxs1_state),
++	.no_reconnect = 1,
++
++	.i2c_algo = &tbsqboxs1_i2c_algo,
++	.rc.legacy = {
++		.rc_map_table = tbsqboxs1_rc_keys,
++		.rc_map_size = ARRAY_SIZE(tbsqboxs1_rc_keys),
++		.rc_interval = 150,
++		.rc_query = tbsqboxs1_rc_query,
++	},
++
++	.generic_bulk_ctrl_endpoint = 0x81,
++	/* parameter for the MPEG2-data transfer */
++	.num_adapters = 1,
++	.download_firmware = tbsqboxs1_load_firmware,
++	.read_mac_address = tbsqboxs1_read_mac_address,
++		.adapter = {
++		{
++			.num_frontends = 1,
++			.fe = {{
++				.frontend_attach = tbsqboxs1_frontend_attach,
++				.streaming_ctrl = NULL,
++				.tuner_attach = tbsqboxs1_earda_tuner_attach,
++				.stream = {
++					.type = USB_BULK,
++					.count = 8,
++					.endpoint = 0x82,
++					.u = {
++						.bulk = {
++							.buffersize = 4096,
++						}
++					}
++				},
++			}}
++		}
++	},
++	.num_device_descs = 1,
++	.devices = {
++		{"TBS QBOX DVBS USB2.0",
++			{&tbsqboxs1_table[1], NULL},
++			{NULL},
++		}
++	}
++};
++
++static int tbsqboxs1_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	if (0 == dvb_usb_device_init(intf, &tbsqboxs1_properties,
++			THIS_MODULE, NULL, adapter_nr)) {
++		return 0;
++	}
++	return -ENODEV;
++}
++
++static struct usb_driver tbsqboxs1_driver = {
++	.name = "tbsqboxs1",
++	.probe = tbsqboxs1_probe,
++	.disconnect = dvb_usb_device_exit,
++	.id_table = tbsqboxs1_table,
++};
++
++static int __init tbsqboxs1_module_init(void)
++{
++	int ret =  usb_register(&tbsqboxs1_driver);
++	if (ret)
++		err("usb_register failed. Error number %d", ret);
++
++	return ret;
++}
++
++static void __exit tbsqboxs1_module_exit(void)
++{
++	usb_deregister(&tbsqboxs1_driver);
++}
++
++module_init(tbsqboxs1_module_init);
++module_exit(tbsqboxs1_module_exit);
++
++MODULE_AUTHOR("Bob Liu <Bob@turbosight.com>");
++MODULE_DESCRIPTION("Driver for TBS QBOX");
++MODULE_VERSION("0.1");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qbox.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qbox.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,8 @@
++#ifndef _TBSQBOX_H_
++#define _TBSQBOX_H_
++
++#define DVB_USB_LOG_PREFIX "tbsqboxs1"
++#include "dvb-usb.h"
++
++#define deb_xfer(args...) dprintk(dvb_usb_tbsqboxs1_debug, 0x02, args)
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.c media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.c
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,485 @@
++/* DVB USB framework compliant Linux driver for the
++*	TBS QBOX
++*
++* Copyright (C) 2008 Bob Liu (Bob@Turbosight.com)
++* Igor M. Liplianin (liplianin@me.by)
++*
++*	This program is free software; you can redistribute it and/or modify it
++*	under the terms of the GNU General Public License as published by the
++*	Free Software Foundation, version 2.
++*
++* see Documentation/dvb/README.dvb-usb for more information
++*/
++
++/* 
++* History:
++*
++* July 2009 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++* remove QBOX2-DS3000 support
++* add QBOXS2-CX24116 support
++*/
++
++#include <linux/version.h>
++#include "tbs-qboxs2.h"
++#include "cx24116.h"
++
++
++#ifndef USB_PID_TBSQBOX_1
++#define USB_PID_TBSQBOX_1 0x5928
++#endif
++
++#define TBSQBOX_READ_MSG 0
++#define TBSQBOX_WRITE_MSG 1
++
++/* on my own*/
++#define TBSQBOX_VOLTAGE_CTRL (0x1800)
++#define TBSQBOX_RC_QUERY (0x1a00)
++
++struct tbsqboxs2_state {
++	u32 last_key_pressed;
++};
++struct tbsqboxs2_rc_keys {
++	u32 keycode;
++	u32 event;
++};
++
++/* debug */
++static int dvb_usb_tbsqboxs2_debug;
++module_param_named(debug, dvb_usb_tbsqboxs2_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." DVB_USB_DEBUG_STATUS);
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++static int tbsqboxs2_op_rw(struct usb_device *dev, u8 request, u16 value,
++			u16 index, u8 * data, u16 len, int flags)
++{
++	int ret;
++	u8 u8buf[len];
++
++	unsigned int pipe = (flags == TBSQBOX_READ_MSG) ?
++				usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
++	u8 request_type = (flags == TBSQBOX_READ_MSG) ? USB_DIR_IN : USB_DIR_OUT;
++
++	if (flags == TBSQBOX_WRITE_MSG)
++		memcpy(u8buf, data, len);
++	ret = usb_control_msg(dev, pipe, request, request_type | USB_TYPE_VENDOR,
++				value, index, u8buf, len, 2000);
++
++	if (flags == TBSQBOX_READ_MSG)
++		memcpy(data, u8buf, len);
++	return ret;
++}
++
++/* I2C */
++static int tbsqboxs2_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg msg[],
++		int num)
++{
++struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	int i = 0, len;
++	u8 ibuf[1], obuf[3];
++	u8 buf6[20];
++
++	if (!d)
++		return -ENODEV;
++	if (mutex_lock_interruptible(&d->i2c_mutex) < 0)
++		return -EAGAIN;
++
++	switch (num) {
++	case 2: {
++		/* read */
++		obuf[0] = msg[0].len;
++		obuf[1] = msg[0].addr<<1;
++		obuf[2] = msg[0].buf[0];
++
++		tbsqboxs2_op_rw(d->udev, 0x90, 0, 0,
++					obuf, 3, TBSQBOX_WRITE_MSG);
++		msleep(5);
++		tbsqboxs2_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++		memcpy(msg[1].buf, ibuf, msg[1].len);
++		break;
++	}
++	case 1:
++		switch (msg[0].addr) {
++		case 0x55: {
++			if (msg[0].buf[0] == 0xf7) {
++				/* firmware */
++				/* Write in small blocks */
++				u8 iobuf[19];
++				iobuf[0] = 0x12;
++				iobuf[1] = 0xaa;
++				iobuf[2] = 0xf7;
++				len = msg[0].len - 1;
++				i = 1;
++				do {
++					memcpy(iobuf + 3, msg[0].buf + i, (len > 16 ? 16 : len));
++					tbsqboxs2_op_rw(d->udev, 0x80, 0, 0,
++						iobuf, (len > 16 ? 16 : len) + 3, TBSQBOX_WRITE_MSG);
++					i += 16;
++					len -= 16;
++				} while (len > 0);
++			} else {
++				/* write to register */
++				buf6[0] = msg[0].len+1;//lenth
++				buf6[1] = msg[0].addr<<1;//demod addr
++				for(i=0;i<msg[0].len;i++) {
++				buf6[2+i] = msg[0].buf[i];//register
++				}
++				tbsqboxs2_op_rw(d->udev, 0x80, 0, 0,
++							buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++				//msleep(3);
++			}
++			break;
++		}
++		case 0x60: {
++			/* write to register */
++			buf6[0] = msg[0].len+1;//lenth
++			buf6[1] = msg[0].addr<<1;//demod addr
++			for(i=0;i<msg[0].len;i++) {
++				buf6[2+i] = msg[0].buf[i];//register
++			}
++			tbsqboxs2_op_rw(d->udev, 0x80, 0, 0,
++						buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++			msleep(3);
++
++			break;
++		}
++		case (TBSQBOX_RC_QUERY): {
++			tbsqboxs2_op_rw(d->udev, 0xb8, 0, 0,
++					buf6, 4, TBSQBOX_READ_MSG);
++			msg[0].buf[0] = buf6[2];
++			msg[0].buf[1] = buf6[3];
++			msleep(3);
++			//info("TBSQBOX_RC_QUERY %x %x %x %x\n",buf6[0],buf6[1],buf6[2],buf6[3]);
++			break;
++		}
++		case (TBSQBOX_VOLTAGE_CTRL): {
++			buf6[0] = 3;
++			buf6[1] = msg[0].buf[0];
++			tbsqboxs2_op_rw(d->udev, 0x8a, 0, 0,
++					buf6, 2, TBSQBOX_WRITE_MSG);
++			
++			break;
++		}
++		}
++
++		break;
++	}
++
++	mutex_unlock(&d->i2c_mutex);
++	return num;
++}
++
++static u32 tbsqboxs2_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++
++
++static struct i2c_algorithm tbsqboxs2_i2c_algo = {
++	.master_xfer = tbsqboxs2_i2c_transfer,
++	.functionality = tbsqboxs2_i2c_func,
++};
++
++static const struct cx24116_config qbox2_cx24116_config = {
++	.demod_address = 0x55,
++	.mpg_clk_pos_pol = 0x01,
++};
++
++static int tbsqboxs2_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
++{
++	int i,ret;
++	u8 ibuf[3] = {0, 0,0};
++	u8 eeprom[256], eepromline[16];
++
++	for (i = 0; i < 256; i++) {
++		ibuf[0]=1;//lenth
++		ibuf[1]=0xa0;//eeprom addr
++		ibuf[2]=i;//register
++		ret = tbsqboxs2_op_rw(d->udev, 0x90, 0, 0,
++					ibuf, 3, TBSQBOX_WRITE_MSG);
++		ret = tbsqboxs2_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++			if (ret < 0) {
++				err("read eeprom failed");
++				return -1;
++			} else {
++				eepromline[i%16] = ibuf[0];
++				eeprom[i] = ibuf[0];
++			}
++			
++			if ((i % 16) == 15) {
++				deb_xfer("%02x: ", i - 15);
++				debug_dump(eepromline, 16, deb_xfer);
++			}
++	}
++	memcpy(mac, eeprom + 16, 6);
++	return 0;
++};
++
++static int tbsqboxs2_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
++{
++	static u8 command_13v[1] = {0x00};
++	static u8 command_18v[1] = {0x01};
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_VOLTAGE_CTRL, .flags = 0,
++			.buf = command_13v, .len = 1},
++	};
++	
++	struct dvb_usb_adapter *udev_adap =
++		(struct dvb_usb_adapter *)(fe->dvb->priv);
++	if (voltage == SEC_VOLTAGE_18)
++		msg[0].buf = command_18v;
++	info("tbsqboxs2_set_voltage %d",voltage);
++	i2c_transfer(&udev_adap->dev->i2c_adap, msg, 1);
++	return 0;
++}
++
++static struct dvb_usb_device_properties tbsqboxs2_properties;
++
++static int tbsqboxs2_frontend_attach(struct dvb_usb_adapter *d)
++{
++	u8 buf[20];
++	
++	if ((d->fe_adap[0].fe = dvb_attach(cx24116_attach, &qbox2_cx24116_config,
++					&d->dev->i2c_adap)) != NULL) {
++			d->fe_adap[0].fe->ops.set_voltage = tbsqboxs2_set_voltage;
++			printk("QBOXS2: CX24116 attached.\n");
++
++			buf[0] = 7;
++			buf[1] = 1;
++			tbsqboxs2_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			return 0;
++	}
++
++	return -EIO;
++}
++
++
++
++static struct rc_map_table tbsqboxs2_rc_keys[] = {
++	{ 0xff84, KEY_POWER2 },		/*power*/
++	{ 0xff94, KEY_MUTE },		/*mute*/
++	{ 0xff87, KEY_1 },
++	{ 0xff86, KEY_2 },
++	{ 0xff85, KEY_3 },
++	{ 0xff8b, KEY_4 },
++	{ 0xff8a, KEY_5 },
++	{ 0xff89, KEY_6 },
++	{ 0xff8f, KEY_7 },
++	{ 0xff8e, KEY_8 },
++	{ 0xff8d, KEY_9 },
++	{ 0xff92, KEY_0 },
++	{ 0xff96, KEY_CHANNELUP },	/*ch+*/
++	{ 0xff91, KEY_CHANNELDOWN },	/*ch-*/
++	{ 0xff93, KEY_VOLUMEUP },		/*vol+*/
++	{ 0xff8c, KEY_VOLUMEDOWN },		/*vol-*/
++	{ 0xff83, KEY_RECORD },		/*rec*/
++	{ 0xff98, KEY_PAUSE  },		/*pause*/
++	{ 0xff99, KEY_OK },	/*ok*/
++	{ 0xff9a, KEY_SHUFFLE },		  /* snapshot */
++	{ 0xff81, KEY_UP },
++	{ 0xff90, KEY_LEFT },
++	{ 0xff82, KEY_RIGHT },
++	{ 0xff88, KEY_DOWN },
++	{ 0xff95, KEY_FAVORITES },
++	{ 0xff97, KEY_SUBTITLE },
++	{ 0xff9d, KEY_ZOOM },
++	{ 0xff9f, KEY_EXIT },
++	{ 0xff9e, KEY_MENU },
++	{ 0xff9c, KEY_EPG },
++	{ 0xff80, KEY_PREVIOUS },
++	{ 0xff9d, KEY_MODE }
++
++
++};
++
++
++
++static int tbsqboxs2_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
++{
++	struct rc_map_table *keymap = d->props.rc.legacy.rc_map_table;
++	int keymap_size = d->props.rc.legacy.rc_map_size;
++	
++	struct tbsqboxs2_state *st = d->priv;
++	u8 key[2];
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_RC_QUERY, .flags = I2C_M_RD, .buf = key,
++		.len = 2},
++	};
++	int i;
++
++	*state = REMOTE_NO_KEY_PRESSED;
++	if (tbsqboxs2_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
++		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
++		for (i = 0; i < keymap_size; i++) {
++			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
++				*state = REMOTE_KEY_PRESSED;
++				*event = keymap[i].keycode;
++				st->last_key_pressed =
++					keymap[i].keycode;
++				break;
++			}
++		st->last_key_pressed = 0;
++		}
++	}
++	 
++	return 0;
++}
++
++static struct usb_device_id tbsqboxs2_table[] = {
++	{USB_DEVICE(0x734c, 0x5928)},
++	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX_1)},
++	{ }
++};
++
++MODULE_DEVICE_TABLE(usb, tbsqboxs2_table);
++
++static int tbsqboxs2_load_firmware(struct usb_device *dev,
++			const struct firmware *frmwr)
++{
++	u8 *b, *p;
++	int ret = 0, i;
++	u8 reset;
++	const struct firmware *fw;
++	const char *filename = "dvb-usb-tbsqbox-id5928.fw";
++	switch (dev->descriptor.idProduct) {
++	case 0x5928:
++		ret = request_firmware(&fw, filename, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename);
++			return ret;
++		}
++		break;
++	default:
++		fw = frmwr;
++		break;
++	}
++	info("start downloading TBSQBOX firmware");
++	p = kmalloc(fw->size, GFP_KERNEL);
++	reset = 1;
++	/*stop the CPU*/
++	tbsqboxs2_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++	tbsqboxs2_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++
++	if (p != NULL) {
++		memcpy(p, fw->data, fw->size);
++		for (i = 0; i < fw->size; i += 0x40) {
++			b = (u8 *) p + i;
++			if (tbsqboxs2_op_rw(dev, 0xa0, i, 0, b , 0x40,
++					TBSQBOX_WRITE_MSG) != 0x40) {
++				err("error while transferring firmware");
++				ret = -EINVAL;
++				break;
++			}
++		}
++		/* restart the CPU */
++		reset = 0;
++		if (ret || tbsqboxs2_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++		if (ret || tbsqboxs2_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++
++		msleep(100);
++		kfree(p);
++	}
++	return ret;
++}
++
++static struct dvb_usb_device_properties tbsqboxs2_properties = {
++	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++	.usb_ctrl = DEVICE_SPECIFIC,
++	.firmware = "dvb-usb-tbsqbox-id5928.fw",
++	.size_of_priv = sizeof(struct tbsqboxs2_state),
++	.no_reconnect = 1,
++
++	.i2c_algo = &tbsqboxs2_i2c_algo,
++	.rc.legacy = {
++		.rc_map_table = tbsqboxs2_rc_keys,
++		.rc_map_size = ARRAY_SIZE(tbsqboxs2_rc_keys),
++		.rc_interval = 150,
++		.rc_query = tbsqboxs2_rc_query,
++	},
++
++	.generic_bulk_ctrl_endpoint = 0x81,
++	/* parameter for the MPEG2-data transfer */
++	.num_adapters = 1,
++	.download_firmware = tbsqboxs2_load_firmware,
++	.read_mac_address = tbsqboxs2_read_mac_address,
++		.adapter = {
++		{
++			.num_frontends = 1,
++			.fe = {{
++				.frontend_attach = tbsqboxs2_frontend_attach,
++				.streaming_ctrl = NULL,
++				.stream = {
++					.type = USB_BULK,
++					.count = 8,
++					.endpoint = 0x82,
++					.u = {
++						.bulk = {
++							.buffersize = 4096,
++						}
++					}
++				},
++			}}
++		}
++	},
++	.num_device_descs = 1,
++	.devices = {
++		{"TBS QBOXS2 DVBS2 USB2.0",
++			{&tbsqboxs2_table[0], NULL},
++			{NULL},
++		}
++	}
++};
++
++static int tbsqboxs2_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	if (0 == dvb_usb_device_init(intf, &tbsqboxs2_properties,
++			THIS_MODULE, NULL, adapter_nr)) {
++		return 0;
++	}
++	return -ENODEV;
++}
++
++static struct usb_driver tbsqboxs2_driver = {
++	.name = "tbsqboxs2",
++	.probe = tbsqboxs2_probe,
++	.disconnect = dvb_usb_device_exit,
++	.id_table = tbsqboxs2_table,
++};
++
++static int __init tbsqboxs2_module_init(void)
++{
++	int ret =  usb_register(&tbsqboxs2_driver);
++	if (ret)
++		err("usb_register failed. Error number %d", ret);
++
++	return ret;
++}
++
++static void __exit tbsqboxs2_module_exit(void)
++{
++	usb_deregister(&tbsqboxs2_driver);
++}
++
++module_init(tbsqboxs2_module_init);
++module_exit(tbsqboxs2_module_exit);
++
++MODULE_AUTHOR("Bob Liu <Bob@turbosight.com>");
++MODULE_DESCRIPTION("Driver for TBS QBOXS2-CX24116");
++MODULE_VERSION("0.2");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs2.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,8 @@
++#ifndef _TBSQBOXS2_H_
++#define _TBSQBOXS2_H_
++
++#define DVB_USB_LOG_PREFIX "tbsqboxs2"
++#include "dvb-usb.h"
++
++#define deb_xfer(args...) dprintk(dvb_usb_tbsqboxs2_debug, 0x02, args)
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.c media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.c
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,469 @@
++/* DVB USB framework compliant Linux driver for the
++*	TBS QBOX
++*
++* Copyright (C) 2008 Bob Liu (Bob@Turbosight.com)
++* Igor M. Liplianin (liplianin@me.by)
++*
++*	This program is free software; you can redistribute it and/or modify it
++*	under the terms of the GNU General Public License as published by the
++*	Free Software Foundation, version 2.
++*
++* see Documentation/dvb/README.dvb-usb for more information
++*/
++
++/* 
++* History:
++*
++* December 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++* remove QBOX2-CX24116 support
++* add QBOXS3 support
++*/
++
++#include <linux/version.h>
++#include "tbs-qboxs3.h"
++#include "tbs5921fe.h"
++#include "tbs5921ctrl.h"
++#include "tbsfe.h"
++
++#ifndef USB_PID_TBSQBOX_1
++#define USB_PID_TBSQBOX_1 0x5921
++#endif
++
++#define TBSQBOX_READ_MSG 0
++#define TBSQBOX_WRITE_MSG 1
++
++/* on my own*/
++#define TBSQBOX_VOLTAGE_CTRL (0x1800)
++#define TBSQBOX_RC_QUERY (0x1a00)
++
++struct tbsqboxs3_state {
++	u32 last_key_pressed;
++};
++struct tbsqboxs3_rc_keys {
++	u32 keycode;
++	u32 event;
++};
++
++/* debug */
++static int dvb_usb_tbsqboxs3_debug;
++module_param_named(debug, dvb_usb_tbsqboxs3_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level (1=info 2=xfer (or-able))." DVB_USB_DEBUG_STATUS);
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++static int tbsqboxs3_op_rw(struct usb_device *dev, u8 request, u16 value,
++			u16 index, u8 * data, u16 len, int flags)
++{
++	int ret;
++	u8 u8buf[len];
++
++	unsigned int pipe = (flags == TBSQBOX_READ_MSG) ?
++				usb_rcvctrlpipe(dev, 0) : usb_sndctrlpipe(dev, 0);
++	u8 request_type = (flags == TBSQBOX_READ_MSG) ? USB_DIR_IN : USB_DIR_OUT;
++
++	if (flags == TBSQBOX_WRITE_MSG)
++		memcpy(u8buf, data, len);
++	ret = usb_control_msg(dev, pipe, request, request_type | USB_TYPE_VENDOR,
++				value, index, u8buf, len, 2000);
++
++	if (flags == TBSQBOX_READ_MSG)
++		memcpy(data, u8buf, len);
++	return ret;
++}
++
++/* I2C */
++static int tbsqboxs3_i2c_transfer(struct i2c_adapter *adap, struct i2c_msg msg[],
++		int num)
++{
++struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	int i = 0, len;
++	u8 ibuf[1], obuf[3];
++	u8 buf6[20];
++
++	if (!d)
++		return -ENODEV;
++	if (mutex_lock_interruptible(&d->i2c_mutex) < 0)
++		return -EAGAIN;
++
++	switch (num) {
++	case 2: {
++		/* read */
++		obuf[0] = msg[0].len;
++		obuf[1] = msg[0].addr<<1;
++		obuf[2] = msg[0].buf[0];
++
++		tbsqboxs3_op_rw(d->udev, 0x90, 0, 0,
++					obuf, 3, TBSQBOX_WRITE_MSG);
++		msleep(5);
++		tbsqboxs3_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++		memcpy(msg[1].buf, ibuf, msg[1].len);
++		break;
++	}
++	case 1:
++		switch (msg[0].addr) {
++		case 0x55: {
++			if (msg[0].buf[0] == 0xfa) {
++				/* firmware */
++				/* Write in small blocks */
++				u8 iobuf[19];
++				iobuf[0] = 0x12;
++				iobuf[1] = 0xaa;
++				iobuf[2] = 0xfa;
++				len = msg[0].len - 1;
++				i = 1;
++				do {
++					memcpy(iobuf + 3, msg[0].buf + i, (len > 16 ? 16 : len));
++					tbsqboxs3_op_rw(d->udev, 0x80, 0, 0,
++						iobuf, (len > 16 ? 16 : len) + 3, TBSQBOX_WRITE_MSG);
++					i += 16;
++					len -= 16;
++				} while (len > 0);
++			} else {
++				/* write to register */
++				buf6[0] = msg[0].len+1;//lenth
++				buf6[1] = msg[0].addr<<1;//demod addr
++				for(i=0;i<msg[0].len;i++) {
++				buf6[2+i] = msg[0].buf[i];//register
++				}
++				tbsqboxs3_op_rw(d->udev, 0x80, 0, 0,
++							buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++				//msleep(3);
++			}
++			break;
++		}
++		case 0x60: {
++			/* write to register */
++			buf6[0] = msg[0].len+1;//lenth
++			buf6[1] = msg[0].addr<<1;//demod addr
++			for(i=0;i<msg[0].len;i++) {
++				buf6[2+i] = msg[0].buf[i];//register
++			}
++			tbsqboxs3_op_rw(d->udev, 0x80, 0, 0,
++						buf6, msg[0].len+2, TBSQBOX_WRITE_MSG);
++			msleep(3);
++
++			break;
++		}
++		case (TBSQBOX_RC_QUERY): {
++			tbsqboxs3_op_rw(d->udev, 0xb8, 0, 0,
++					buf6, 4, TBSQBOX_READ_MSG);
++			msg[0].buf[0] = buf6[2];
++			msg[0].buf[1] = buf6[3];
++			msleep(3);
++			//info("TBSQBOX_RC_QUERY %x %x %x %x\n",buf6[0],buf6[1],buf6[2],buf6[3]);
++			break;
++		}
++		case (TBSQBOX_VOLTAGE_CTRL): {
++			break;
++		}
++		}
++
++		break;
++	}
++
++	mutex_unlock(&d->i2c_mutex);
++	return num;
++}
++
++static u32 tbsqboxs3_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++
++
++static struct i2c_algorithm tbsqboxs3_i2c_algo = {
++	.master_xfer = tbsqboxs3_i2c_transfer,
++	.functionality = tbsqboxs3_i2c_func,
++};
++
++static struct tbs5921fe_config tbs5921_fe_config = {
++        .tbs5921fe_address = 0x55,
++
++	.tbs5921_ctrl = tbs5921ctrl,
++};
++
++static int tbsqboxs3_read_mac_address(struct dvb_usb_device *d, u8 mac[6])
++{
++	int i,ret;
++	u8 ibuf[3] = {0, 0,0};
++	u8 eeprom[256], eepromline[16];
++
++	for (i = 0; i < 256; i++) {
++		ibuf[0]=1;//lenth
++		ibuf[1]=0xa0;//eeprom addr
++		ibuf[2]=i;//register
++		ret = tbsqboxs3_op_rw(d->udev, 0x90, 0, 0,
++					ibuf, 3, TBSQBOX_WRITE_MSG);
++		ret = tbsqboxs3_op_rw(d->udev, 0x91, 0, 0,
++					ibuf, 1, TBSQBOX_READ_MSG);
++			if (ret < 0) {
++				err("read eeprom failed");
++				return -1;
++			} else {
++				eepromline[i%16] = ibuf[0];
++				eeprom[i] = ibuf[0];
++			}
++			
++			if ((i % 16) == 15) {
++				deb_xfer("%02x: ", i - 15);
++				debug_dump(eepromline, 16, deb_xfer);
++			}
++	}
++	memcpy(mac, eeprom + 16, 6);
++	return 0;
++};
++
++static struct dvb_usb_device_properties tbsqboxs3_properties;
++
++static int tbsqboxs3_frontend_attach(struct dvb_usb_adapter *d)
++{
++	u8 buf[20];
++	
++        if ((d->fe_adap[0].fe = dvb_attach(tbs5921fe_attach, &tbs5921_fe_config,
++                                        &d->dev->i2c_adap, 0)) != NULL) {
++			printk("QBOXS3: TBS5921FE attached.\n");
++			dvb_attach(tbsfe_attach, d->fe_adap[0].fe);
++
++			buf[0] = 7;
++			buf[1] = 1;
++			tbsqboxs3_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			buf[0] = 1;
++			buf[1] = 1;
++			tbsqboxs3_op_rw(d->dev->udev, 0x8a, 0, 0,
++					buf, 2, TBSQBOX_WRITE_MSG);
++
++			return 0;
++	}
++
++	return -EIO;
++}
++
++
++
++static struct rc_map_table tbsqboxs3_rc_keys[] = {
++	{ 0xff84, KEY_POWER2 },		/*power*/
++	{ 0xff94, KEY_MUTE },		/*mute*/
++	{ 0xff87, KEY_1 },
++	{ 0xff86, KEY_2 },
++	{ 0xff85, KEY_3 },
++	{ 0xff8b, KEY_4 },
++	{ 0xff8a, KEY_5 },
++	{ 0xff89, KEY_6 },
++	{ 0xff8f, KEY_7 },
++	{ 0xff8e, KEY_8 },
++	{ 0xff8d, KEY_9 },
++	{ 0xff92, KEY_0 },
++	{ 0xff96, KEY_CHANNELUP },	/*ch+*/
++	{ 0xff91, KEY_CHANNELDOWN },	/*ch-*/
++	{ 0xff93, KEY_VOLUMEUP },		/*vol+*/
++	{ 0xff8c, KEY_VOLUMEDOWN },		/*vol-*/
++	{ 0xff83, KEY_RECORD },		/*rec*/
++	{ 0xff98, KEY_PAUSE  },		/*pause*/
++	{ 0xff99, KEY_OK },	/*ok*/
++	{ 0xff9a, KEY_SHUFFLE },		  /* snapshot */
++	{ 0xff81, KEY_UP },
++	{ 0xff90, KEY_LEFT },
++	{ 0xff82, KEY_RIGHT },
++	{ 0xff88, KEY_DOWN },
++	{ 0xff95, KEY_FAVORITES },
++	{ 0xff97, KEY_SUBTITLE },
++	{ 0xff9d, KEY_ZOOM },
++	{ 0xff9f, KEY_EXIT },
++	{ 0xff9e, KEY_MENU },
++	{ 0xff9c, KEY_EPG },
++	{ 0xff80, KEY_PREVIOUS },
++	{ 0xff9b, KEY_MODE }
++
++
++};
++
++
++
++static int tbsqboxs3_rc_query(struct dvb_usb_device *d, u32 *event, int *state)
++{
++	struct rc_map_table *keymap = d->props.rc.legacy.rc_map_table;
++	int keymap_size = d->props.rc.legacy.rc_map_size;
++	
++	struct tbsqboxs3_state *st = d->priv;
++	u8 key[2];
++	struct i2c_msg msg[] = {
++		{.addr = TBSQBOX_RC_QUERY, .flags = I2C_M_RD, .buf = key,
++		.len = 2},
++	};
++	int i;
++
++	*state = REMOTE_NO_KEY_PRESSED;
++	if (tbsqboxs3_i2c_transfer(&d->i2c_adap, msg, 1) == 1) {
++		//info("key: %x %x\n",msg[0].buf[0],msg[0].buf[1]); 
++		for (i = 0; i < keymap_size; i++) {
++			if (rc5_data(&keymap[i]) == msg[0].buf[1]) {
++				*state = REMOTE_KEY_PRESSED;
++				*event = keymap[i].keycode;
++				st->last_key_pressed =
++					keymap[i].keycode;
++				break;
++			}
++		st->last_key_pressed = 0;
++		}
++	}
++	 
++	return 0;
++}
++
++static struct usb_device_id tbsqboxs3_table[] = {
++	{USB_DEVICE(0x734c, 0x5921)},
++	{USB_DEVICE(USB_VID_CYPRESS, USB_PID_TBSQBOX_1)},
++	{ }
++};
++
++MODULE_DEVICE_TABLE(usb, tbsqboxs3_table);
++
++static int tbsqboxs3_load_firmware(struct usb_device *dev,
++			const struct firmware *frmwr)
++{
++	u8 *b, *p;
++	int ret = 0, i;
++	u8 reset;
++	const struct firmware *fw;
++	const char *filename = "dvb-usb-tbsqbox-id5921.fw";
++	switch (dev->descriptor.idProduct) {
++	case 0x5921:
++		ret = request_firmware(&fw, filename, &dev->dev);
++		if (ret != 0) {
++			err("did not find the firmware file. (%s) "
++			"Please see linux/Documentation/dvb/ for more details "
++			"on firmware-problems.", filename);
++			return ret;
++		}
++		break;
++	default:
++		fw = frmwr;
++		break;
++	}
++	info("start downloading TBSQBOX firmware");
++	p = kmalloc(fw->size, GFP_KERNEL);
++	reset = 1;
++	/*stop the CPU*/
++	tbsqboxs3_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++	tbsqboxs3_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1, TBSQBOX_WRITE_MSG);
++
++	if (p != NULL) {
++		memcpy(p, fw->data, fw->size);
++		for (i = 0; i < fw->size; i += 0x40) {
++			b = (u8 *) p + i;
++			if (tbsqboxs3_op_rw(dev, 0xa0, i, 0, b , 0x40,
++					TBSQBOX_WRITE_MSG) != 0x40) {
++				err("error while transferring firmware");
++				ret = -EINVAL;
++				break;
++			}
++		}
++		/* restart the CPU */
++		reset = 0;
++		if (ret || tbsqboxs3_op_rw(dev, 0xa0, 0x7f92, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++		if (ret || tbsqboxs3_op_rw(dev, 0xa0, 0xe600, 0, &reset, 1,
++					TBSQBOX_WRITE_MSG) != 1) {
++			err("could not restart the USB controller CPU.");
++			ret = -EINVAL;
++		}
++
++		msleep(100);
++		kfree(p);
++	}
++	return ret;
++}
++
++static struct dvb_usb_device_properties tbsqboxs3_properties = {
++	.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++	.usb_ctrl = DEVICE_SPECIFIC,
++	.firmware = "dvb-usb-tbsqbox-id5921.fw",
++	.size_of_priv = sizeof(struct tbsqboxs3_state),
++	.no_reconnect = 1,
++
++	.i2c_algo = &tbsqboxs3_i2c_algo,
++	.rc.legacy = {
++		.rc_map_table = tbsqboxs3_rc_keys,
++		.rc_map_size = ARRAY_SIZE(tbsqboxs3_rc_keys),
++		.rc_interval = 150,
++		.rc_query = tbsqboxs3_rc_query,
++	},
++
++	.generic_bulk_ctrl_endpoint = 0x81,
++	/* parameter for the MPEG2-data transfer */
++	.num_adapters = 1,
++	.download_firmware = tbsqboxs3_load_firmware,
++	.read_mac_address = tbsqboxs3_read_mac_address,
++		.adapter = {
++		{
++			.num_frontends = 1,
++			.fe = {{
++				.frontend_attach = tbsqboxs3_frontend_attach,
++				.streaming_ctrl = NULL,
++				.stream = {
++					.type = USB_BULK,
++					.count = 8,
++					.endpoint = 0x82,
++					.u = {
++						.bulk = {
++							.buffersize = 4096,
++						}
++					}
++				},
++			}}
++		}
++	},
++	.num_device_descs = 1,
++	.devices = {
++		{"TBS QBOXS3 DVBS2 USB2.0",
++			{&tbsqboxs3_table[0], NULL},
++			{NULL},
++		}
++	}
++};
++
++static int tbsqboxs3_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	if (0 == dvb_usb_device_init(intf, &tbsqboxs3_properties,
++			THIS_MODULE, NULL, adapter_nr)) {
++		return 0;
++	}
++	return -ENODEV;
++}
++
++static struct usb_driver tbsqboxs3_driver = {
++	.name = "tbsqboxs3",
++	.probe = tbsqboxs3_probe,
++	.disconnect = dvb_usb_device_exit,
++	.id_table = tbsqboxs3_table,
++};
++
++static int __init tbsqboxs3_module_init(void)
++{
++	int ret =  usb_register(&tbsqboxs3_driver);
++	if (ret)
++		err("usb_register failed. Error number %d", ret);
++
++	return ret;
++}
++
++static void __exit tbsqboxs3_module_exit(void)
++{
++	usb_deregister(&tbsqboxs3_driver);
++}
++
++module_init(tbsqboxs3_module_init);
++module_exit(tbsqboxs3_module_exit);
++
++MODULE_AUTHOR("Bob Liu <Bob@turbosight.com>");
++MODULE_DESCRIPTION("Driver for TBS QBOXS3");
++MODULE_VERSION("0.2");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.h media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.h
+--- media_build_experimental/linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/dvb-usb/tbs-qboxs3.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,8 @@
++#ifndef _TBSQBOXS3_H_
++#define _TBSQBOXS3_H_
++
++#define DVB_USB_LOG_PREFIX "tbsqboxs3"
++#include "dvb-usb.h"
++
++#define deb_xfer(args...) dprintk(dvb_usb_tbsqboxs3_debug, 0x02, args)
++#endif
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/Kconfig media_build_experimental_tbs//linux/drivers/media/dvb/frontends/Kconfig
+--- media_build_experimental/linux/drivers/media/dvb/frontends/Kconfig	2012-04-20 21:40:15.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/Kconfig	2012-04-18 22:15:31.000000000 +0200
+@@ -231,6 +231,125 @@
+ 	default m if DVB_FE_CUSTOMISE
+ 	help
+ 	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++	  
++config DVB_TBSFE
++	tristate "TBS FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A TurboSight TBS FE module. Say Y when you want to support this.
++
++config DVB_TBS6980FE
++	tristate "TurboSight TBS6980FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6981FE
++	tristate "TurboSight TBS6981FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6921FE
++	tristate "TurboSight TBS6921FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS8921FE
++	tristate "TurboSight TBS8921FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6925CTRL
++	tristate "TurboSight TBS6925 controls"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A TurboSight TBS6925 controls. Say Y when you want to support this.
++
++config DVB_TBS6992
++	tristate "TBS6992 based tuners"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  TurboSighti TBS6992 Silicon Tuner
++
++config DVB_TBS5921FE
++	tristate "TurboSight TBS5921FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS62X0FE
++	tristate "TurboSight TBS60x0FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-T/T2/C tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6984FE
++	tristate "TurboSight TBS6984FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++	  
++config DVB_TBS6922FE
++	tristate "TurboSight TBS6922FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6928FE
++	tristate "TurboSight TBS6928FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS8922FE
++	tristate "TurboSight TBS8922FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS5922FE
++	tristate "TurboSight TBS5922FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS5880FE
++	tristate "TurboSight TBS5880FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-T/T2/C tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6982FE
++	tristate "TurboSight TBS6982FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6991FE
++	tristate "TurboSight TBS6991FE based"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
+ 
+ config DVB_SI21XX
+ 	tristate "Silicon Labs SI21XX based"
+@@ -558,26 +677,12 @@
+ 	  to support this frontend.
+ 
+ config DVB_AU8522
+-	depends on I2C
+-	tristate
+-
+-config DVB_AU8522_DTV
+-	tristate "Auvitek AU8522 based DTV demod"
+-	depends on DVB_CORE && I2C
+-	select DVB_AU8522
++	tristate "Auvitek AU8522 based"
++	depends on DVB_CORE && I2C && VIDEO_V4L2
+ 	default m if DVB_FE_CUSTOMISE
+ 	help
+-	  An ATSC 8VSB, QAM64/256 & NTSC demodulator module. Say Y when
+-	  you want to enable DTV demodulation support for this frontend.
+-
+-config DVB_AU8522_V4L
+-	tristate "Auvitek AU8522 based ATV demod"
+-	depends on VIDEO_V4L2 && I2C
+-	select DVB_AU8522
+-	default m if DVB_FE_CUSTOMISE
+-	help
+-	  An ATSC 8VSB, QAM64/256 & NTSC demodulator module. Say Y when
+-	  you want to enable ATV demodulation support for this frontend.
++	  An ATSC 8VSB and QAM64/256 tuner module. Say Y when you want
++	  to support this frontend.
+ 
+ config DVB_S5H1411
+ 	tristate "Samsung S5H1411 based"
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/kmem_wrap.c media_build_experimental_tbs//linux/drivers/media/dvb/frontends/kmem_wrap.c
+--- media_build_experimental/linux/drivers/media/dvb/frontends/kmem_wrap.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/kmem_wrap.c	2012-04-18 22:53:09.000000000 +0200
+@@ -0,0 +1,16 @@
++#include <linux/slab.h>
++
++void *kmalloc_wrap(int size)
++{
++       return kmalloc(size, GFP_KERNEL);
++}
++
++void *kzalloc_wrap(int size)
++{
++       return kzalloc(size, GFP_KERNEL);
++}
++
++void kfree_wrap(void *p)
++{
++       kfree(p);
++}
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/Makefile media_build_experimental_tbs//linux/drivers/media/dvb/frontends/Makefile
+--- media_build_experimental/linux/drivers/media/dvb/frontends/Makefile	2012-04-20 21:40:16.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/Makefile	2012-04-19 22:02:16.000000000 +0200
+@@ -2,11 +2,13 @@
+ # Makefile for the kernel DVB frontend device drivers.
+ #
+ 
++ccflags-y += -fno-stack-protector
+ ccflags-y += -I$(srctree)/drivers/media/dvb/dvb-core/
+ ccflags-y += -I$(srctree)/drivers/media/common/tuners/
+ 
+ stb0899-objs = stb0899_drv.o stb0899_algo.o
+ stv0900-objs = stv0900_core.o stv0900_sw.o
++au8522-objs = au8522_dig.o au8522_decoder.o
+ drxd-objs = drxd_firm.o drxd_hard.o
+ cxd2820r-objs = cxd2820r_core.o cxd2820r_c.o cxd2820r_t.o cxd2820r_t2.o
+ drxk-objs := drxk_hard.o
+@@ -62,9 +64,7 @@
+ obj-$(CONFIG_DVB_TUA6100) += tua6100.o
+ obj-$(CONFIG_DVB_S5H1409) += s5h1409.o
+ obj-$(CONFIG_DVB_TUNER_ITD1000) += itd1000.o
+-obj-$(CONFIG_DVB_AU8522) += au8522_common.o
+-obj-$(CONFIG_DVB_AU8522_DTV) += au8522_dig.o
+-obj-$(CONFIG_DVB_AU8522_V4L) += au8522_decoder.o
++obj-$(CONFIG_DVB_AU8522) += au8522.o
+ obj-$(CONFIG_DVB_TDA10048) += tda10048.o
+ obj-$(CONFIG_DVB_TUNER_CX24113) += cx24113.o
+ obj-$(CONFIG_DVB_S5H1411) += s5h1411.o
+@@ -75,6 +75,39 @@
+ obj-$(CONFIG_DVB_DUMMY_FE) += dvb_dummy_fe.o
+ obj-$(CONFIG_DVB_AF9013) += af9013.o
+ obj-$(CONFIG_DVB_CX24116) += cx24116.o
++obj-$(CONFIG_DVB_TBSFE) += tbsfe.o
++obj-$(CONFIG_DVB_TBS6980FE) += tbs6980fe.o
++tbs6980fe-objs += kmem_wrap.o tbs6980fe_driver.o
++obj-$(CONFIG_DVB_TBS6981FE) += tbs6981fe.o
++tbs6981fe-objs += kmem_wrap.o tbs6981fe_driver.o
++obj-$(CONFIG_DVB_TBS6921FE) += tbs6921fe.o
++tbs6921fe-objs += kmem_wrap.o tbs6921fe_driver.o
++obj-$(CONFIG_DVB_TBS8921FE) += tbs8921fe.o
++tbs8921fe-objs += kmem_wrap.o tbs8921fe_driver.o
++obj-$(CONFIG_DVB_TBS6925CTRL) += tbs6925ctrl.o
++tbs6925ctrl-objs += kmem_wrap.o tbs6925ctrl_driver.o
++obj-$(CONFIG_DVB_TBS6992) += tbs6992.o
++tbs6992-objs += kmem_wrap.o tbs6992_driver.o
++obj-$(CONFIG_DVB_TBS5921FE) += tbs5921fe.o
++tbs5921fe-objs += kmem_wrap.o tbs5921fe_driver.o
++obj-$(CONFIG_DVB_TBS62X0FE) += tbs62x0fe.o
++tbs62x0fe-objs += kmem_wrap.o tbs62x0fe_driver.o
++obj-$(CONFIG_DVB_TBS6984FE) += tbs6984fe.o
++tbs6984fe-objs += kmem_wrap.o tbs6984fe_driver.o
++obj-$(CONFIG_DVB_TBS6922FE) += tbs6922fe.o
++tbs6922fe-objs += kmem_wrap.o tbs6922fe_driver.o
++obj-$(CONFIG_DVB_TBS6928FE) += tbs6928fe.o
++tbs6928fe-objs += kmem_wrap.o tbs6928fe_driver.o
++obj-$(CONFIG_DVB_TBS8922FE) += tbs8922fe.o
++tbs8922fe-objs += kmem_wrap.o tbs8922fe_driver.o
++obj-$(CONFIG_DVB_TBS5922FE) += tbs5922fe.o
++tbs5922fe-objs += kmem_wrap.o tbs5922fe_driver.o
++obj-$(CONFIG_DVB_TBS5880FE) += tbs5880fe.o
++tbs5880fe-objs += kmem_wrap.o tbs5880fe_driver.o
++obj-$(CONFIG_DVB_TBS6982FE) += tbs6982fe.o
++tbs6982fe-objs += kmem_wrap.o tbs6982fe_driver.o
++obj-$(CONFIG_DVB_TBS6991FE) += tbs6991fe.o
++tbs6991fe-objs += kmem_wrap.o tbs6991fe_driver.o
+ obj-$(CONFIG_DVB_SI21XX) += si21xx.o
+ obj-$(CONFIG_DVB_STV0288) += stv0288.o
+ obj-$(CONFIG_DVB_STB6000) += stb6000.o
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs5880fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs5880fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs5880fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs5880fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,35 @@
++/*
++    TurboSight TBS 5880 DVBT/T2/C frontend driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS5880FE_H
++#define TBS5880FE_H
++
++#include <linux/dvb/frontend.h>
++#include "dvb-usb.h"
++
++struct tbs5880fe_config {
++	u8 tbs5880fe_address;
++
++	int (*tbs5880_ctrl)(struct usb_device *dev, u8 *a);
++};
++
++#if defined(CONFIG_DVB_TBS5880FE) || \
++	(defined(CONFIG_DVB_TBS5880FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs5880fe_attach(
++	const struct tbs5880fe_config *config,
++	struct i2c_adapter *i2c);
++#else
++static inline struct dvb_frontend *tbs5880fe_attach(
++	const struct tbs5880fe_config *config,
++	struct i2c_adapter *i2c)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS5880FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs5921fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs5921fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs5921fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs5921fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,35 @@
++/*
++    TurboSight TBS 5921 DVBS/S2 frontend driver
++    Copyright (C) 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2010 TurboSight.com
++*/
++
++#ifndef TBS5921FE_H
++#define TBS5921FE_H
++
++#include <linux/dvb/frontend.h>
++#include "dvb-usb.h"
++
++struct tbs5921fe_config {
++	u8 tbs5921fe_address;
++
++	int (*tbs5921_ctrl)(struct usb_device *dev, u8 *a);
++};
++
++#if defined(CONFIG_DVB_TBS5921FE) || \
++	(defined(CONFIG_DVB_TBS5921FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs5921fe_attach(
++	const struct tbs5921fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs5921fe_attach(
++	const struct tbs5921fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS5921FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs5922fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs5922fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs5922fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs5922fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,35 @@
++/*
++    TurboSight TBS 5922 DVBS/S2 frontend driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS5922FE_H
++#define TBS5922FE_H
++
++#include <linux/dvb/frontend.h>
++#include "dvb-usb.h"
++
++struct tbs5922fe_config {
++	u8 tbs5922fe_address;
++
++	int (*tbs5922_ctrl)(struct usb_device *dev, u8 *a);
++};
++
++#if defined(CONFIG_DVB_TBS5922FE) || \
++	(defined(CONFIG_DVB_TBS5922FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs5922fe_attach(
++	const struct tbs5922fe_config *config,
++	struct i2c_adapter *i2c);
++#else
++static inline struct dvb_frontend *tbs5922fe_attach(
++	const struct tbs5922fe_config *config,
++	struct i2c_adapter *i2c)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS5922FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs62x0fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs62x0fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs62x0fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs62x0fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 62x0 DVBT/T2/C frontend driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS62X0FE_H
++#define TBS62X0FE_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs62x0fe_config {
++	u8 tbs62x0fe_address;
++
++	int (*tbs62x0_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs62x0_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS62X0FE) || \
++	(defined(CONFIG_DVB_TBS62X0FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs62x0fe_attach(
++	const struct tbs62x0fe_config *config,
++	struct i2c_adapter *i2c);
++#else
++static inline struct dvb_frontend *tbs62x0fe_attach(
++	const struct tbs62x0fe_config *config,
++	struct i2c_adapter *i2c)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS62X0FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6921fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6921fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6921fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6921fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6921 DVBS/S2 frontend driver
++    Copyright (C) 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2010 TurboSight.com
++*/
++
++#ifndef TBS6921FE_H
++#define TBS6921FE_H
++
++#include <linux/dvb/frontend.h>
++#include "cx23885.h"
++
++struct tbs6921fe_config {
++	u8 tbs6921fe_address;
++
++	int (*tbs6921_ctrl1)(struct cx23885_dev *dev, int a);
++	int (*tbs6921_ctrl2)(struct cx23885_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6921FE) || \
++	(defined(CONFIG_DVB_TBS6921FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6921fe_attach(
++	const struct tbs6921fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs6921fe_attach(
++	const struct tbs6921fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6921FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6922fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6922fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6922fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6922fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6922 DVBS/S2 Satellite Demodulator/Tuner driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS6922FE_H
++#define TBS6922FE_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs6922fe_config {
++	u8 tbs6922fe_address;
++	
++	int (*tbs6922_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs6922_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6922FE) || \
++	(defined(CONFIG_DVB_TBS6922FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6922fe_attach(
++	const struct tbs6922fe_config *config,
++	struct i2c_adapter *i2c);
++#else
++static inline struct dvb_frontend *tbs6922fe_attach(
++	const struct tbs6922fe_config *config,
++	struct i2c_adapter *i2c)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6922FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6925ctrl.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6925ctrl.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6925ctrl.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6925ctrl.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,42 @@
++/*
++    TurboSight TBS 6925 DVBS/S2 controls
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS6925CTRL_H
++#define TBS6925CTRL_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs6925ctrl_config {
++	u8 tbs6925ctrl_address;
++
++	int (*tbs6925_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs6925_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6925CTRL) || \
++	(defined(CONFIG_DVB_TBS6925CTRL_MODULE) && defined(MODULE))
++
++
++extern struct dvb_frontend *tbs6925ctrl_attach(
++	struct dvb_frontend *fe,
++	struct i2c_adapter *i2c,
++	const struct tbs6925ctrl_config *config);
++
++#else
++static inline struct dvb_frontend *tbs6925ctrl_attach(
++	struct dvb_frontend *fe,
++	struct i2c_adapter *i2c,
++	const struct tbs6925ctrl_config *config)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++
++#endif /* CONFIG_DVB_TBS6925CTRL */
++
++#endif /* TBS6925CTRL_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6928fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6928fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6928fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6928fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6928 DVBS/S2 Satellite Demodulator/Tuner driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS6928FE_H
++#define TBS6928FE_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs6928fe_config {
++	u8 tbs6928fe_address;
++	
++	int (*tbs6928_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs6928_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6928FE) || \
++	(defined(CONFIG_DVB_TBS6928FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6928fe_attach(
++	const struct tbs6928fe_config *config,
++	struct i2c_adapter *i2c);
++#else
++static inline struct dvb_frontend *tbs6928fe_attach(
++	const struct tbs6928fe_config *config,
++	struct i2c_adapter *i2c)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6928FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6980fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6980fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6980fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6980fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6980 Dual DVBS/S2 frontend driver
++    Copyright (C) 2009 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2009 TurboSight.com
++*/
++
++#ifndef TBS6980FE_H
++#define TBS6980FE_H
++
++#include <linux/dvb/frontend.h>
++#include "cx23885.h"
++
++struct tbs6980fe_config {
++	u8 tbs6980fe_address;
++
++	int (*tbs6980_ctrl1)(struct cx23885_dev *dev, int a);
++	int (*tbs6980_ctrl2)(struct cx23885_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6980FE) || \
++	(defined(CONFIG_DVB_TBS6980FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6980fe_attach(
++	const struct tbs6980fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs6980fe_attach(
++	const struct tbs6980fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6980FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6981fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6981fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6981fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6981fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6981 Dual DVBS/S2 frontend driver
++    Copyright (C) 2009 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2009 TurboSight.com
++*/
++
++#ifndef TBS6981FE_H
++#define TBS6981FE_H
++
++#include <linux/dvb/frontend.h>
++#include "cx23885.h"
++
++struct tbs6981fe_config {
++	u8 tbs6981fe_address;
++
++	int (*tbs6981_ctrl1)(struct cx23885_dev *dev, int a);
++	int (*tbs6981_ctrl2)(struct cx23885_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6981FE) || \
++	(defined(CONFIG_DVB_TBS6981FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6981fe_attach(
++	const struct tbs6981fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs6981fe_attach(
++	const struct tbs6981fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6981FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6982fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6982fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6982fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6982fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6982 DVBS/S2 Satellite Demodulator/Tuner driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS6982FE_H
++#define TBS6982FE_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs6982fe_config {
++	u8 tbs6982fe_address;
++	
++	int (*tbs6982_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs6982_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6982FE) || \
++	(defined(CONFIG_DVB_TBS6982FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6982fe_attach(
++	const struct tbs6982fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs6982fe_attach(
++	const struct tbs6982fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6982FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6984fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6984fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6984fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6984fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6984 Dual DVBS/S2 frontend driver
++    Copyright (C) 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2010 TurboSight.com
++*/
++
++#ifndef TBS6984FE_H
++#define TBS6984FE_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs6984fe_config {
++	u8 tbs6984fe_address;
++
++	int (*tbs6984_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs6984_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6984FE) || \
++	(defined(CONFIG_DVB_TBS6984FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6984fe_attach(
++	const struct tbs6984fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs6984fe_attach(
++	const struct tbs6984fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6984FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6991fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6991fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6991fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6991fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 6991 DVBS/S2 Satellite Demodulator/Tuner driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS6991FE_H
++#define TBS6991FE_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs6991fe_config {
++	u8 tbs6991fe_address;
++	
++	int (*tbs6991_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs6991_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS6991FE) || \
++	(defined(CONFIG_DVB_TBS6991FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs6991fe_attach(
++	const struct tbs6991fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs6991fe_attach(
++	const struct tbs6991fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6991FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6992_cfg.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6992_cfg.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6992_cfg.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6992_cfg.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,21 @@
++
++static int tbs6992_set_frequency(struct dvb_frontend *fe, u32 frequency)
++{
++	struct dvb_frontend_ops	*frontend_ops = NULL;
++	struct dvb_tuner_ops *tuner_ops = NULL;
++	struct tuner_state t_state;
++	int ret = 0;
++
++	t_state.frequency = frequency;
++	if (&fe->ops)
++		frontend_ops = &fe->ops;
++	if (&frontend_ops->tuner_ops)
++		tuner_ops = &frontend_ops->tuner_ops;
++	if (tuner_ops->set_state) {
++		if ((ret = tuner_ops->set_state(fe, DVBFE_TUNER_FREQUENCY, &t_state)) < 0) {
++			printk("%s: Invalid parameter\n", __func__);
++			return ret;
++		}
++	}
++	return 0;
++}
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs6992.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6992.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs6992.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs6992.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,46 @@
++/*
++	TurboSight TBS 6992 Silicon Tuner driver
++    	Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    	Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS6992_H
++#define TBS6992_H
++
++#include <linux/dvb/frontend.h>
++#include "saa716x_priv.h"
++
++struct tbs6992_config {
++	u8 tbs6992_address;
++	
++	int (*tbs6992_ctrl1)(struct saa716x_dev *dev, int a);
++	int (*tbs6992_ctrl2)(struct saa716x_dev *dev, int a, int b);
++};
++
++struct tbs6992_state {
++	struct i2c_adapter *i2c;
++	const struct tbs6992_config *config;
++	struct dvb_frontend *frontend;
++	int status;
++};
++
++#if defined(CONFIG_DVB_TBS6992) || \
++	(defined(CONFIG_DVB_TBS6992_MODULE) && defined(MODULE))
++
++extern struct dvb_frontend *tbs6992_attach(
++	struct dvb_frontend *fe,
++	const struct tbs6992_config *config,
++	struct i2c_adapter *i2c);
++#else
++static inline struct dvb_frontend *tbs6992_attach(
++	struct dvb_frontend *fe,
++	const struct tbs6992_config *config,
++	struct i2c_adapter *i2c)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS6992_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs8921fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs8921fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs8921fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs8921fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 8921 DVBS/S2 frontend driver
++    Copyright (C) 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2010 TurboSight.com
++*/
++
++#ifndef TBS8921FE_H
++#define TBS8921FE_H
++
++#include <linux/dvb/frontend.h>
++#include "cx88.h"
++
++struct tbs8921fe_config {
++	u8 tbs8921fe_address;
++
++	int (*tbs8921_ctrl1)(struct cx88_core *core, int a);
++	int (*tbs8921_ctrl2)(struct cx88_core *core, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS8921FE) || \
++	(defined(CONFIG_DVB_TBS8921FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs8921fe_attach(
++	const struct tbs8921fe_config *config,
++	struct i2c_adapter *i2c, int demod);
++#else
++static inline struct dvb_frontend *tbs8921fe_attach(
++	const struct tbs8921fe_config *config,
++	struct i2c_adapter *i2c, int demod)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS8921FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbs8922fe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs8922fe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbs8922fe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbs8922fe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,36 @@
++/*
++    TurboSight TBS 8922 DVBS/S2 Satellite Demodulator/Tuner driver
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS8922FE_H
++#define TBS8922FE_H
++
++#include <linux/dvb/frontend.h>
++#include "cx88.h"
++
++struct tbs8922fe_config {
++	u8 tbs8922fe_address;
++
++	int (*tbs8922_ctrl1)(struct cx88_core *core, int a);
++	int (*tbs8922_ctrl2)(struct cx88_core *core, int a, int b);
++};
++
++#if defined(CONFIG_DVB_TBS8922FE) || \
++	(defined(CONFIG_DVB_TBS8922FE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbs8922fe_attach(
++	const struct tbs8922fe_config *config,
++	struct i2c_adapter *i2c);
++#else
++static inline struct dvb_frontend *tbs8922fe_attach(
++	const struct tbs8922fe_config *config,
++	struct i2c_adapter *i2c)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++#endif
++
++#endif /* TBS8922FE_H */
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbsfe.c media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbsfe.c
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbsfe.c	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbsfe.c	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,55 @@
++/*
++    TurboSight TBS FE module
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#include "dvb_frontend.h"
++#include "tbsfe.h"
++
++/* phase poise enhancements */
++static int pne;
++module_param(pne, int, 0644);
++MODULE_PARM_DESC(pne, "Phase noise enhancements 0:Off, "\
++	"1:On (default:0)");
++
++/* define how SNR measurement is reported */
++static int esno;
++module_param(esno, int, 0644);
++MODULE_PARM_DESC(esno, "SNR is reported in 0:Percentage, "\
++	"1:(EsNo dB)*10 (default:0)");
++
++/* define how signal measurement is reported */
++static int dbm;
++module_param(dbm, int, 0644);
++MODULE_PARM_DESC(dbm, "Signal is reported in 0:Percentage, "\
++	"1:-1*dBm (default:0)");
++
++/* define how outer code correction is performed */
++static int occ = 1;
++module_param(occ, int, 0644);
++MODULE_PARM_DESC(occ, "0:outer code correction is disabled, "\
++	"1: outer code correction is enabled(default:1)");
++
++static int tbsfe_params(struct dvb_frontend *fe, long arg)
++{
++	return (occ << 3) | (pne << 2) | (esno << 1) | dbm;
++}
++
++static void tbsfe_release(struct dvb_frontend *fe)
++{
++}
++
++struct dvb_frontend *tbsfe_attach(struct dvb_frontend *fe)
++{
++	fe->ops.release_sec = tbsfe_release;
++	fe->ops.enable_high_lnb_voltage = tbsfe_params;
++
++	return fe;
++}
++EXPORT_SYMBOL(tbsfe_attach);
++
++MODULE_DESCRIPTION("TurboSight TBS FE module");
++MODULE_AUTHOR("Konstantin Dimitrov <kosio.dimitrov@gmail.com>");
++MODULE_LICENSE("GPL");
+diff -urN media_build_experimental/linux/drivers/media/dvb/frontends/tbsfe.h media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbsfe.h
+--- media_build_experimental/linux/drivers/media/dvb/frontends/tbsfe.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/dvb/frontends/tbsfe.h	2012-04-18 22:15:31.000000000 +0200
+@@ -0,0 +1,27 @@
++/*
++    TurboSight TBS FE module
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBSFE_H
++#define TBSFE_H
++
++#include <linux/dvb/frontend.h>
++
++#if defined(CONFIG_DVB_TBSFE) || \
++	(defined(CONFIG_DVB_TBSFE_MODULE) && defined(MODULE))
++extern struct dvb_frontend *tbsfe_attach(
++	struct dvb_frontend *fe);
++#else
++static inline struct dvb_frontend *tbsfe_attach(
++	struct dvb_frontend *fe)
++{
++	printk(KERN_WARNING "%s: driver disabled by Kconfig\n", __func__);
++	return NULL;
++}
++
++#endif /* CONFIG_DVB_TBSFE */
++
++#endif /* TBSFE_H */
+diff -urN media_build_experimental/linux/drivers/media/video/cx23885/cx23885-cards.c media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885-cards.c
+--- media_build_experimental/linux/drivers/media/video/cx23885/cx23885-cards.c	2012-01-17 05:45:50.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885-cards.c	2012-04-20 16:58:59.000000000 +0200
+@@ -213,8 +213,8 @@
+ 		.portc		= CX23885_MPEG_DVB,
+ 		.tuner_type	= TUNER_XC4000,
+ 		.tuner_addr	= 0x61,
+-		.radio_type	= UNSET,
+-		.radio_addr	= ADDR_UNSET,
++		.radio_type	= TUNER_XC4000,
++		.radio_addr	= 0x61,
+ 		.input		= {{
+ 			.type	= CX23885_VMUX_TELEVISION,
+ 			.vmux	= CX25840_VIN2_CH1 |
+@@ -243,6 +243,20 @@
+ 		.name		= "TurboSight TBS 6920",
+ 		.portb		= CX23885_MPEG_DVB,
+ 	},
++	[CX23885_BOARD_TBS_6921] = {
++		.name		= "TurboSight TBS 6921",
++		.portb		= CX23885_MPEG_DVB,
++	},
++	[CX23885_BOARD_TBS_6980] = {
++		.name		= "TurboSight TBS 6980",
++		.portb		= CX23885_MPEG_DVB,
++		.portc		= CX23885_MPEG_DVB,
++	},
++	[CX23885_BOARD_TBS_6981] = {
++		.name		= "TurboSight TBS 6981",
++		.portb		= CX23885_MPEG_DVB,
++		.portc		= CX23885_MPEG_DVB,
++	},
+ 	[CX23885_BOARD_TEVII_S470] = {
+ 		.name		= "TeVii S470",
+ 		.portb		= CX23885_MPEG_DVB,
+@@ -335,33 +349,8 @@
+ 	},
+ 	[CX23885_BOARD_HAUPPAUGE_HVR1850] = {
+ 		.name		= "Hauppauge WinTV-HVR1850",
+-		.porta		= CX23885_ANALOG_VIDEO,
+ 		.portb		= CX23885_MPEG_ENCODER,
+ 		.portc		= CX23885_MPEG_DVB,
+-		.tuner_type	= TUNER_ABSENT,
+-		.tuner_addr	= 0x42, /* 0x84 >> 1 */
+-		.force_bff	= 1,
+-		.input          = {{
+-			.type   = CX23885_VMUX_TELEVISION,
+-			.vmux   =	CX25840_VIN7_CH3 |
+-					CX25840_VIN5_CH2 |
+-					CX25840_VIN2_CH1 |
+-					CX25840_DIF_ON,
+-			.amux   = CX25840_AUDIO8,
+-		}, {
+-			.type   = CX23885_VMUX_COMPOSITE1,
+-			.vmux   =	CX25840_VIN7_CH3 |
+-					CX25840_VIN4_CH2 |
+-					CX25840_VIN6_CH1,
+-			.amux   = CX25840_AUDIO7,
+-		}, {
+-			.type   = CX23885_VMUX_SVIDEO,
+-			.vmux   =	CX25840_VIN7_CH3 |
+-					CX25840_VIN4_CH2 |
+-					CX25840_VIN8_CH1 |
+-					CX25840_SVIDEO_ON,
+-			.amux   = CX25840_AUDIO7,
+-		} },
+ 	},
+ 	[CX23885_BOARD_COMPRO_VIDEOMATE_E800] = {
+ 		.name		= "Compro VideoMate E800",
+@@ -463,41 +452,6 @@
+ 			.gpio0  = 0,
+ 		} },
+ 	},
+-	[CX23885_BOARD_MYGICA_X8507] = {
+-		.name		= "Mygica X8507",
+-		.tuner_type = TUNER_XC5000,
+-		.tuner_addr = 0x61,
+-		.tuner_bus	= 1,
+-		.porta		= CX23885_ANALOG_VIDEO,
+-		.input		= {
+-			{
+-				.type   = CX23885_VMUX_TELEVISION,
+-				.vmux   = CX25840_COMPOSITE2,
+-				.amux   = CX25840_AUDIO8,
+-			},
+-			{
+-				.type   = CX23885_VMUX_COMPOSITE1,
+-				.vmux   = CX25840_COMPOSITE8,
+-			},
+-			{
+-				.type   = CX23885_VMUX_SVIDEO,
+-				.vmux   = CX25840_SVIDEO_LUMA3 |
+-						CX25840_SVIDEO_CHROMA4,
+-			},
+-			{
+-				.type   = CX23885_VMUX_COMPONENT,
+-				.vmux   = CX25840_COMPONENT_ON |
+-					CX25840_VIN1_CH1 |
+-					CX25840_VIN6_CH2 |
+-					CX25840_VIN7_CH3,
+-			},
+-		},
+-	},
+-	[CX23885_BOARD_TERRATEC_CINERGY_T_PCIE_DUAL] = {
+-		.name		= "TerraTec Cinergy T PCIe Dual",
+-		.portb		= CX23885_MPEG_DVB,
+-		.portc		= CX23885_MPEG_DVB,
+-	}
+ };
+ const unsigned int cx23885_bcount = ARRAY_SIZE(cx23885_boards);
+ 
+@@ -590,6 +544,18 @@
+ 		.subdevice = 0x8888,
+ 		.card      = CX23885_BOARD_TBS_6920,
+ 	}, {
++		.subvendor = 0x6921,
++		.subdevice = 0x8888,
++		.card      = CX23885_BOARD_TBS_6921,
++	}, {
++		.subvendor = 0x6980,
++		.subdevice = 0x8888,
++		.card      = CX23885_BOARD_TBS_6980,
++	}, {
++		.subvendor = 0x6981,
++		.subdevice = 0x8888,
++		.card      = CX23885_BOARD_TBS_6981,
++	}, {
+ 		.subvendor = 0xd470,
+ 		.subdevice = 0x9022,
+ 		.card      = CX23885_BOARD_TEVII_S470,
+@@ -697,14 +663,6 @@
+ 		.subvendor = 0x1b55,
+ 		.subdevice = 0xe2e4,
+ 		.card      = CX23885_BOARD_NETUP_DUAL_DVB_T_C_CI_RF,
+-	}, {
+-		.subvendor = 0x14f1,
+-		.subdevice = 0x8502,
+-		.card      = CX23885_BOARD_MYGICA_X8507,
+-	}, {
+-		.subvendor = 0x153b,
+-		.subdevice = 0x117e,
+-		.card      = CX23885_BOARD_TERRATEC_CINERGY_T_PCIE_DUAL,
+ 	},
+ };
+ const unsigned int cx23885_idcount = ARRAY_SIZE(cx23885_subids);
+@@ -1084,6 +1042,9 @@
+ 		cx_set(GP0_IO, 0x00040004);
+ 		break;
+ 	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
+ 		cx_write(MC417_CTL, 0x00000036);
+ 		cx_write(MC417_OEN, 0x00001000);
+ 		cx_set(MC417_RWD, 0x00000002);
+@@ -1136,7 +1097,6 @@
+ 		break;
+ 	case CX23885_BOARD_MYGICA_X8506:
+ 	case CX23885_BOARD_MAGICPRO_PROHDTVE2:
+-	case CX23885_BOARD_MYGICA_X8507:
+ 		/* GPIO-0 (0)Analog / (1)Digital TV */
+ 		/* GPIO-1 reset XC5000 */
+ 		/* GPIO-2 reset LGS8GL5 / LGS8G75 */
+@@ -1312,6 +1272,18 @@
+ 		v4l2_subdev_call(dev->sd_cx25840, core, s_io_pin_config,
+ 				 ir_rxtx_pin_cfg_count, ir_rxtx_pin_cfg);
+ 		break;
++	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
++		dev->sd_ir = cx23885_find_hw(dev, CX23885_HW_AV_CORE);
++		if (dev->sd_ir == NULL) {
++			ret = -ENODEV;
++			break;
++		}
++		v4l2_subdev_call(dev->sd_cx25840, core, s_io_pin_config,
++				 ir_rx_pin_cfg_count, ir_rx_pin_cfg);
++		break;
+ 	case CX23885_BOARD_DVICO_FUSIONHDTV_DVB_T_DUAL_EXP:
+ 		request_module("ir-kbd-i2c");
+ 		break;
+@@ -1332,6 +1304,10 @@
+ 		break;
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
++	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
+ 		cx23885_irq_remove(dev, PCI_MSK_AV_CORE);
+ 		/* sd_ir is a duplicate pointer to the AV Core, just clear it */
+ 		dev->sd_ir = NULL;
+@@ -1375,6 +1351,10 @@
+ 		break;
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
++	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
+ 		if (dev->sd_ir)
+ 			cx23885_irq_add_enable(dev, PCI_MSK_AV_CORE);
+ 		break;
+@@ -1436,7 +1416,6 @@
+ 		ts1->ts_clk_en_val = 0x1; /* Enable TS_CLK */
+ 		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
+ 		break;
+-	case CX23885_BOARD_HAUPPAUGE_HVR1850:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1800:
+ 		/* Defaults for VID B - Analog encoder */
+ 		/* DREQ_POL, SMODE, PUNC_CLK, MCLK_POL Serial bus + punc clk */
+@@ -1447,7 +1426,6 @@
+ 		/* APB_TSVALERR_POL (active low)*/
+ 		ts1->vld_misc_val    = 0x2000;
+ 		ts1->hw_sop_ctrl_val = (0x47 << 16 | 188 << 4 | 0xc);
+-		cx_write(0x130184, 0xc);
+ 
+ 		/* Defaults for VID C */
+ 		ts2->gen_ctrl_val  = 0xc; /* Serial bus + punctured clock */
+@@ -1455,10 +1433,20 @@
+ 		ts2->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
+ 		break;
+ 	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
+ 		ts1->gen_ctrl_val  = 0x4; /* Parallel */
+ 		ts1->ts_clk_en_val = 0x1; /* Enable TS_CLK */
+ 		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
+ 		break;
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
++		ts1->gen_ctrl_val  = 0x0c; /* Serial bus + punctured clock */
++		ts1->ts_clk_en_val = 0x1;  /* Enable TS_CLK */
++		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
++		ts2->gen_ctrl_val  = 0x0c; /* Serial bus + punctured clock*/
++		ts2->ts_clk_en_val = 0x1;  /* Enable TS_CLK */
++		ts2->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
++		break;
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_DVBWORLD_2005:
+ 		ts1->gen_ctrl_val  = 0x5; /* Parallel */
+@@ -1467,7 +1455,6 @@
+ 		break;
+ 	case CX23885_BOARD_NETUP_DUAL_DVBS2_CI:
+ 	case CX23885_BOARD_NETUP_DUAL_DVB_T_C_CI_RF:
+-	case CX23885_BOARD_TERRATEC_CINERGY_T_PCIE_DUAL:
+ 		ts1->gen_ctrl_val  = 0xc; /* Serial bus + punctured clock */
+ 		ts1->ts_clk_en_val = 0x1; /* Enable TS_CLK */
+ 		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
+@@ -1503,6 +1490,7 @@
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1275:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1255:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1210:
++	case CX23885_BOARD_HAUPPAUGE_HVR1850:
+ 	case CX23885_BOARD_COMPRO_VIDEOMATE_E800:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1290:
+ 	case CX23885_BOARD_GOTVIEW_X5_3D_HYBRID:
+@@ -1539,8 +1527,10 @@
+ 	case CX23885_BOARD_GOTVIEW_X5_3D_HYBRID:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1500:
+ 	case CX23885_BOARD_MPX885:
+-	case CX23885_BOARD_MYGICA_X8507:
+-	case CX23885_BOARD_TERRATEC_CINERGY_T_PCIE_DUAL:
++	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
+ 		dev->sd_cx25840 = v4l2_i2c_new_subdev(&dev->v4l2_dev,
+ 				&dev->i2c_bus[2].i2c_adap,
+ 				"cx25840", 0x88 >> 1, NULL);
+diff -urN media_build_experimental/linux/drivers/media/video/cx23885/cx23885-dvb.c media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885-dvb.c
+--- media_build_experimental/linux/drivers/media/video/cx23885/cx23885-dvb.c	2012-01-17 05:45:50.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885-dvb.c	2012-04-20 17:35:25.000000000 +0200
+@@ -61,6 +61,10 @@
+ #include "cx23885-f300.h"
+ #include "altera-ci.h"
+ #include "stv0367.h"
++#include "tbs6980fe.h"
++#include "tbs6981fe.h"
++#include "tbs6921fe.h"
++#include "tbsfe.h"
+ #include "drxk.h"
+ #include "mt2063.h"
+ 
+@@ -113,7 +117,7 @@
+ 	cx23885_free_buffer(q, (struct cx23885_buffer *)vb);
+ }
+ 
+-static int cx23885_dvb_set_frontend(struct dvb_frontend *fe);
++/*static int cx23885_dvb_set_frontend(struct dvb_frontend *fe); */
+ 
+ static void cx23885_dvb_gate_ctrl(struct cx23885_tsport  *port, int open)
+ {
+@@ -130,11 +134,16 @@
+ 	if (fe && fe->dvb.frontend && fe->dvb.frontend->ops.i2c_gate_ctrl)
+ 		fe->dvb.frontend->ops.i2c_gate_ctrl(fe->dvb.frontend, open);
+ 
+-	/*
+-	 * FIXME: Improve this path to avoid calling the
+-	 * cx23885_dvb_set_frontend() every time it passes here.
+-	 */
+-	cx23885_dvb_set_frontend(fe->dvb.frontend);
++int cx23885ctrl1(struct cx23885_dev *dev, int a)
++{
++	return cx_read(a);
++}
++
++int cx23885ctrl2(struct cx23885_dev *dev, int a, int b)
++{
++	cx_write(a, b);
++
++	return 0;
+ }
+ 
+ static struct videobuf_queue_ops dvb_qops = {
+@@ -462,6 +471,27 @@
+ 	.demod_address = 0x55,
+ };
+ 
++static struct tbs6980fe_config tbs6980_fe_config = {
++	.tbs6980fe_address = 0x55,
++
++	.tbs6980_ctrl1 = cx23885ctrl1,
++	.tbs6980_ctrl2 = cx23885ctrl2,
++};
++
++static struct tbs6981fe_config tbs6981_fe_config = {
++	.tbs6981fe_address = 0x55,
++
++	.tbs6981_ctrl1 = cx23885ctrl1,
++	.tbs6981_ctrl2 = cx23885ctrl2,
++};
++
++static struct tbs6921fe_config tbs6921_fe_config = {
++	.tbs6921fe_address = 0x55,
++
++	.tbs6921_ctrl1 = cx23885ctrl1,
++	.tbs6921_ctrl2 = cx23885ctrl2,
++};
++
+ static struct ds3000_config tevii_ds3000_config = {
+ 	.demod_address = 0x68,
+ };
+@@ -960,6 +990,52 @@
+ 			fe0->dvb.frontend->ops.set_voltage = f300_set_voltage;
+ 
+ 		break;
++	case CX23885_BOARD_TBS_6921:
++		i2c_bus = &dev->i2c_bus[1];
++
++		fe0->dvb.frontend = dvb_attach(tbs6921fe_attach,
++					&tbs6921_fe_config,
++					&i2c_bus->i2c_adap, 0);
++		dvb_attach(tbsfe_attach, fe0->dvb.frontend);
++		break;
++	case CX23885_BOARD_TBS_6980:
++		i2c_bus = &dev->i2c_bus[1];
++
++		switch (port->nr) {
++		case 1:
++			fe0->dvb.frontend = dvb_attach(tbs6980fe_attach,
++				&tbs6980_fe_config,
++				&i2c_bus->i2c_adap, 0);
++			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
++		break;
++		case 2:
++			fe0->dvb.frontend = dvb_attach(tbs6980fe_attach,
++				&tbs6980_fe_config,
++				&i2c_bus->i2c_adap, 1);
++			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
++		break;
++		}
++
++		break;
++	case CX23885_BOARD_TBS_6981:
++		i2c_bus = &dev->i2c_bus[1];
++
++		switch (port->nr) {
++		case 1:
++			fe0->dvb.frontend = dvb_attach(tbs6981fe_attach,
++				&tbs6981_fe_config,
++				&i2c_bus->i2c_adap, 0);
++			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
++		break;
++		case 2:
++			fe0->dvb.frontend = dvb_attach(tbs6981fe_attach,
++				&tbs6981_fe_config,
++				&i2c_bus->i2c_adap, 1);
++			dvb_attach(tbsfe_attach, fe0->dvb.frontend);
++		break;
++		}
++
++		break;
+ 	case CX23885_BOARD_TEVII_S470:
+ 		i2c_bus = &dev->i2c_bus[1];
+ 
+@@ -1248,6 +1324,39 @@
+ 		memcpy(port->frontends.adapter.proposed_mac, eeprom + 0xa0, 6);
+ 		break;
+ 		}
++	case CX23885_BOARD_TBS_6920: 
++	case CX23885_BOARD_TBS_6921: {
++		u8 eeprom[256]; /* 24C02 i2c eeprom */
++
++		cx23885_tbs(dev);
++
++		if (port->nr != 1)
++			break;
++
++		/* Read entire EEPROM */
++		dev->i2c_bus[0].i2c_client.addr = 0xa0 >> 1;
++		tveeprom_read(&dev->i2c_bus[0].i2c_client, eeprom, sizeof(eeprom));
++		printk(KERN_INFO "TurboSight TBS 692x MAC= "
++				"%02X:%02X:%02X:%02X:%02X:%02X\n",
++				eeprom[0xa0], eeprom[0xa1], eeprom[0xa2],
++				eeprom[0xa3], eeprom[0xa4], eeprom[0xa5]);
++		memcpy(port->frontends.adapter.proposed_mac, eeprom + 0xa0, 6);
++		break;
++		}
++	case CX23885_BOARD_TBS_6980: 
++	case CX23885_BOARD_TBS_6981: {
++		u8 eeprom[256]; /* 24C02 i2c eeprom */
++
++		cx23885_tbs(dev);
++
++		/* Read entire EEPROM */
++		dev->i2c_bus[0].i2c_client.addr = 0xa0 >> 1;
++		tveeprom_read(&dev->i2c_bus[0].i2c_client, eeprom, sizeof(eeprom));
++		memcpy(port->frontends.adapter.proposed_mac, eeprom + 0xa0 + 16*(port->nr - 1), 6);
++		printk(KERN_INFO "TurboSight TBS698x Dual DVB-S2 card port%d MAC=%pM\n",
++			(port->nr - 1), port->frontends.adapter.proposed_mac);
++		break;
++		}
+ 	}
+ 
+ 	return ret;
+diff -urN media_build_experimental/linux/drivers/media/video/cx23885/cx23885.h media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885.h
+--- media_build_experimental/linux/drivers/media/video/cx23885/cx23885.h	2012-01-08 05:45:35.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885.h	2012-04-20 16:15:33.000000000 +0200
+@@ -19,6 +19,9 @@
+  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+  */
+ 
++#ifndef CX23885_H
++#define CX23885_H
++
+ #include <linux/pci.h>
+ #include <linux/i2c.h>
+ #include <linux/i2c-algo-bit.h>
+@@ -42,7 +45,7 @@
+ 
+ #define UNSET (-1U)
+ 
+-#define CX23885_MAXBOARDS 8
++#define CX23885_MAXBOARDS 32
+ 
+ /* Max number of inputs by card */
+ #define MAX_CX23885_INPUT 8
+@@ -89,6 +92,9 @@
+ #define CX23885_BOARD_MPX885                   32
+ #define CX23885_BOARD_MYGICA_X8507             33
+ #define CX23885_BOARD_TERRATEC_CINERGY_T_PCIE_DUAL 34
++#define CX23885_BOARD_TBS_6980                 35
++#define CX23885_BOARD_TBS_6981                 36
++#define CX23885_BOARD_TBS_6921                 37
+ 
+ #define GPIO_0 0x00000001
+ #define GPIO_1 0x00000002
+@@ -603,6 +609,7 @@
+ extern int cx23885_i2c_register(struct cx23885_i2c *bus);
+ extern int cx23885_i2c_unregister(struct cx23885_i2c *bus);
+ extern void cx23885_av_clk(struct cx23885_dev *dev, int enable);
++extern void cx23885_tbs(struct cx23885_dev *dev);
+ 
+ /* ----------------------------------------------------------- */
+ /* cx23885-417.c                                               */
+@@ -651,3 +658,5 @@
+ {
+ 	return (norm & (V4L2_STD_MN & ~V4L2_STD_PAL_Nc)) ? 754 : 922;
+ }
++
++#endif
+diff -urN media_build_experimental/linux/drivers/media/video/cx23885/cx23885-input.c media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885-input.c
+--- media_build_experimental/linux/drivers/media/video/cx23885/cx23885-input.c	2011-06-22 05:45:32.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/video/cx23885/cx23885-input.c	2012-04-20 13:58:49.000000000 +0200
+@@ -87,6 +87,10 @@
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1290:
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
++	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
+ 		/*
+ 		 * The only boards we handle right now.  However other boards
+ 		 * using the CX2388x integrated IR controller should be similar
+@@ -163,6 +167,10 @@
+ 		params.invert_level = true;
+ 		break;
+ 	case CX23885_BOARD_TEVII_S470:
++	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
+ 		/*
+ 		 * The IR controller on this board only returns pulse widths.
+ 		 * Any other mode setting will fail to set up the device.
+@@ -279,6 +287,16 @@
+ 		/* A guess at the remote */
+ 		rc_map = RC_MAP_TEVII_NEC;
+ 		break;
++	case CX23885_BOARD_TBS_6920:
++	case CX23885_BOARD_TBS_6921:
++	case CX23885_BOARD_TBS_6980:
++	case CX23885_BOARD_TBS_6981:
++		/* Integrated CX23885 IR controller */
++		driver_type = RC_DRIVER_IR_RAW;
++		allowed_protos = RC_TYPE_ALL;
++		/* A guess at the remote */
++		rc_map = RC_MAP_TBS_NEC;
++		break;
+ 	default:
+ 		return -ENODEV;
+ 	}
+diff -urN media_build_experimental/linux/drivers/media/video/cx23885/Kconfig media_build_experimental_tbs//linux/drivers/media/video/cx23885/Kconfig
+--- media_build_experimental/linux/drivers/media/video/cx23885/Kconfig	2011-09-24 05:45:14.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/video/cx23885/Kconfig	2012-04-18 23:29:24.000000000 +0200
+@@ -23,6 +23,9 @@
+ 	select DVB_STV0900 if !DVB_FE_CUSTOMISE
+ 	select DVB_DS3000 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0367 if !DVB_FE_CUSTOMISE
++	select DVB_TBS6980FE if !DVB_FE_CUSTOMISE
++	select DVB_TBS6981FE if !DVB_FE_CUSTOMISE
++	select DVB_TBS6921FE if !DVB_FE_CUSTOMISE
+ 	select MEDIA_TUNER_MT2131 if !MEDIA_TUNER_CUSTOMISE
+ 	select MEDIA_TUNER_XC2028 if !MEDIA_TUNER_CUSTOMISE
+ 	select MEDIA_TUNER_TDA8290 if !MEDIA_TUNER_CUSTOMISE
+diff -urN media_build_experimental/linux/drivers/media/video/cx23885/Makefile media_build_experimental_tbs//linux/drivers/media/video/cx23885/Makefile
+--- media_build_experimental/linux/drivers/media/video/cx23885/Makefile	2011-10-15 05:45:29.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/video/cx23885/Makefile	2012-04-20 00:15:26.000000000 +0200
+@@ -2,7 +2,7 @@
+ 		    cx23885-core.o cx23885-i2c.o cx23885-dvb.o cx23885-417.o \
+ 		    cx23885-ioctl.o cx23885-ir.o cx23885-av.o cx23885-input.o \
+ 		    cx23888-ir.o netup-init.o cimax2.o netup-eeprom.o \
+-		    cx23885-f300.o cx23885-alsa.o
++		    cx23885-f300.o
+ 
+ obj-$(CONFIG_VIDEO_CX23885) += cx23885.o
+ obj-$(CONFIG_MEDIA_ALTERA_CI) += altera-ci.o
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/cx88-cards.c media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-cards.c
+--- media_build_experimental/linux/drivers/media/video/cx88/cx88-cards.c	2012-01-17 05:45:50.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-cards.c	2012-04-20 14:07:49.000000000 +0200
+@@ -1573,8 +1573,8 @@
+ 		.name           = "Pinnacle Hybrid PCTV",
+ 		.tuner_type     = TUNER_XC2028,
+ 		.tuner_addr     = 0x61,
+-		.radio_type     = UNSET,
+-		.radio_addr     = ADDR_UNSET,
++		.radio_type     = TUNER_XC2028,
++		.radio_addr     = 0x61,
+ 		.input          = { {
+ 			.type   = CX88_VMUX_TELEVISION,
+ 			.vmux   = 0,
+@@ -1611,8 +1611,8 @@
+ 		.name           = "Leadtek TV2000 XP Global",
+ 		.tuner_type     = TUNER_XC2028,
+ 		.tuner_addr     = 0x61,
+-		.radio_type     = UNSET,
+-		.radio_addr     = ADDR_UNSET,
++		.radio_type     = TUNER_XC2028,
++		.radio_addr     = 0x61,
+ 		.input          = { {
+ 			.type   = CX88_VMUX_TELEVISION,
+ 			.vmux   = 0,
+@@ -2075,6 +2075,32 @@
+ 		} },
+ 		.mpeg           = CX88_MPEG_DVB,
+ 	},
++	[CX88_BOARD_TBS_8921] = {
++		.name		= "TBS 8921 DVB-S/S2",
++		.tuner_type	= TUNER_ABSENT,
++		.radio_type	= UNSET,
++		.tuner_addr	= ADDR_UNSET,
++		.radio_addr	= ADDR_UNSET,
++		.input		= {{
++			.type	= CX88_VMUX_DVB,
++			.vmux	= 0,
++			.gpio0	= 0x0303,
++		} },
++		.mpeg		= CX88_MPEG_DVB,
++	},
++	[CX88_BOARD_TBS_8922] = {
++		.name		= "TBS 8922 DVB-S/S2",
++		.tuner_type	= TUNER_ABSENT,
++		.radio_type	= UNSET,
++		.tuner_addr	= ADDR_UNSET,
++		.radio_addr	= ADDR_UNSET,
++		.input		= {{
++			.type	= CX88_VMUX_DVB,
++			.vmux	= 0,
++			.gpio0	= 0x4343,
++		} },
++		.mpeg		= CX88_MPEG_DVB,
++	},
+ 	[CX88_BOARD_PROF_6200] = {
+ 		.name           = "Prof 6200 DVB-S",
+ 		.tuner_type     = UNSET,
+@@ -2115,8 +2141,8 @@
+ 		.name           = "Terratec Cinergy HT PCI MKII",
+ 		.tuner_type     = TUNER_XC2028,
+ 		.tuner_addr     = 0x61,
+-		.radio_type     = UNSET,
+-		.radio_addr     = ADDR_UNSET,
++		.radio_type     = TUNER_XC2028,
++		.radio_addr     = 0x61,
+ 		.input          = { {
+ 			.type   = CX88_VMUX_TELEVISION,
+ 			.vmux   = 0,
+@@ -2154,9 +2180,9 @@
+ 	[CX88_BOARD_WINFAST_DTV1800H] = {
+ 		.name           = "Leadtek WinFast DTV1800 Hybrid",
+ 		.tuner_type     = TUNER_XC2028,
+-		.radio_type     = UNSET,
++		.radio_type     = TUNER_XC2028,
+ 		.tuner_addr     = 0x61,
+-		.radio_addr     = ADDR_UNSET,
++		.radio_addr     = 0x61,
+ 		/*
+ 		 * GPIO setting
+ 		 *
+@@ -2195,9 +2221,9 @@
+ 	[CX88_BOARD_WINFAST_DTV1800H_XC4000] = {
+ 		.name		= "Leadtek WinFast DTV1800 H (XC4000)",
+ 		.tuner_type	= TUNER_XC4000,
+-		.radio_type	= UNSET,
++		.radio_type	= TUNER_XC4000,
+ 		.tuner_addr	= 0x61,
+-		.radio_addr	= ADDR_UNSET,
++		.radio_addr	= 0x61,
+ 		/*
+ 		 * GPIO setting
+ 		 *
+@@ -2236,9 +2262,9 @@
+ 	[CX88_BOARD_WINFAST_DTV2000H_PLUS] = {
+ 		.name		= "Leadtek WinFast DTV2000 H PLUS",
+ 		.tuner_type	= TUNER_XC4000,
+-		.radio_type	= UNSET,
++		.radio_type	= TUNER_XC4000,
+ 		.tuner_addr	= 0x61,
+-		.radio_addr	= ADDR_UNSET,
++		.radio_addr	= 0x61,
+ 		/*
+ 		 * GPIO
+ 		 *   2: 1: mute audio
+@@ -2723,6 +2749,14 @@
+ 		.subdevice = 0x8888,
+ 		.card      = CX88_BOARD_TBS_8920,
+ 	}, {
++		.subvendor = 0x8921,
++		.subdevice = 0x8888,
++		.card      = CX88_BOARD_TBS_8921,
++	}, {
++		.subvendor = 0x8922,
++		.subdevice = 0x8888,
++		.card      = CX88_BOARD_TBS_8922,
++	}, {
+ 		.subvendor = 0xb022,
+ 		.subdevice = 0x3022,
+ 		.card      = CX88_BOARD_PROF_6200,
+@@ -3547,6 +3581,22 @@
+ 		cx_write(MO_SRST_IO, 1);
+ 		msleep(100);
+ 		break;
++	case  CX88_BOARD_TBS_8921:
++		cx_write(MO_GP0_IO, 0x0300);
++		msleep(10);
++		cx_write(MO_GP0_IO, 0x0302);
++		msleep(200);
++		cx_write(MO_GP0_IO, 0x0303);
++		msleep(100);
++		break;
++	case  CX88_BOARD_TBS_8922:
++		cx_write(MO_GP0_IO, 0x4340);
++		msleep(10);
++		cx_write(MO_GP0_IO, 0x4342);
++		msleep(200);
++		cx_write(MO_GP0_IO, 0x4343);
++		msleep(100);
++		break;
+ 	} /*end switch() */
+ 
+ 
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/cx88-core.c media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-core.c
+--- media_build_experimental/linux/drivers/media/video/cx88/cx88-core.c	2011-08-28 05:45:24.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-core.c	2012-04-20 14:08:05.000000000 +0200
+@@ -636,6 +636,9 @@
+ 	cx_write(MO_PCI_INTSTAT,   0xFFFFFFFF); // Clear PCI int
+ 	cx_write(MO_INT1_STAT,     0xFFFFFFFF); // Clear RISC int
+ 
++	/* set default notch filter */
++	cx_andor(MO_HTOTAL, 0x1800, (HLNotchFilter4xFsc << 11));
++
+ 	/* Reset on-board parts */
+ 	cx_write(MO_SRST_IO, 0);
+ 	msleep(10);
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/cx88-dvb.c media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-dvb.c
+--- media_build_experimental/linux/drivers/media/video/cx88/cx88-dvb.c	2012-01-08 05:45:35.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-dvb.c	2012-04-20 14:08:15.000000000 +0200
+@@ -59,6 +59,11 @@
+ #include "stb6100_proc.h"
+ #include "mb86a16.h"
+ #include "ds3000.h"
++#include "tbs8921fe.h"
++#include "tbs8921ctrl.h"
++#include "tbs8922fe.h"
++#include "tbs8922ctrl.h"
++#include "tbsfe.h"
+ 
+ MODULE_DESCRIPTION("driver for cx2388x based DVB cards");
+ MODULE_AUTHOR("Chris Pascoe <c.pascoe@itee.uq.edu.au>");
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/cx88.h media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88.h
+--- media_build_experimental/linux/drivers/media/video/cx88/cx88.h	2012-01-08 05:45:35.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88.h	2012-04-20 14:11:00.000000000 +0200
+@@ -18,6 +18,9 @@
+  *  along with this program; if not, write to the Free Software
+  *  Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+  */
++ 
++#ifndef CX88_H
++#define CX88_H
+ 
+ #include <linux/pci.h>
+ #include <linux/i2c.h>
+@@ -246,6 +249,8 @@
+ #define CX88_BOARD_WINFAST_DTV1800H_XC4000 88
+ #define CX88_BOARD_WINFAST_TV2000_XP_GLOBAL_6F36 89
+ #define CX88_BOARD_WINFAST_TV2000_XP_GLOBAL_6F43 90
++#define CX88_BOARD_TBS_8921                91
++#define CX88_BOARD_TBS_8922                92
+ 
+ enum cx88_itype {
+ 	CX88_VMUX_COMPOSITE1 = 1,
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/cx88-input.c media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-input.c
+--- media_build_experimental/linux/drivers/media/video/cx88/cx88-input.c	2012-01-08 05:45:35.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-input.c	2012-04-20 14:08:48.000000000 +0200
+@@ -374,6 +374,8 @@
+ 	case CX88_BOARD_OMICOM_SS4_PCI:
+ 	case CX88_BOARD_SATTRADE_ST4200:
+ 	case CX88_BOARD_TBS_8920:
++	case CX88_BOARD_TBS_8921:
++	case CX88_BOARD_TBS_8922:
+ 	case CX88_BOARD_TBS_8910:
+ 	case CX88_BOARD_PROF_7300:
+ 	case CX88_BOARD_PROF_7301:
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/cx88-mpeg.c media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-mpeg.c
+--- media_build_experimental/linux/drivers/media/video/cx88/cx88-mpeg.c	2011-07-15 01:43:20.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-mpeg.c	2012-04-20 14:09:20.000000000 +0200
+@@ -57,7 +57,7 @@
+ 	struct cx8802_dev *dev=container_of(work, struct cx8802_dev, request_module_wk);
+ 
+ 	if (dev->core->board.mpeg & CX88_MPEG_DVB)
+-		request_module("cx88-dvb");
++		request_module("cx88-dvb-core");
+ 	if (dev->core->board.mpeg & CX88_MPEG_BLACKBIRD)
+ 		request_module("cx88-blackbird");
+ }
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/cx88-video.c media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-video.c
+--- media_build_experimental/linux/drivers/media/video/cx88/cx88-video.c	2011-08-28 05:45:24.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/cx88-video.c	2012-04-20 14:09:38.000000000 +0200
+@@ -266,7 +266,7 @@
+ 			.id            = V4L2_CID_BAND_STOP_FILTER,
+ 			.name          = "Notch filter",
+ 			.minimum       = 0,
+-			.maximum       = 1,
++			.maximum       = 3,
+ 			.step          = 1,
+ 			.default_value = 0x0,
+ 			.type          = V4L2_CTRL_TYPE_INTEGER,
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/Kconfig media_build_experimental_tbs//linux/drivers/media/video/cx88/Kconfig
+--- media_build_experimental/linux/drivers/media/video/cx88/Kconfig	2011-11-09 05:45:27.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/Kconfig	2012-04-20 14:04:01.000000000 +0200
+@@ -62,6 +62,8 @@
+ 	select DVB_STB6000 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0900 if !DVB_FE_CUSTOMISE
+ 	select DVB_STB6100 if !DVB_FE_CUSTOMISE
++	select DVB_TBS8921FE if !DVB_FE_CUSTOMISE
++	select DVB_TBS8922FE if !DVB_FE_CUSTOMISE
+ 	select MEDIA_TUNER_SIMPLE if !MEDIA_TUNER_CUSTOMISE
+ 	---help---
+ 	  This adds support for DVB/ATSC cards based on the
+@@ -70,6 +72,11 @@
+ 	  To compile this driver as a module, choose M here: the
+ 	  module will be called cx88-dvb.
+ 
++config VIDEO_CX88_MPEG
++	tristate
++	depends on VIDEO_CX88_DVB || VIDEO_CX88_BLACKBIRD
++	default y
++
+ config VIDEO_CX88_VP3054
+ 	tristate "VP-3054 Secondary I2C Bus Support"
+ 	default m
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/Makefile media_build_experimental_tbs//linux/drivers/media/video/cx88/Makefile
+--- media_build_experimental/linux/drivers/media/video/cx88/Makefile	2011-09-04 05:45:09.000000000 +0200
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/Makefile	2012-04-20 14:06:03.000000000 +0200
+@@ -7,7 +7,8 @@
+ obj-$(CONFIG_VIDEO_CX88_MPEG) += cx8802.o
+ obj-$(CONFIG_VIDEO_CX88_ALSA) += cx88-alsa.o
+ obj-$(CONFIG_VIDEO_CX88_BLACKBIRD) += cx88-blackbird.o
+-obj-$(CONFIG_VIDEO_CX88_DVB) += cx88-dvb.o
++obj-$(CONFIG_VIDEO_CX88_DVB) += cx88-dvb-core.o
++cx88-dvb-core-objs += cx88-dvb.o tbs8921ctrl.o tbs8922ctrl.o
+ obj-$(CONFIG_VIDEO_CX88_VP3054) += cx88-vp3054-i2c.o
+ 
+ ccflags-y += -Idrivers/media/video
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/tbs8921ctrl.h media_build_experimental_tbs//linux/drivers/media/video/cx88/tbs8921ctrl.h
+--- media_build_experimental/linux/drivers/media/video/cx88/tbs8921ctrl.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/tbs8921ctrl.h	2012-04-20 14:11:23.000000000 +0200
+@@ -0,0 +1,14 @@
++/*
++    TurboSight TBS 8921 DVB-S/S2 controls
++    Copyright (C) 2010 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2010 TurboSight.com
++*/
++
++#ifndef TBS8921CTRL_H
++#define TBS8921CTRL_H
++
++extern int tbs8921ctrl1(struct cx88_core *core, int a);
++extern int tbs8921ctrl2(struct cx88_core *core, int a, int b);
++
++#endif
+diff -urN media_build_experimental/linux/drivers/media/video/cx88/tbs8922ctrl.h media_build_experimental_tbs//linux/drivers/media/video/cx88/tbs8922ctrl.h
+--- media_build_experimental/linux/drivers/media/video/cx88/tbs8922ctrl.h	1970-01-01 01:00:00.000000000 +0100
++++ media_build_experimental_tbs//linux/drivers/media/video/cx88/tbs8922ctrl.h	2011-10-09 22:19:31.000000000 +0200
+@@ -0,0 +1,14 @@
++/*
++    TurboSight TBS 8922 DVB-S/S2 controls
++    Copyright (C) 2011 Konstantin Dimitrov <kosio.dimitrov@gmail.com>
++
++    Copyright (C) 2011 TurboSight.com
++*/
++
++#ifndef TBS8922CTRL_H
++#define TBS8922CTRL_H
++
++extern int tbs8922ctrl1(struct cx88_core *core, int a);
++extern int tbs8922ctrl2(struct cx88_core *core, int a, int b);
++
++#endif

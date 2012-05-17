@@ -1,0 +1,34 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+tar xjvf linux-tbs-drivers.tar.bz2
+
+cd linux-tbs-drivers
+
+chmod -R +x linux v4l
+[ "$TARGET_ARCH" = "i386" ] && sh ./v4l/tbs-x86_r3.sh
+[ "$TARGET_ARCH" = "x86_64" ] && sh ./v4l/tbs-x86_64.sh
+
+#make DIR=$(kernel_path) 
+
+make \
+  KDIR=$(kernel_path) \
+  KERNELRELEASE=$(kernel_version) \
+  SRCDIR=$(kernel_path) \
+  OUTDIR=$(kernel_path) \
+
+install_dir="$PWD/.install"
+debug_dir="$PWD/.install-debuginfo/usr/lib/debug"
+
+mkdir -p $install_dir $debug_dir
+
+make install \
+  DESTDIR=$install_dir \
+  KERNELRELEASE=$(kernel_version) \
+
+mv $install_dir/lib/firmware $install_dir/firmware
+rm -f $install_dir/lib/modules/$(kernel_version)/modules.*
+

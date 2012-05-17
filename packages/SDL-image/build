@@ -1,0 +1,24 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+            --enable-bmp \
+            --enable-gif \
+            --enable-jpg \
+            --disable-jpg-shared \
+            --disable-lbm \
+            --enable-pcx \
+            --enable-png \
+            --disable-png-shared \
+            --enable-pnm \
+            --enable-tga \
+            --disable-tif \
+            --disable-tif-shared \
+            --enable-xcf \
+            --enable-xpm \
+            --disable-xv \
+
+make
+make_install

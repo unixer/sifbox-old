@@ -1,0 +1,11 @@
+PKG_NAME=libsoup
+PKG_VERSION=2.35.92
+PKG_URL="http://ftp.acc.umu.se/pub/gnome/sources/libsoup/2.35/libsoup-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_DEPENDS="gnutls GLib libxml2 gettext"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_PRIORITY=optional
+PKG_SECTION=libs
+PKG_SHORTDESC="an HTTP library implementation in C"
+PKG_LONGDESC="libsoup uses the Glib main loop and is designed to work well with GTK+ applications."

@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+if [ "$DEBUG" = yes ]; then
+  DEBUG_CONFIG="--enable-debug"
+else
+  DEBUG_CONFIG="--disable-debug"
+fi
+
+cd $BUILD/$1*
+export MAKEFLAGS=-j1
+do_configure \
+            --disable-doc \
+            $DEBUG_CONFIG \
+
+make
+make_install

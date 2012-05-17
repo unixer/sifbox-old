@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+mkdir -p $INSTALL/bin
+cp -P objdir-host/nih-dbus-tool/nih-dbus-tool $INSTALL/bin
+
+do_installdev usr/include
+do_installdev usr/lib
+do_installdev usr/share/aclocal toolchain

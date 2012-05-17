@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/checkdeps build || exit 1
+
+export INSTALL=$PXE_NAME
+rm -rf $PXE_NAME
+mkdir -p $PXE_NAME
+
+$SCRIPTS/image "$1"
+
+chmod -R +r $PXE_NAME

@@ -1,0 +1,10 @@
+--- linux/drivers/media/dvb/frontends/drxk_hard.old	2012-01-21 18:02:59.000000000 +0100
++++ linux/drivers/media/dvb/frontends/drxk_hard.c	2012-01-21 18:05:06.000000000 +0100
+@@ -1955,6 +1955,7 @@ static int GetLockStatus(struct drxk_sta
+ 		status = GetDVBTLockStatus(state, pLockStatus);
+ 		break;
+ 	default:
++		status = 0;
+ 		break;
+ 	}
+ error:

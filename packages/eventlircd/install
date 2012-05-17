@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install etc/eventlircd.d
+do_install lib/udev/rules.d
+do_install usr/sbin
+
+cp $ROOT/$PACKAGES/$1/config/eventlircd.conf $INSTALL/etc
+cp $ROOT/$PACKAGES/$1/config/evmap/* $INSTALL/etc/eventlircd.d
+#mkdir -p $INSTALL/etc/systemd/system/multi-user-target-wants
+mkdir -p $INSTALL/lib/systemd/system
+cp $ROOT/$PACKAGES/$1/config/irexec.service $INSTALL/lib/systemd/system
+mkdir -p  $INSTALL/lib/systemd/system/multi-user.target.wants
+cd $INSTALL/lib/systemd/system/multi-user.target.wants
+ln -s /lib/systemd/system/irexec.service irexec.service
+cp -P $ROOT/$PACKAGES/$1/config/98-eventlircd.rules $INSTALL/lib/udev/rules.d
+#mkdir -p $INSTALL/etc/rc_keymaps
+#cp $ROOT/$PACKAGES/$1/remotes/imon_mce $INSTALL/etc/rc_keymaps
+#cp $ROOT/$PACKAGES/$1/remotes/imon_pad $INSTALL/etc/rc_keymaps

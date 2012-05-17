@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+mkdir -p .install/usr/include
+mkdir -p .install/usr/lib
+
+do_installdev usr/include
+do_installdev usr/lib

@@ -1,0 +1,9 @@
+--- linux/drivers/media/Kconfig	2011-03-11 17:25:49.000000000 +0100
++++ experimental/v4l-dvb-saa716x/linux/drivers/media/Kconfig	2011-05-03 02:49:32.000000000 +0200
+@@ -114,4 +114,6 @@ source "drivers/media/radio/Kconfig"
+ 
+ source "drivers/media/dvb/Kconfig"
+ 
++source "drivers/media/common/saa716x/Kconfig"
++
+ endif # MEDIA_SUPPORT

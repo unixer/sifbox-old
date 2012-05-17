@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install usr
+do_install lib
+do_install etc
+cp -r $ROOT/$PACKAGES/$1/config/* $INSTALL/etc
+mkdir -p $INSTALL/etc/systemd/system/multi-user-target-wants
+cd $INSTALL/etc/systemd/system/multi-user-target-wants
+ln -s /lib/systemd/system/rsyslog.service rsyslog.service
+

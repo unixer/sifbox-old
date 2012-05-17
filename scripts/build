@@ -1,0 +1,88 @@
+#!/bin/sh
+
+. config/options
+
+if [ -z "$1" ]; then
+  echo "usage: $0 package_name"
+  exit 1
+fi
+
+if [ "$1" = "--force" ]; then
+  FORCE=true
+  shift
+fi
+
+unset INSTALL
+
+[ -n "$REPO" ] && $SCRIPTS/get-opk $1
+[ -n "$REPO" -a ! -f $ROOT/$STAMPS/dl-from-repo-not-ok ] && echo "Continuing without building $1" && exit 0
+
+mkdir -p $STAMPS/$1
+STAMP=$STAMPS/$1/build
+
+$SCRIPTS/unpack $1
+if [ -f $STAMP -a -f $PACKAGES/$1/need_build ]; then
+  $PACKAGES/$1/need_build $@
+fi
+
+# check for platform-specific package overlay
+BUILD_RULE=$PACKAGES/$1/build
+PLATFORM_BUILD="$PLATFORM_PACKAGES/$1/build"
+[ -r "$PLATFORM_BUILD" ] && BUILD_RULE="$PLATFORM_BUILD"
+MACHINE_BUILD="$MACHINE_PACKAGES/$1/build"
+[ -r "$MACHINE_BUILD" ] && BUILD_RULE="$MACHINE_BUILD"
+
+# check for flavour-specific package overlay
+FLAVOUR_BUILD="$FLAVOUR_PACKAGES/$1/build"
+[ -r "$FLAVOUR_BUILD" ] && BUILD_RULE="$FLAVOUR_BUILD"
+
+if [ "$FORCE" = true ] || [ -f $STAMP -a $BUILD_RULE -nt $STAMP ]; then
+  rm -f $STAMP
+  $SCRIPTS/unpackage $1
+  $SCRIPTS/unpackagedev $1
+fi
+
+if [ ! -f $STAMP ]; then
+  rm -f $STAMP
+
+  printf "%${INDENT}c BUILD    $1\n" >&$SILENT_OUT
+  export INDENT=$((${INDENT:-1}+$INDENT_SIZE))
+
+  get_meta $1
+
+  if [ "$PKG_OPK_ARCH" = unsupported ]; then
+    echo "$1 is not supported on $TARGET_ARCH, aborting."
+    exit 1
+  fi
+
+  if [ "$DYNAMIC_SYSROOT" = yes ]; then
+    for f in $ROOT/$TOOLCHAIN/var/lib/opkg/info/*.control ; do
+      p=`basename $f .control`
+      [ "$p" = "opkg-host" -o "$p" = "opkg-utils" ] && continue
+      $SCRIPTS/uninstalldev $p
+    done
+
+    # we create all the dev packages before installing them because, when using
+    # dynamic sysroot, a package build could clear the toolchain and make the
+    # subsequent package build fail in some cases
+    for p in $PKG_BUILD_DEPENDS; do
+      $SCRIPTS/packagedev $p
+    done
+  fi
+
+  for p in $PKG_BUILD_DEPENDS; do
+    $SCRIPTS/installdev $p
+  done
+
+  if [ -f $BUILD_RULE ]; then
+    $BUILD_RULE $@ >&$VERBOSE_OUT
+  elif [ -f "$PKG_BUILD_DIR/Makefile" ]; then
+    $SCRIPTS/build toolchain
+    make -C $PKG_BUILD_DIR >&$VERBOSE_OUT
+  elif [ -f "$PKG_BUILD_DIR/$1.c" ]; then
+    $SCRIPTS/build toolchain
+    make -C $PKG_BUILD_DIR $1 >&$VERBOSE_OUT
+  fi
+
+  create_stamp $STAMP
+fi

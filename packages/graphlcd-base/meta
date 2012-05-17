@@ -1,0 +1,16 @@
+PKG_NAME=graphlcd-base
+#PKG_VERSION=0.1.9
+PKG_VERSION=aacb78d4335e498417835d518c64b33acb58c749
+#PKG_URL_PROTO=git
+#PKG_URL="git://projects.vdr-developer.org/graphlcd-base.git"
+PKG_URL="http://projects.vdr-developer.org/git/graphlcd-base.git/snapshot/graphlcd-base-${PKG_VERSION}.tar.bz2"
+#PKG_URL="http://download.berlios.de/graphlcd/graphlcd-base-${PKG_VERSION}.tgz"
+PKG_REV=1
+PKG_BUILD_DEPENDS="toolchain freetype"
+PKG_RUN_DEPENDS="$TARGET_LIBC freetype"
+PKG_USE="uclibc"
+PKG_DEPENDS_uclibc="libiconv"
+PKG_PRIORITY=optional
+PKG_SECTION=utils
+PKG_SHORTDESC="graphical LCD library"
+PKG_LONGDESC="The GraphLCD base is a project to support graphical LC displays. It is mainly used by the graphlcd plugin for the Video Disc Recorder to display its information."

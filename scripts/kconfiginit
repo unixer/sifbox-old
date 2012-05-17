@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/path
+
+$SCRIPTS/checkdeps kconfiginit || exit 1
+
+export BUILD=$BUILD_NOARCH
+$SCRIPTS/unpack kconfig-frontends
+
+mkdir -p build/config
+
+touch $STAMPS_NOARCH/kconfiginit

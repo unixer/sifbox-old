@@ -1,0 +1,12 @@
+. config/options $1
+
+VER=`ls $BUILD/rootfs/lib/modules`
+
+mkdir -p $INSTALL/lib/modules/$VER/tbs
+
+find $BUILD/$1*/linux-tbs-drivers -name \*.ko -exec cp {} $INSTALL/lib/modules/$VER/tbs \;
+ 
+
+mkdir -p $INSTALL/firmware/
+cp $BUILD/$1*/*.fw $INSTALL/firmware/
+

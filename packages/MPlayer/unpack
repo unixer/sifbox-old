@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/build toolchain
+
+sed -i 's/\(cc_check -lpthread\) && $TMPO/\1/' $BUILD/$1*/configure
+
+exit 0

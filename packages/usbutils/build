@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+  --datadir=/usr/share/misc \
+  --datarootdir=/usr/share \
+  --mandir=/usr/share/man \
+
+make
+make_install
+sed -i 's%usbids=.*%usbids=/usr/share/misc/usb.ids%' \
+  .install/usr/share/pkgconfig/usbutils.pc

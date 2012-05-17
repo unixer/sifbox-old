@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+cd $BUILD/$1*
+
+for i in allnewnoad allnoad allnoadnice allnoaduncut clearlogos noad noadifnew
+do
+  do_install usr/bin/$i
+done

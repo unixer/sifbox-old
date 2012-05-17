@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/options
+
+pkg_uses $1 opengl && GL_TYPE="gl"
+pkg_uses $1 opengles && GL_TYPE="glesv2"
+
+cd $BUILD/$1*
+do_waf_configure \
+  --enable-$GL_TYPE
+do_waf_build
+do_waf_install

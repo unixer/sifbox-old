@@ -1,0 +1,67 @@
+#!/bin/sh
+
+simplifylang() {
+  local i tmp
+
+  for i in $LANGUAGES; do
+    eval tmp=\$${i}_name
+    if [ "$1" = "$i" -o "$1" = "$tmp" ]; then
+      echo $i
+      return
+    fi
+  done
+}
+
+lang2charset() {
+  local i lang charset=$1
+
+  if [ -z "$charset" ]; then
+    if [ -n "$MENU_LANG" ]; then
+      charset="$MENU_LANG"
+    else
+      charset="$DEFAULT_LANGUAGE"
+    fi
+  fi
+
+  lang=`simplifylang $charset`
+  if [ -n "$lang" ]; then
+    eval charset=\$${lang}_charset
+  fi
+
+  for i in $CHARSETS; do
+    if [ "$charset" = "$i" ]; then
+      echo $charset
+      return
+    fi
+  done
+
+  echo "ERROR: Couldn't find a matching charset for '$1'." 1>&2
+}
+
+lang2font() {
+  local i tmp charset
+
+  charset=`lang2charset $1`
+  charset=`echo "$charset" | sed s%-%_%g`
+
+  for i in ${charset}_${2}font ${charset}_font DEFAULT_FONT; do
+    eval tmp=\$$i
+    if [ -n "$tmp" ]; then
+      echo $tmp
+      return
+    fi
+  done
+}
+
+fribidi_mp_set_option() {
+  local tmp name
+
+  name=`echo $1 | sed s%-%_%g`
+  eval tmp=\$${name}_fribidi
+  if [ -n "$tmp" ]; then
+    mp_set_option "${2}flip-hebrew" 1
+    mp_set_option "${2}fribidi-charset" "$tmp"
+  else
+    mp_set_option "${2}flip-hebrew" 0
+  fi
+}

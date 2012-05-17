@@ -1,0 +1,17 @@
+diff --git a/po/Makefile.in.in b/po/Makefile.in.in
+index ada8bb4..f7b2a95 100644
+--- a/po/Makefile.in.in
++++ b/po/Makefile.in.in
+@@ -20,6 +20,7 @@ VPATH = @srcdir@
+
+ prefix = @prefix@
+ exec_prefix = @exec_prefix@
++datarootdir = @datarootdir@
+ datadir = @datadir@
+ localedir = $(datadir)/locale
+ gettextsrcdir = $(datadir)/gettext/po
+diff --git a/src/nano.c b/src/nano.c
+index 7008413..22b305d 100644
+--- a/src/nano.c
+
+

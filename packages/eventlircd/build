@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+autoreconf -i
+do_configure
+
+make
+make_install
+
+for file in lircd eventlircd; do
+  mv .install/lib/udev/rules.d/98-$file.rules.disabled \
+    .install/lib/udev/rules.d/98-$file.rules
+done

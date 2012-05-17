@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+            --disable-alsa \
+            --disable-external-libs \
+            --disable-sqlite \
+            --disable-octave \
+
+make
+make_install

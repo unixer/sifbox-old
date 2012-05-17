@@ -1,0 +1,44 @@
+commit 5f05a3de9f689c5593e56b9444d647b2c7522bd9
+Author: Andreas Auras <yak54@inkennet.de>
+Date:   Thu Feb 2 22:32:24 2012 +0100
+
+    Added configuration parameter for enabling/disabling XLockDisplay calls
+    
+    Added configuration parameter
+    'video.output.vdpau_enable_buggy_xcb_workaround'
+    for enabling/disabling XLockDisplay calls in VDPAU video output driver.
+    It is enabled by default (like it is in the current implementation).
+    But on many systems now it works fine without these locks.
+    Disabling it by configuration is easier as changing source code.
+    The whole mechanisms could still be dropped by undefining LOCKDISPLAY
+    in file 'video_out_vdpau.c'.
+
+diff --git a/src/video_out/video_out_vdpau.c b/src/video_out/video_out_vdpau.c
+index 29f365a..df11f7c 100644
+--- a/src/video_out/video_out_vdpau.c
++++ b/src/video_out/video_out_vdpau.c
+@@ -188,8 +188,8 @@ static VdpDecoderDestroy *orig_vdp_decoder_destroy;
+ static VdpDecoderRender *orig_vdp_decoder_render;
+ 
+ #ifdef LOCKDISPLAY
+-#define DO_LOCKDISPLAY          XLockDisplay(guarded_display)
+-#define DO_UNLOCKDISPLAY        XUnlockDisplay(guarded_display)
++#define DO_LOCKDISPLAY          do { if (guarded_display) XLockDisplay(guarded_display); } while(0)
++#define DO_UNLOCKDISPLAY        do { if (guarded_display) XUnlockDisplay(guarded_display); } while(0)
+ static Display *guarded_display;
+ #else
+ #define DO_LOCKDISPLAY
+@@ -2641,7 +2641,12 @@ static vo_driver_t *vdpau_open_plugin (video_driver_class_t *class_gen, const vo
+     return NULL;
+ 
+ #ifdef LOCKDISPLAY
+-  guarded_display     = visual->display;
++  int buggy_xcb_workaround = config->register_bool( config, "video.output.vdpau_enable_buggy_xcb_workaround", 1,
++    _("vdpau: Use lock display synchronization for some vdpau calls (workaround for buggy libX11/xcb)"),
++    _("Enable this if you have a buggy libX11/xcb."),
++      10, NULL, this );
++  guarded_display     = buggy_xcb_workaround ? visual->display: NULL;
++  fprintf( stderr, "vo_vdpau: %s lock display synchronization for some vdpau calls\n", buggy_xcb_workaround ? "Use": "Do not use" );
+ #endif
+ 
+   this->display       = visual->display;

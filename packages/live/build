@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+$SCRIPTS/build toolchain
+
+cd $BUILD/$1*
+./genMakefiles geexbox
+make
+
+for i in BasicUsageEnvironment UsageEnvironment groupsock liveMedia; do
+  mkdir -p .install/live/$i/include
+
+  cp -pPR $i/include/*.*h .install/live/$i/include
+  cp -pPR $i/*.a          .install/live/$i
+done

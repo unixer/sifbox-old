@@ -1,0 +1,9 @@
+[Unit]
+Description=Oscam Services
+
+[Service]
+ExecStart=/usr/bin/oscam -d 128
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

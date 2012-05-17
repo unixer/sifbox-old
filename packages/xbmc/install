@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1-pvr*
+
+cp -P $ROOT/$PACKAGES/$1/scripts/silent.sh .install/usr/bin
+cp -P $ROOT/$PACKAGES/$1/scripts/menuorg-appswitcher .install/usr/bin
+cp -P $ROOT/$PACKAGES/$1/config/RssFeeds.xml .install/usr/share/xbmc/userdata
+cp -P $ROOT/$PACKAGES/$1/scripts/xbmc .install/usr/bin
+
+
+do_install usr/bin
+do_install usr/lib
+do_install usr/share

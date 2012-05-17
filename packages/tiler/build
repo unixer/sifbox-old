@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+sed -i 's%MEMMGR_CFLAGS="-Werror -Wall -pipe -ansi"%MEMMGR_CFLAGS="-Wall -pipe -ansi"%' configure.ac
+
+do_autoconf
+do_configure \
+  --enable-tilermgr \
+  --disable-tests \
+  --disable-stub \
+
+make
+make_install
+
+rm -rf ../.install
+cp -PR .install ..

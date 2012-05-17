@@ -1,0 +1,19 @@
+E' doveroso ricordare che questo proggetto e' nato grazie alla collaborazione di innumerevoli persone tra le quali:
+
+Il Grande mona66 (Maestro di Vita e di Linux)
+Zizio82 (che mi ha "inseito" in testa quest'idea)
+fiveten_59 (Grazie ai suoi scritp e alle sue patch)
+Xgaz (Esperto Drivers)
+asgarot (cocciuto Betatester)
+u Killer Bestia® (Per lo spazio che ci dai)
+genge (Amministratore del sito)
+Grazie anche a tutto il gruppo di openbricks (per gli spunti che mi hanno dato)
+nimou6 (Per gli splendidi Picon cha ha creato)
+
+Ma un grazie soprattutto a tutti voi per la pazienza che avete e per le prove che fate e che senza voi tutto questo non potrebbe esistere.
+
+GRAZIE
+Unixer
+
+
+apt-get install docbook-xsl autoconf mercurial patchutils libdigest-sha1-perl libproc-processtable-perl libnl-dev

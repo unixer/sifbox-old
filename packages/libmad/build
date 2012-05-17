@@ -1,0 +1,47 @@
+#!/bin/sh
+
+. config/options
+
+case $TARGET_ARCH in
+  i386|x86_64)
+    FPM=intel
+    ;;
+
+  powerpc|powerpc64)
+    FPM=ppc
+    ;;
+
+  arm)
+    FPM=arm
+    ;;
+
+  mips)
+    FPM=mips
+    ;;
+esac
+
+cd $BUILD/$1*
+do_configure \
+  --enable-speed \
+  --enable-sso \
+  --enable-fpm=$FPM \
+  --disable-profiling \
+  --disable-debugging \
+
+make
+make_install
+
+mkdir -p .install/usr/lib/pkgconfig
+cat > .install/usr/lib/pkgconfig/mad.pc << "EOF"
+prefix=/usr
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: mad
+Description: MPEG audio decoder
+Requires:
+Version: 0.15.1b
+Libs: -L${libdir} -lmad
+Cflags: -I${includedir}
+EOF

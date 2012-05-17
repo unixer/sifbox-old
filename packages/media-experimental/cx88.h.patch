@@ -1,0 +1,7 @@
+--- media-experimental-media_build_experimental/linux/drivers/media/video/cx88/cx88.h.olg	2012-04-25 11:05:10.962273097 +0200
++++ media-experimental-media_build_experimental/linux/drivers/media/video/cx88/cx88.h	2012-04-25 11:05:21.502273101 +0200
+@@ -735,3 +735,4 @@
+ int cx88_get_control(struct cx88_core *core, struct v4l2_control *ctl);
+ int cx88_set_control(struct cx88_core *core, struct v4l2_control *ctl);
+ int cx88_video_mux(struct cx88_core *core, unsigned int input);
++#endif

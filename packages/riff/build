@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+setup_toolchain host
+
+LOADERCOM_SRC=`ls -d ../riff-loadercomm-*/source`
+
+sed -i riff/riff.mk \
+  -e "s:^CFLAGS=\(.*\)$:CFLAGS=\\1 -I../${LOADERCOM_SRC}:" \
+  -e "s:^LDFLAGS=\(.*\)$:LDFLAGS=\\1 -L${ROOT}/${TOOLCHAIN}/lib:" \
+
+make
+
+rm -rf .install
+mkdir -p .install/usr/bin .install/usr/lib
+cp -P riff/riff .install/usr/bin
+cp -P CDAL/libcdal.so .install/usr/lib

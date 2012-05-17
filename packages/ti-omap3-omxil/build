@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+make -j1 \
+     CC="$TARGET_CC" \
+     DBAPI_CFLAGS="-I$LIB_PREFIX/include/libbridge" \
+     DBAPI_LIBS="-L$LIB_PREFIX/lib -lbridge"
+
+mkdir -p .install/usr/lib .install/usr/include/omx
+
+cp -P src/*.so .install/usr/lib
+cp -P src/components/*.so .install/usr/lib
+
+cp -PR include/* .install/usr/include/omx

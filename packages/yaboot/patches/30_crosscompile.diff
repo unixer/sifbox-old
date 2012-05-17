@@ -1,0 +1,58 @@
+diff -Nur yaboot-1.3.13.orig/Makefile yaboot-1.3.13/Makefile
+--- yaboot-1.3.13.orig/Makefile	Tue Apr 12 12:45:56 2005
++++ yaboot-1.3.13/Makefile	Tue Apr 12 12:46:49 2005
+@@ -28,9 +28,16 @@
+ #
+ CROSS = 
+ 
++# compilation
++CC		:= $(CROSS)gcc
++LD		:= $(CROSS)ld
++AS		:= $(CROSS)as
++OBJCOPY		:= $(CROSS)objcopy
++STRIP		:= $(CROSS)strip
++
+ # The flags for the yaboot binary.
+ #
+-YBCFLAGS = -Os $(CFLAGS) -nostdinc -Wall -isystem `gcc -print-file-name=include` -fsigned-char
++YBCFLAGS = -Os $(CFLAGS) -nostdinc -Wall -isystem `$(CC) -print-file-name=include` -fsigned-char
+ YBCFLAGS += -DVERSION=\"${VERSION}\"	#"
+ YBCFLAGS += -DTEXTADDR=$(TEXTADDR) -DDEBUG=$(DEBUG)
+ YBCFLAGS += -DMALLOCADDR=$(MALLOCADDR) -DMALLOCSIZE=$(MALLOCSIZE)
+@@ -67,7 +74,7 @@
+ 
+ # For compiling userland utils
+ #
+-UCFLAGS = -Os $(CFLAGS) -Wall -I/usr/include
++UCFLAGS = -Os $(CFLAGS) -Wall
+ 
+ # For compiling build-tools that run on the host.
+ #
+@@ -93,12 +100,6 @@
+ OBJS += second/fs_reiserfs.o
+ endif
+ 
+-# compilation
+-CC		:= $(CROSS)gcc
+-LD		:= $(CROSS)ld
+-AS		:= $(CROSS)as
+-OBJCOPY		:= $(CROSS)objcopy
+-
+ lgcc = `$(CC) -print-libgcc-file-name`
+ 
+ all: yaboot addnote mkofboot
+@@ -172,10 +173,10 @@
+ release: docs bindist clean
+ 
+ strip: all
+-	strip second/yaboot
+-	strip --remove-section=.comment second/yaboot
+-	strip util/addnote
+-	strip --remove-section=.comment --remove-section=.note util/addnote
++	$(STRIP) second/yaboot
++	$(STRIP) --remove-section=.comment second/yaboot
++	$(STRIP) util/addnote
++	$(STRIP) --remove-section=.comment --remove-section=.note util/addnote
+ 
+ install: all strip
+ 	install -d -o root -g root -m 0755 ${ROOT}/etc/

@@ -1,0 +1,156 @@
+set -e
+
+#################################
+# Target system path definition #
+#################################
+
+XORG_PATH_ENCODINGS=/usr/share/fonts/X11/encodings
+XORG_PATH_FONTS=/usr/share/X11/fonts
+XORG_PATH_MAPS=$XORG_PATH_FONTS/util
+XORG_PATH_DRI=/usr/lib/dri
+XORG_PATH_EGL=/usr/lib/egl
+XORG_PATH_VAAPI=/usr/lib/va
+XORG_PATH_XKB=/usr/share/X11/xkb
+XORG_PATH_XKB_OUTPUT=/var/lib/xkb
+XORG_PATH_XKB_CACHE=/var/cache/xkb
+XORG_PATH_RGB=/usr/lib/X11/rgb
+XORG_PATH_MODULES=/usr/lib/xorg/modules
+XORG_PATH_DRIVERS=/usr/lib/xorg/modules/drivers
+XORG_PATH_ICONS=/usr/share/X11/icons
+
+QT_PATH_PREFIX=/usr
+QT_PATH_CFG=/etc
+QT_PATH_BINS=$QT_PATH_PREFIX/bin
+QT_PATH_SUBLIB=$QT_PATH_PREFIX/lib/qt4
+QT_PATH_DATA=$QT_PATH_PREFIX/share/qt4
+QT_PATH_DOCS=$QT_PATH_DATA/doc
+QT_PATH_TRANSLATIONS=$QT_PATH_DATA/translations
+QT_PATH_PLUGINS=$QT_PATH_SUBLIB/plugins
+QT_PATH_IMPORTS=$QT_PATH_SUBLIB/imports
+QT_PATH_DEMOS=$QT_PATH_SUBLIB/demos
+QT_PATH_EXAMPLES=$QT_PATH_SUBLIB/examples
+
+################################
+# Static build path definition #
+################################
+
+DISTRO_VERSION=`cat VERSION`
+CONFIG=config
+UTILS=utils
+SCRIPTS=scripts
+PACKAGES=packages
+OVERLAYS=overlays
+SOURCES=sources
+BINARIES=binaries
+BUILD_NOARCH=build/build.host
+STAMPS_NOARCH=.stamps
+DOCS=DOCS
+ROOT=`pwd`
+
+######################
+# Toolchain Settings #
+######################
+
+. config/toolchain
+
+TOOLCHAIN_LANGUAGES=c
+[ "$TOOLCHAIN_CXX" = yes ] && TOOLCHAIN_LANGUAGES=${TOOLCHAIN_LANGUAGES},c++
+
+set_ccache
+export MAKEFLAGS=-j$CONCURRENCY_MAKE_LEVEL
+
+if [ -z "$PATH" -o "$PATH" = "${PATH#$ROOT/$TOOLCHAIN/bin:}" ]; then
+  export PATH="$ROOT/$TOOLCHAIN/bin:$PATH"
+fi
+
+SILENT_OUT=3
+VERBOSE_OUT=4
+if [ "$VERBOSE" = yes ]; then
+  exec 3>&1
+  exec 4>&2
+else
+  exec 3>&2
+  exec 4>/dev/null
+fi
+INDENT_SIZE=4
+
+DISTRONAME_LC=`echo $DISTRONAME | tr '[:upper:]' '[:lower:]'`
+DISTRONAME_UC=`echo $DISTRONAME | tr '[:lower:]' '[:upper:]'`
+DISTRODIR=`echo $DISTRONAME_UC | tr -cd '[:alnum:]' | cut -c -8`
+
+DISTRO_SRCS=http://sources.openbricks.org/$DISTRO_VERSION
+DISTRO_FW=http://firmwares.openbricks.org
+SFNET_SRCS="http://prdownloads.sourceforge.net"
+XORG_SRCS="http://xorg.freedesktop.org/releases/individual"
+CPAN_SRCS="http://search.cpan.org/CPAN/authors/id"
+
+if [ "$DISTRO_VERSION" = devel ]; then
+  DISTRO_VERSION=$DISTRO_VERSION-`date +%Y%m%d`
+  if [ -d .hg ]; then
+    DISTRO_VERSION=$DISTRO_VERSION-Beta-2
+#    DISTRO_VERSION=$DISTRO_VERSION-r`hg tip --template={rev}`
+  elif [ -d .git ]; then
+    DISTRO_VERSION=$DISTRO_VERSION-r`git rev-parse --short HEAD`
+  fi
+fi
+[ -n "$DISTRO_VERSION_EXTRA" ] && DISTRO_VERSION=$DISTRO_VERSION-$DISTRO_VERSION_EXTRA
+
+VERSION_SUFFIX=$TARGET_ARCH
+[ -n "$TARGET_PLATFORM" -a "$TARGET_PLATFORM" != generic ] && \
+  VERSION_SUFFIX=$TARGET_PLATFORM
+[ -n "$TARGET_MACHINE" -a "$TARGET_MACHINE" != generic ] && \
+  VERSION_SUFFIX=$TARGET_MACHINE
+
+BINROOT=$BINARIES/binaries.$VERSION_SUFFIX
+ISO=$BINROOT/$FLAVOUR-$DISTRO_VERSION-$VERSION_SUFFIX.iso
+JFFS2=$BINROOT/$FLAVOUR-$DISTRO_VERSION-$VERSION_SUFFIX.jffs2
+UBIFS=$BINROOT/$FLAVOUR-$DISTRO_VERSION-$VERSION_SUFFIX.ubifs
+EXT2FS=$BINROOT/$FLAVOUR-$DISTRO_VERSION-$VERSION_SUFFIX.ext2
+INITRAMFS_NAME=$BINROOT/$FLAVOUR-$DISTRO_VERSION-$VERSION_SUFFIX.initramfs
+SNOWBALL_EMMC=$BINROOT/$FLAVOUR-$DISTRO_VERSION-$VERSION_SUFFIX.emmc
+GENERATOR_NAME=$BINROOT/$FLAVOUR-generator-$DISTRO_VERSION.$VERSION_SUFFIX
+FLAT_NAME=$BINROOT/$FLAVOUR-flat-$DISTRO_VERSION.$VERSION_SUFFIX
+TARBALL_DIR=$BINROOT/$FLAVOUR-$DISTRO_VERSION.$VERSION_SUFFIX
+TARBALL_NAME=$TARBALL_DIR.tar
+TBZ2_NAME=$TARBALL_NAME.bz2
+PXE_NAME=$BINROOT/$FLAVOUR-pxe/$DISTRONAME_UC.$VERSION_SUFFIX
+VMX_NAME=$BINROOT/$FLAVOUR-vmx
+
+#REPO_S="download.openbricks.org"
+REPO_S="192.168.4.15"
+F_PATH=${REPO_S}:/data/openbricks.org/download/$BINROOT/$PACKAGES
+REPO_PATH="http://$REPO_S/$BINROOT/$PACKAGES"
+#REPO_G=download.geexbox.org
+REPO_G=packages.sifteam.eu
+OPKG_REPO="http://$REPO_G/sifbox/binaries/$VERSION_SUFFIX/latest/packages"
+
+PKGROOT=$ROOT/$BINROOT/packages
+DEVPKGROOT=$ROOT/$BUILD/devpackages
+PKGROOT_STAGE=$ROOT/$BUILD/packages/staging
+DEVPKGROOT_STAGE=$DEVPKGROOT/staging
+
+HOST_NAME_CACHE=$TOOLCHAIN/share/configtools/host_name
+if [ -f $HOST_NAME_CACHE ]; then
+  HOST_NAME=`cat $HOST_NAME_CACHE`
+elif [ -x $TOOLCHAIN/share/configtools/config.guess ]; then
+  HOST_NAME=`$TOOLCHAIN/share/configtools/config.guess`
+fi
+
+GST_VERSION=0.10
+
+PACKAGE_URL="$PACKAGES/$1/url"
+[ -r "$PACKAGE_URL.$TARGET_ARCH" ] && PACKAGE_URL="$PACKAGE_URL.$TARGET_ARCH"
+[ -n "$TARGET_PLATFORM" -a -r "$PACKAGE_URL.$TARGET_PLATFORM" ] && \
+PACKAGE_URL="$PACKAGE_URL.$TARGET_PLATFORM"
+
+CONFIG_PLATFORM=$ROOT/$CONFIG/platforms/$TARGET_ARCH/$TARGET_PLATFORM
+CONFIG_PLATFORM_GENERIC=$ROOT/$CONFIG/platforms/$TARGET_ARCH/generic
+PLATFORM_PACKAGES="$CONFIG_PLATFORM/packages"
+CONFIG_MACHINE=$ROOT/$CONFIG/platforms/$TARGET_ARCH/$TARGET_PLATFORM/machines/$TARGET_MACHINE
+MACHINE_PACKAGES="$CONFIG_MACHINE/packages"
+CONFIG_FLAVOUR=$ROOT/$CONFIG/flavours/$FLAVOUR
+FLAVOUR_PACKAGES="$CONFIG_FLAVOUR/packages"
+
+. config/functions
+
+setup_toolchain target

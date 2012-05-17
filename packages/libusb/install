@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+cd .install/usr/lib
+ln -s libusb-1.0.so.0.0.0 libusb-1.0.a
+cp -p libusb-1.0.a /$SYSROOT_PREFIX/usr/local/lib/
+cd ../../..
+do_install usr/lib/libusb*.so*
+do_install usr/lib/libusb-1.0.a
+
+do_install usr/lib/libusb*.so*

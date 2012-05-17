@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+#cd $BUILD/$1*
+
+VER=`ls $BUILD/rootfs/lib/modules`
+mkdir -p $INSTALL/lib/modules/$VER/experimental
+find $BUILD/$1* -name \*.ko -exec cp {} $INSTALL/lib/modules/$VER/experimental \;
+
+#do_install lib
+#do_install firmware
+#do_install firmware
+mkdir -p $INSTALL/firmware
+cp -r $ROOT/$PACKAGES/$1/firmware/* $INSTALL/firmware

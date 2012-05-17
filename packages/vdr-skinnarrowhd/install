@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+cd .install/etc/vdr/plugins/text2skin/NarrowHD
+rm -rf logos
+ln -s ../../picon logos
+cd ../../../../../../
+do_install etc/vdr/plugins 
+

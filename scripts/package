@@ -1,0 +1,190 @@
+#!/bin/sh
+
+. config/options
+
+add_control() {
+  local KEY="$1"
+  local VAL="$2"
+
+  [ -n "$KEY" -a -n "$VAL" ] && \
+    echo "${KEY}: $VAL" >> $INSTALL/CONTROL/control
+
+  return 0
+}
+
+[ -n "$REPO" ] && $SCRIPTS/get-opk $1
+
+get_meta $1
+
+# check for platform-specific package overlay
+INSTALL_RULE=$PACKAGES/$1/install
+PLATFORM_INSTALL="$PLATFORM_PACKAGES/$1/install"
+[ -r "$PLATFORM_INSTALL" ] && INSTALL_RULE="$PLATFORM_INSTALL"
+MACHINE_INSTALL="$MACHINE_PACKAGES/$1/install"
+[ -r "$MACHINE_INSTALL" ] && INSTALL_RULE="$MACHINE_INSTALL"
+
+# check for flavour-specific package overlay
+FLAVOUR_INSTALL="$FLAVOUR_PACKAGES/$1/install"
+[ -r "$FLAVOUR_INSTALL" ] && INSTALL_RULE="$FLAVOUR_INSTALL"
+
+if [ "$PKG_OPK_ARCH" = unsupported ]; then
+  echo "$1 is not supported on $TARGET_ARCH, aborting"
+  exit 1
+fi
+
+# build
+$SCRIPTS/build $1
+BUILD_STAMP=$STAMPS/$1/build
+
+mkdir -p $PKGROOT
+STAMP="$PKGROOT/$PKG_OPK"
+
+if [ -f $STAMP ] && [ $INSTALL_RULE -nt $STAMP -o $BUILD_STAMP -nt $STAMP ]; then
+  $SCRIPTS/uninstall $1
+  rm -f $STAMP
+fi
+
+if [ -f $STAMP ]; then
+  echo "$1 is already packaged, skipping..." >&$VERBOSE_OUT
+  exit 0
+fi
+
+if [ ! -f $INSTALL_RULE ]; then
+  echo "$1 is not a runtime package, skipping..." >&$VERBOSE_OUT
+  exit 0
+fi
+
+printf "%${INDENT}c PACKAGE  $1\n" >&$SILENT_OUT
+export INDENT=$((${INDENT:-1}+$INDENT_SIZE))
+
+rm -f $STAMP
+
+export INSTALL="$PKGROOT_STAGE/$1"
+
+rm -rf $INSTALL
+mkdir -p $INSTALL/CONTROL
+
+# package runtime deps
+for p in $PKG_RUN_DEPENDS; do
+  $SCRIPTS/package $p
+done
+
+# install to staging
+if [ "$SYSTEMD" = yes -a -d $PACKAGES/$1/unit ]; then
+  mkdir -p $INSTALL/lib/systemd/system
+  for unit in $PACKAGES/$1/unit/*; do
+    cp $unit $INSTALL/lib/systemd/system
+    systemctl_enable `basename $unit` $INSTALL
+  done
+fi
+
+if [ "$SYSTEMD" = yes -a -d $PACKAGES/$1/tmpfiles.d ]; then
+  mkdir -p $INSTALL/usr/lib/tmpfiles.d
+  cp $PACKAGES/$1/tmpfiles.d/*.conf $INSTALL/usr/lib/tmpfiles.d
+fi
+
+if [ "$SYSTEMD" = yes -a -d $PACKAGES/$1/modules-load.d ]; then
+  mkdir -p $INSTALL/usr/lib/modules-load.d
+  cp $PACKAGES/$1/modules-load.d/*.conf $INSTALL/usr/lib/modules-load.d
+fi
+
+if [ "$SYSTEMD" = yes -a -d $PACKAGES/$1/sysctl.d ]; then
+  mkdir -p $INSTALL/usr/lib/sysctl.d
+  cp $PACKAGES/$1/sysctl.d/*.conf $INSTALL/usr/lib/sysctl.d
+fi
+
+if [ -d $PACKAGES/$1/modprobe.d ]; then
+  mkdir -p $INSTALL/etc/modprobe.d
+  cp $PACKAGES/$1/modprobe.d/*.conf $INSTALL/etc/modprobe.d
+fi
+
+if [ -d $PACKAGES/$1/profile.d ]; then
+  mkdir -p $INSTALL/etc/profile.d
+  cp $PACKAGES/$1/profile.d/*.sh $INSTALL/etc/profile.d
+fi
+
+$INSTALL_RULE $1 >&$VERBOSE_OUT
+
+# build opk package
+[ -d $PACKAGES/$1/package ] && cp -P $PACKAGES/$1/package/* $INSTALL/CONTROL
+
+add_control "Package" "$PKG_NAME"
+add_control "Version" "${PKG_VERSION}-${PKG_REV}"
+add_control "Architecture" "$PKG_OPK_ARCH"
+add_control "Depends" "$PKG_OPK_DEPENDS"
+add_control "Priority" "$PKG_PRIORITY"
+add_control "Section" "$PKG_SECTION"
+add_control "Maintainer" "The SifTeam (http://forum.sifteam.eu)"
+add_control "Source" "https://github.com/unixer/sifbox/"
+add_control "Description" "$PKG_SHORTDESC"
+
+if [ -n "$PKG_SHORTDESC" -a -n "$PKG_LONGDESC" ]; then
+  echo "$PKG_LONGDESC" | fmt | sed 's/^/  /g' >> \
+    $INSTALL/CONTROL/control
+
+  # write enabled use flags in the package description
+  uses=""
+  for flag in $PKG_USE; do
+    type=`get_use_type $flag`
+    if [ -z "$type" ] && pkg_uses $PKG_NAME $flag; then
+      [ -z "$uses" ] && uses=$flag || uses="$uses $flag"
+    fi
+  done
+  if [ -n "$uses" ]; then
+    echo "  ." >> $INSTALL/CONTROL/control
+    echo "Use flags: $uses" | fmt | sed 's/^/  /g' >> \
+      $INSTALL/CONTROL/control
+  fi
+fi
+
+opkg-build -O -o root -g root $INSTALL $PKGROOT >&$VERBOSE_OUT
+
+if [ -d "$PKG_BUILD_DIR/.install-debuginfo" ]; then
+  DEBUGINFO="$PKG_BUILD_DIR/.install-debuginfo"
+elif [ -d "$PKG_BUILD_DIR/objdir-target/.install-debuginfo" ]; then
+  DEBUGINFO="$PKG_BUILD_DIR/objdir-target/.install-debuginfo"
+else
+  unset DEBUGINFO
+fi
+
+if [ -d "$DEBUGINFO" ]; then
+  # build runtime debug package
+  export INSTALL="$PKGROOT_STAGE/${PKG_NAME}-dbg"
+  rm -rf $INSTALL
+  mkdir -p $INSTALL/CONTROL
+  cp -PR $DEBUGINFO/* $INSTALL
+
+  # build opk package
+  add_control "Package" "${PKG_NAME}-dbg"
+  add_control "Version" "${PKG_VERSION}-${PKG_REV}"
+  add_control "Architecture" "$PKG_OPK_ARCH"
+  add_control "Depends" "$PKG_NAME"
+  add_control "Priority" "extra"
+  add_control "Section" "debug"
+  add_control "Maintainer" "The SifTeam (http://forum.sifteam.eu)"
+  add_control "Source" "https://github.com/unixer/sifbox/"
+  add_control "Description" "debug symbols for $PKG_NAME"
+  echo "This package contains debug data of the $PKG_NAME package. Most people will not need this package. Please install it to produce useful stacktraces to help debugging $PKG_NAME." | fmt | sed 's/^/  /g' >> $INSTALL/CONTROL/control
+
+  opkg-build -O -o root -g root $INSTALL $PKGROOT >&$VERBOSE_OUT
+
+  # build devel debug package
+  export INSTALL="$DEVPKGROOT_STAGE/${PKG_NAME}-dbg"
+  rm -rf $INSTALL
+  mkdir -p $INSTALL/CONTROL
+  cp -PR $DEBUGINFO/* $INSTALL
+
+  # build opk package
+  add_control "Package" "${PKG_NAME}-dbg"
+  add_control "Version" "${PKG_VERSION}-${PKG_REV}dev${PKG_OPK_ARCH}"
+  add_control "Architecture" "`uname -m`"
+  add_control "Priority" "extra"
+  add_control "Section" "debug"
+  add_control "Maintainer" "The SifTeam (http://forum.sifteam.eu)"
+  add_control "Source" "https://github.com/unixer/sifbox/"
+  add_control "Description" "debug symbols for $PKG_NAME (devel version)"
+
+  opkg-build -O -o root -g root $INSTALL $DEVPKGROOT >&$VERBOSE_OUT
+fi
+
+exit 0

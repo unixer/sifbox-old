@@ -1,0 +1,4 @@
+MACHINE_NAME=beagleboard-xm
+MACHINE_DESC="Beagle Board XM"
+MACHINE_XLOADER_CONFIG="omap3530beagle_config"
+MACHINE_UBOOT_CONFIG="omap3_beagle_config"

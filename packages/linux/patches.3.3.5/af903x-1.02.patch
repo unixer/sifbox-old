@@ -1,0 +1,5367 @@
+Support for DVB-T USB 2.0 sticks based on AF9035/AF9033. Currently
+supported devices:
+- Terratec T5 Ver.2 (also known as T6), Tuner fc0012
+- Avermedia Volar HD Nano (A867R), Tuner MxL5007t
+
+Signed-off-by: Hans-Frieder Vogt <hfvogt@gmx.net>
+
+ Kconfig          |    8 
+ Makefile         |    3 
+ af903x-cmd.h     |   61 +
+ af903x-core.c    |  453 ++++++++++++
+ af903x-core.h    |   59 +
+ af903x-devices.c | 1446 ++++++++++++++++++++++++++++++++++++++
+ af903x-fe-priv.h |  202 +++++
+ af903x-fe.c      | 2070 +++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ af903x-fe.h      |  164 ++++
+ af903x-reg.h     |  214 +++++
+ af903x-tuners.c  |  447 +++++++++++
+ af903x-tuners.h  |   62 +
+ af903x.h         |   51 +
+ dvb-usb-ids.h    |   16 
+ 14 files changed, 5256 insertions(+)
+
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-cmd.h b/drivers/media/dvb/dvb-usb/af903x-cmd.h
+--- a/drivers/media/dvb/dvb-usb/af903x-cmd.h	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-cmd.h	2012-03-06 23:30:41.976748091 +0100
+@@ -0,0 +1,61 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2012 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#ifndef _AF903X_CMD_H_
++#define _AF903X_CMD_H_
++
++#define CMD_DEMOD_READ		0x0000
++#define CMD_DEMOD_WRITE		0x0001
++#define CMD_TUNER_READ		0x0002
++#define CMD_TUNER_WRITE		0x0003
++#define CMD_REG_EEPROM_READ	0x0004
++#define CMD_REG_EEPROM_WRITE	0x0005
++#define CMD_DATA_READ		0x0006
++#define CMD_VAR_READ		0x0008
++#define CMD_VAR_WRITE		0x0009
++#define CMD_PLATFORM_GET	0x000A
++#define CMD_PLATFORM_SET	0x000B
++#define CMD_IP_CACHE		0x000D
++#define CMD_IP_ADD		0x000E
++#define CMD_IP_REMOVE		0x000F
++#define CMD_PID_ADD		0x0010
++#define CMD_PID_REMOVE		0x0011
++#define CMD_SIPSI_GET		0x0012
++#define CMD_SIPSI_MPE_RESET	0x0013
++#define CMD_H_PID_ADD		0x0015
++#define CMD_H_PID_REMOVE	0x0016
++#define CMD_ABORT		0x0017
++#define CMD_IR_GET		0x0018
++#define CMD_IR_SET		0x0019
++#define CMD_FW_DOWNLOAD		0x0021
++#define CMD_QUERYINFO		0x0022
++#define CMD_BOOT		0x0023
++#define CMD_REBOOT		0x0023
++#define CMD_FW_DOWNLOAD_BEGIN	0x0024
++#define CMD_FW_DOWNLOAD_END	0x0025
++#define CMD_RUN_CODE		0x0026
++#define CMD_SCATTER_READ	0x0028
++#define CMD_SCATTER_WRITE	0x0029
++#define CMD_GENERIC_READ	0x002A
++#define CMD_GENERIC_WRITE	0x002B
++
++#endif
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-core.c b/drivers/media/dvb/dvb-usb/af903x-core.c
+--- a/drivers/media/dvb/dvb-usb/af903x-core.c	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-core.c	2012-03-11 11:09:45.712245748 +0100
+@@ -0,0 +1,453 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2011 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ * and the IT9135 driver by Jason Dong
++ * Copyright (C) 2011 ITE Technologies, INC.
++ * and the Cinergy T Stick driver
++ * http://linux.terratec.de/files/Cinergy_T_Stick/terratec_af9035.zip
++ * Copyright (C) 2009 Antti Palosaari <crope@iki.fi>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#include "af903x.h"
++#include "af903x-core.h"
++#include "af903x-cmd.h"
++#include "af903x-reg.h"
++
++#define AF903X_MAIL_BOX_SIZE 63
++#define AF9035_RETRY 10
++#define AF9035_SND_TIMEOUT 100
++#define AF9035_RCV_TIMEOUT 200
++
++u8 cmd_counter = 0;
++
++#define AF903X_MAX_PKT_SIZE 255
++
++#define BUILD_COMMAND(command, processor, chip) (command + ((u16)(processor + chip) << 12))
++
++static u8 regmask[8] = {0x01, 0x03, 0x07, 0x0f, 0x1f, 0x3f, 0x7f, 0xff};
++
++static u16 check_sum(u8 *p, int len)
++{
++	u16 sum = 0;
++	u8 i = 1;
++	while (i < len)
++		sum += (i++ & 1) ? (*p++) << 8 : *p++;
++	return ~sum;
++}
++
++static int add_check_sum(int *buf_len, u8 *buf)
++{
++	u16 sum = check_sum(&buf[1], *buf_len);
++
++	buf[*buf_len]     = sum >> 8;
++	buf[*buf_len + 1] = sum & 0xff;
++	buf[0]            = *buf_len + 1;
++	*buf_len         += 2;
++
++	return 0;
++}
++
++static int remove_check_sum(int *buf_len, u8 *buf)
++{
++	int ret = 0;
++	u16 sum = check_sum(&buf[1], *buf_len-2);
++
++	if (((buf[*buf_len-2] << 8) + buf[*buf_len-1]) != sum) {
++		ret = -EIO;
++		goto exit;
++	}
++	if (buf[2]) {/* status byte */
++		if (buf[2] & 0x10)
++			ret = -EBUSY;	/* firmware download error */
++		else
++			ret = -EFAULT;
++	}
++	buf[0] = *buf_len - 3;
++	*buf_len -= 2;
++exit:
++	return ret;
++}
++
++static int af903x_send_cmd(struct usb_device *udev,
++	u16 command, u8 chip, enum af903x_processor pro,
++	int wlen, u8 *wdata, int rlen, u8 *rdata)
++{
++	struct mutex *af903x_mutex = dev_get_drvdata(&udev->dev);
++	int ret = 0;
++	u8 buf[255];
++	int buf_len, nremain, nsend, i;
++	int actual_l, j;
++
++	if (af903x_mutex)
++		mutex_lock(af903x_mutex);
++
++	/* checks */
++	if (wlen + 6 > AF903X_MAIL_BOX_SIZE) {
++		ret = -EINVAL;
++		goto exit;
++	}
++	if (rlen + 5 > AF903X_MAX_PKT_SIZE) {
++		ret = -EINVAL;
++		goto exit;
++	}
++	if (rlen + 5 > AF903X_MAIL_BOX_SIZE) {
++		ret = -EINVAL;
++		goto exit;
++	}
++
++	command = BUILD_COMMAND(command, pro, chip);
++	buf[1] = command >> 8;
++	buf[2] = command & 0xff;
++	buf[3] = cmd_counter++;
++	buf_len = 4;
++	if (wlen && wdata) {
++		memcpy(&buf[4], wdata, wlen);
++		buf_len += wlen;
++	}
++
++	ret = add_check_sum(&buf_len, buf);
++	if (ret < 0)
++		goto exit;
++
++	/* send command */
++	nsend = 0;
++	nremain = buf_len;
++	while (nremain > 0) {
++		i = (nremain > AF903X_MAX_PKT_SIZE) ? AF903X_MAX_PKT_SIZE : nremain;
++		for (j = 0; j < AF9035_RETRY; j++) {
++			ret = usb_bulk_msg(usb_get_dev(udev),
++				usb_sndbulkpipe(usb_get_dev(udev), 0x02),
++				&buf[nsend], i, &actual_l, AF9035_SND_TIMEOUT);
++			if (ret == 0 ||
++			(ret != -EBUSY && ret != -ETIMEDOUT && ret != -EINTR))
++				break;
++			msleep(1);
++		}
++		if (ret < 0)
++			goto exit;
++
++		nsend   += i;
++		nremain -= i;
++	}
++	/* no acknowledge for CMD_FW_DOWNLOAD */
++	if ((command & 0xff) == CMD_FW_DOWNLOAD)
++		goto exit;
++
++	buf_len = 5 + rlen;
++
++	for (j = 0; j < AF9035_RETRY; j++) {
++		ret = usb_bulk_msg(usb_get_dev(udev),
++			usb_rcvbulkpipe(usb_get_dev(udev),0x81),
++			buf, buf_len, &actual_l, AF9035_RCV_TIMEOUT);
++		if (ret == 0 ||
++			(ret != -EBUSY && ret != -ETIMEDOUT && ret != -EINTR))
++			break;
++		msleep(1);
++	}
++	if (ret < 0)
++		goto exit;
++
++	ret = remove_check_sum(&buf_len, buf);
++	if (ret < 0)
++		goto exit;
++
++	if (rlen && rdata)
++		memcpy(rdata, &buf[3], rlen);
++
++exit:
++	if (af903x_mutex)
++		mutex_unlock(af903x_mutex);
++	return ret;
++}
++
++int af9035_wr_regs(struct usb_device *udev, u8 chip, enum af903x_processor pro,
++	u32 reg, int len, u8 *buff)
++{
++	u8 b[6+len];
++
++	b[0] = (u8)len;			/* write buffer length */
++	if ((pro == PRO_LINK) && (reg <= 0xff))
++		b[1] = 1;		/* register address length */
++	else
++		b[1] = 2;
++	b[2] = (reg >> 24) & 0xff;	/* bits 31:24 of address */
++	b[3] = (reg >> 16) & 0xff;	/* bits 23:16 of address */
++	b[4] = (reg >> 8) & 0xff;	/* bits 15:8 of address */
++	b[5] = reg & 0xff;		/* bits 7:0 of address */
++	memcpy(&b[6], buff, len);
++
++	return af903x_send_cmd(udev, CMD_DEMOD_WRITE, chip, pro,
++		sizeof(b), b, 0, NULL);
++}
++
++int af9035_wr_reg(struct usb_device *udev, u8 chip, enum af903x_processor pro,
++	u32 reg, u8 val)
++{
++	return af9035_wr_regs(udev, chip, pro, reg, 1, &val);
++}
++
++int af9035_rd_regs(struct usb_device *udev, u8 chip, enum af903x_processor pro,
++	u32 reg, int len, u8 *buff)
++{
++	u8 b[6];
++
++	b[0] = (u8)len;			/* read buffer length */
++	if ((pro == PRO_LINK) && (reg <= 0xff))
++		b[1] = 1;		/* register address length */
++	else
++		b[1] = 2;
++	b[2] = (reg >> 24) & 0xff;	/* bits 31:24 of address */
++	b[3] = (reg >> 16) & 0xff;	/* bits 23:16 of address */
++	b[4] = (reg >> 8) & 0xff;	/* bits 15:8 of address */
++	b[5] = reg & 0xff;		/* bits 7:0 of address */
++
++	return af903x_send_cmd(udev, CMD_DEMOD_READ, chip, pro,
++		sizeof(b), b, len, buff);
++}
++
++int af9035_rd_reg(struct usb_device *udev, u8 chip, enum af903x_processor pro,
++	u32 reg, u8 *val)
++{
++	return af9035_rd_regs(udev, chip, pro, reg, 1, val);
++}
++
++int af9035_wr_reg_bits(struct usb_device *udev, u8 chip, enum af903x_processor pro,
++	u32 reg, u8 pos, u8 len, u8 val)
++{
++	int ret;
++	u8 tmp, mask;
++
++	if (len == 8) {
++		tmp = val;
++		goto exit;
++	}
++	ret = af9035_rd_reg(udev, chip, pro, reg, &tmp);
++	if (ret < 0)
++		return ret;
++
++	mask = regmask[len - 1] << pos;
++	tmp = (tmp & ~mask) | ((val << pos) & mask);
++
++exit:
++	return af9035_wr_reg(udev, chip, pro, reg, tmp);
++}
++
++int af9035_rd_reg_bits(struct usb_device *udev, u8 chip,
++	enum af903x_processor pro, u32 reg, u8 pos, u8 len, u8 *val)
++{
++	int ret;
++	u8 tmp;
++
++	ret = af9035_rd_reg(udev, chip, pro, reg, &tmp);
++	if (ret < 0)
++		return ret;
++
++	if (len == 8) {
++		*val = tmp;
++	} else {
++		*val = (tmp >> pos) & regmask[len - 1];
++	}
++
++	return 0;
++}
++
++int af9035_wr_tuner_regs(struct usb_device *udev, u8 chip, u8 tuner_addr,
++	u16 reg, u8 addr_len, int len, u8 *buff)
++{
++	u8 b[5+len];
++
++	b[0] = (u8)len;		/* write buffer length */
++	b[1] = tuner_addr;	/* i2c address of tuner */
++	b[2] = addr_len;	/* register addr length */
++	b[3] = reg >> 8;	/* high byte of reg. address */
++	b[4] = reg & 0xff;	/* low byte of reg. address */
++	memcpy(&b[5], buff, len);
++
++	return af903x_send_cmd(udev, CMD_TUNER_WRITE, chip, PRO_LINK,
++		sizeof(b), b, 0, NULL);
++}
++
++int af9035_rd_tuner_regs(struct usb_device *udev, u8 chip, u8 tuner_addr,
++	u16 reg, u8 addr_len, int len, u8 *buff)
++{
++	u8 b[5] = {
++		len,		/* read buffer length */
++		tuner_addr,	/* i2c address of tuner */
++		addr_len,	/* register addr length */
++		reg >> 8,	/* high byte of reg. address */
++		reg & 0xff	/* low byte of reg. address */
++	};
++
++	return af903x_send_cmd(udev, CMD_TUNER_READ, chip, PRO_LINK,
++		sizeof(b), b, len, buff);
++}
++
++int af903x_get_fw_version(struct usb_device *udev, enum af903x_processor pro,
++	u32 *version)
++{
++	int ret = 0;
++	u8 wbuf[1] = {0,};
++	u8 rbuf[4] = {0,};
++	u8 value = 0;
++
++	/* Check chip version */
++	ret = af9035_rd_reg(udev, 0, PRO_LINK, CHIP_VERSION, &value);
++	if (ret)
++		goto exit;
++
++	wbuf[0] = 1;
++	ret = af903x_send_cmd(udev, CMD_QUERYINFO, 0, pro,
++		1, wbuf, 4, rbuf);
++	if (ret)
++		goto exit;
++	*version = (rbuf[0] << 24) + (rbuf[1] << 16) + (rbuf[2] << 8) + rbuf[3];
++
++exit:
++	return ret;
++}
++
++#define PAYLOAD_LEN (AF903X_MAIL_BOX_SIZE - 6)
++
++static int af903x_load_fw(struct usb_device *udev, u32 len, u8 *fw)
++{
++	int ret = 0;
++	int loop, remainder, i;
++
++	loop = len / PAYLOAD_LEN;
++	remainder = len % PAYLOAD_LEN;
++
++	for (i = 0; i < loop; i++) {
++		ret = af903x_send_cmd(udev, CMD_FW_DOWNLOAD, 0, PRO_LINK,
++			PAYLOAD_LEN, fw, 0, NULL);
++		if (ret)
++			goto exit;
++		fw += PAYLOAD_LEN;
++	}
++	if (remainder) {
++		ret = af903x_send_cmd(udev, CMD_FW_DOWNLOAD, 0, PRO_LINK,
++			remainder, fw, 0, NULL);
++	}
++
++exit:
++	return ret;
++}
++
++int af903x_load_firmware(struct usb_device *udev,
++		u8 *fw_codes, struct af903x_fw_segment *fw_segs, u8 *fw_parts)
++{
++	int ret = 0;
++	int beginPartition, endPartition, i;
++	u32 version;
++	u32 firmwareLength;
++	u8 *firmwareCodesPointer;
++	u16 command;
++
++/* Define I2C master speed, the default value 0x07 means
++   366KHz (1000000000 / (24.4 * 16 * I2C_CLK_366)). */
++#define I2C_CLK_366 0x07
++/* 100kHz for tuner I2C */
++#define I2C_CLK_100 0x1a
++
++	/* Set I2C master clock speed. */
++	ret = af9035_wr_reg(udev, 0, PRO_LINK, I2C_CLK, I2C_CLK_366);
++	if (ret)
++		goto exit;
++
++	firmwareCodesPointer = fw_codes;
++
++	beginPartition = 0;
++	endPartition = fw_parts[0];
++
++	for (i = beginPartition; i < endPartition; i++) {
++		firmwareLength = fw_segs[i].length;
++		switch (fw_segs[i].type) {
++		case 0: /* download firmware */
++			ret = af903x_send_cmd(udev, CMD_FW_DOWNLOAD_BEGIN,
++				0, PRO_LINK, 0, NULL, 0, NULL);
++			if (ret)
++				goto exit;
++			ret = af903x_load_fw(udev,
++					firmwareLength, firmwareCodesPointer);
++			if (ret)
++				goto exit;
++			ret = af903x_send_cmd(udev, CMD_FW_DOWNLOAD_END,
++				0, PRO_LINK, 0, NULL, 0, NULL);
++			if (ret)
++				deb_info("%s: CMD_FW_DOWNLOAD_END resulted in "
++					"error %d, still try to continue\n",
++					__func__, ret);
++			break;
++		case 1: /* copy firmware */
++			ret = af903x_send_cmd(udev, CMD_SCATTER_WRITE,
++				0, PRO_LINK,
++				firmwareLength, firmwareCodesPointer, 0, NULL);
++			if (ret)
++				goto exit;
++			break;
++		default: /* Direct write firmware */
++			command = (firmwareCodesPointer[0] << 8) +
++				firmwareCodesPointer[1];
++			ret = af903x_send_cmd(udev, command, 0, PRO_LINK,
++				firmwareLength - 2, firmwareCodesPointer + 2,
++				0, NULL);
++			if (ret)
++				goto exit;
++			break;
++		}
++		firmwareCodesPointer += firmwareLength;
++	}
++
++	/* Boot */
++	ret = af903x_send_cmd(udev, CMD_BOOT, 0, PRO_LINK,
++		0, NULL, 0, NULL);
++	if (ret)
++		goto exit;
++
++	msleep(10);
++
++	/* Check if firmware is running */
++	version = 0;
++	ret = af903x_get_fw_version(udev, PRO_LINK, &version);
++	if (ret)
++		goto exit;
++	if (version == 0)
++		ret = -EIO;
++
++exit:
++	/* Set I2C master clock 100k in order to support tuner I2C. */
++	i = af9035_wr_reg (udev, 0, PRO_LINK, I2C_CLK, I2C_CLK_100);
++	/* if previous functions have failed, communicate this with priority */
++	if (ret)
++		return ret;
++	else
++		return i;
++}
++
++int af903x_reboot(struct usb_device *udev, u8 chip)
++{
++	return af903x_send_cmd(udev, CMD_REBOOT, chip, PRO_LINK,
++			0, NULL, 0, NULL);
++}
++
++int af903x_ir_get(struct usb_device *udev, u32 *b)
++{
++	return af903x_send_cmd(udev, CMD_IR_GET, 0, PRO_LINK,
++			0, NULL, 4, (u8 *)b);
++}
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-core.h b/drivers/media/dvb/dvb-usb/af903x-core.h
+--- a/drivers/media/dvb/dvb-usb/af903x-core.h	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-core.h	2012-02-19 18:04:21.000000000 +0100
+@@ -0,0 +1,59 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#ifndef _AF903X_CORE_H_
++#define _AF903X_CORE_H_
++
++enum af903x_processor {
++	PRO_LINK = 0,
++	PRO_OFDM = 8
++};
++
++struct af903x_fw_segment {
++	u8 type;	/* 0:Firmware download 1:Rom copy 2:Direct command */
++	u32 length;
++};
++
++extern struct i2c_algorithm af903x_i2c_algo;
++
++extern int af9035_wr_regs(struct usb_device *udev, u8 chip,
++	enum af903x_processor pro, u32 reg, int len, u8 *buff);
++extern int af9035_wr_reg(struct usb_device *udev, u8 chip,
++	enum af903x_processor pro, u32 reg, u8 val);
++extern int af9035_rd_regs(struct usb_device *udev, u8 chip,
++	enum af903x_processor pro, u32 reg, int len, u8 *buff);
++extern int af9035_rd_reg(struct usb_device *udev, u8 chip,
++	enum af903x_processor pro, u32 reg, u8 *val);
++extern int af9035_wr_reg_bits(struct usb_device *udev, u8 chip,
++	enum af903x_processor pro, u32 reg, u8 pos, u8 len, u8 val);
++extern int af9035_rd_reg_bits(struct usb_device *udev, u8 chip,
++	enum af903x_processor pro, u32 reg, u8 pos, u8 len, u8 *val);
++extern int af9035_wr_tuner_regs(struct usb_device *udev, u8 chip,
++	u8 tuner_addr, u16 reg, u8 addr_len, int len, u8 *buff);
++extern int af9035_rd_tuner_regs(struct usb_device *udev, u8 chip,
++	u8 tuner_addr, u16 reg, u8 addr_len, int len, u8 *buff);
++
++extern int af903x_get_fw_version(struct usb_device *udev,
++	enum af903x_processor pro, u32 *version);
++extern int af903x_load_firmware(struct usb_device *udev,
++	u8 *fw_codes, struct af903x_fw_segment *fw_segs, u8 *fw_parts);
++extern int af903x_reboot(struct usb_device *udev, u8 chip);
++extern int af903x_ir_get(struct usb_device *udev, u32 *b);
++
++#endif
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-devices.c b/drivers/media/dvb/dvb-usb/af903x-devices.c
+--- a/drivers/media/dvb/dvb-usb/af903x-devices.c	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-devices.c	2012-03-11 10:38:41.528228875 +0100
+@@ -0,0 +1,1446 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2011 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ * and the IT9135 driver by Jason Dong
++ * Copyright (C) 2011 ITE Technologies, INC.
++ * and the Cinergy T Stick driver
++ * http://linux.terratec.de/files/Cinergy_T_Stick/terratec_af9035.zip
++ * Copyright (C) 2009 Antti Palosaari <crope@iki.fi>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#include "af903x-fe.h"
++#include <linux/firmware.h>
++#include <media/rc-core.h>
++
++static int dvb_usb_af903x_disable_rc = 0;
++module_param_named(disable_rc, dvb_usb_af903x_disable_rc, int, 0644);
++MODULE_PARM_DESC(disable_rc, "disable rc");
++
++int dvb_usb_af903x_debug;
++module_param_named(debug,dvb_usb_af903x_debug, int, 0644);
++MODULE_PARM_DESC(debug, "set debugging level.(info=1,deb_fw=2,deb_fwdata=4,deb_data=8)" DVB_USB_DEBUG_STATUS);
++
++static int pid_filter_off = 0;
++module_param_named(pid_off, pid_filter_off, int, 0644);
++MODULE_PARM_DESC(pid_off, "switch pid filter 0=on, 1=off");
++
++DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
++
++struct afa_config af903x_config;
++
++static int af903x_disable_gpio_pins(struct usb_device *udev)
++{
++	int ret;
++
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH1_EN, 0, 1, 0);
++	if (ret)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH1_ON, 0, 1, 0);
++	if (ret)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH5_EN, 0, 1, 0);
++	if (ret)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH5_ON, 0, 1, 0);
++	if (ret)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_EN, 0, 1, 0);
++	if (ret)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_ON, 0, 1, 0);
++
++exit:
++	return ret;
++}
++
++static int af903x_tuner_wakeup(struct usb_device *udev)
++{
++	return af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_O, 0, 1, 1);
++}
++
++static int af903x_nim_reset(struct usb_device *udev)
++{
++	int ret = 0;
++
++	deb_data("%s\n", __func__);
++
++	/* Set AF0350 GPIOH1 to 0 to reset AF0351 */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH1_EN, 0, 1, 1);
++	if (ret < 0)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH1_ON, 0, 1, 1);
++	if (ret < 0)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH1_O, 0, 1, 0);
++	if (ret < 0)
++		goto exit;
++
++	msleep(50);
++
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH1_O, 0, 1, 1);
++
++exit:
++	return ret;
++}
++
++static int af903x_is_psb_overflow(struct af903x_dev_ctx *ctx, int chip,
++	bool *overflow)
++{
++	struct usb_device *udev = ctx->udev;
++	int ret;
++	u32 reg;
++	u8 status;
++	bool retval = false;
++    
++	deb_data("%s: chip = %d\n", __func__, chip);
++
++	if (chip == 0)
++		reg = MP2IF_PSB_OVERFLOW;	/* 0xF980 */
++	else
++		reg = REG_SYS_BUF_OVERFLOW;	/* 0xF9B9 */
++	ret = af9035_rd_reg(udev, 0, PRO_OFDM, reg, &status);
++	if (ret)
++		goto exit;
++	
++	retval = (status & 0x01) == 0x01;
++	if (retval) {
++		ret = af9035_wr_reg(udev, 0, PRO_OFDM,
++			reg, status & 0xfe);
++		if (ret)
++			goto exit;
++	}
++	*overflow = retval;
++exit:
++	return ret;
++}
++
++static int af903x_tuner_power_ctrl(struct af903x_dev_ctx *ctx, int chip, bool on)
++{ 
++	struct usb_device *udev = ctx->udev;
++	int ret;
++
++	deb_data("%s: chip = %d, on: %s\n", __func__, chip, on ? "ON" : "OFF");
++
++	/* init gpioH7 */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_EN, 0, 1, 1);
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_ON, 0, 1, 1);
++
++	if (on)
++		ctx->active_tuner |= (1 << chip);
++	else
++		ctx->active_tuner &= ~(1 << chip);
++
++	if (on) {
++		/* tuner on */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_O,
++			0, 1, 1);
++	} else {
++		/* tuner off */
++		if (ctx->architecture == ARCHITECTURE_PIP) {
++			/* only switch tuner(s) off if none in use */
++			if (!ctx->active_tuner) {
++				ret = af9035_wr_reg_bits(udev, 0,
++					PRO_LINK, GPIOH7_O, 0, 1, 0);
++			}
++		} else {
++			ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++				GPIOH7_O, 0, 1, 0);
++		}
++	}
++	return ret;
++}
++
++static int af903x_init_rf_loop_thru(struct af903x_dev_ctx *ctx)
++{
++	struct usb_device *udev = ctx->udev;
++	int ret = 0;
++
++        deb_data("%s\n", __func__);
++
++        ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH2_EN, 0, 1, 1);
++    	if (ret < 0)
++		goto exit;
++       	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH2_ON, 0, 1, 1);
++    	if (ret < 0)
++		goto exit;
++       	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH2_O, 0, 1, 1);
++    	if (ret < 0)
++		goto exit;
++
++exit:
++	if (ret)
++		deb_data("%s failed !!!\n", __func__);
++	return ret;
++}
++
++/* setup of the USB interface - only call if more than 1 demodulator present */
++static int af903x_usb_setup(struct af903x_dev_ctx *ctx)
++{
++	struct usb_device *udev = ctx->udev;
++	int ret = 0, i;
++
++	deb_data("%s\n", __func__);
++
++	for (i = 0; i < ctx->conf.chip_num; i++) {
++		ret = af9035_wr_reg(udev, i, PRO_OFDM,
++			DCA_FPGA_LATCH, 0x66);
++		if (ret < 0)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, i, PRO_OFDM,
++			DCA_PLATCH, 0, 1, 1);
++		if (ret < 0)
++			goto exit;
++	}
++exit:
++	return ret;
++}
++
++static int af903x_init_nim_suspend_regs(struct usb_device *udev)
++{
++	int ret;
++    
++	deb_data("%s\n", __func__);
++
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH5_EN, 0, 1, 1);
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH5_ON, 0, 1, 1);
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH5_O, 0, 1, 0);
++
++	ret = af9035_wr_reg_bits(udev, 1, PRO_LINK, PWRDW, 0, 1, 1);
++
++	ret = af9035_wr_reg_bits(udev, 1, PRO_LINK, PWRDW_HWEN, 0, 1, 1);
++
++	return ret;
++}
++
++static int af903x_nim_suspend(struct usb_device *udev, bool suspend)
++{
++	deb_data("%s: suspend = %s\n", __func__, suspend ? "ON":"OFF");
++
++	return af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH5_O,
++		0, 1, suspend ? 1 : 0);
++}
++
++int af903x_ap_ctrl(struct af903x_dev_ctx *ctx, int chip, bool on)
++{
++	int ret;
++
++	deb_data("%s: chip: %d, on: %s\n", __func__, chip, on ? "ON" : "OFF");
++
++	ret = af903x_tuner_power_ctrl(ctx, chip, on);
++       	if (ret) {
++		deb_data("\taf903x_tuner_power_ctrl fail: %d\n", ret);
++		goto exit;
++	}
++
++    	ret = af903x_fe_power_ctrl(ctx, chip, on);
++    	if (ret) {
++		deb_data("\taf903x_fe_power_ctrl fail: %d\n", ret);
++		goto exit;
++	}
++
++exit:
++	return ret;
++}
++
++extern struct tuner_desc tuner_af9007;
++extern struct tuner_desc tuner_fc0012;
++extern struct tuner_desc tuner_mxl5007t;
++
++static int af903x_set_bus_tuner(struct af903x_dev_ctx *ctx, u16 tuner_id)
++{
++	int ret = 0;
++
++	deb_data("%s: tuner_id = 0x%x\n", __func__, tuner_id);
++
++	switch (tuner_id) {
++	case TUNER_AF9007:
++		ctx->tuner_desc = &tuner_af9007;
++		break;
++	case TUNER_FC0012:
++		ctx->tuner_desc = &tuner_fc0012;
++		break;
++	case TUNER_MXL5007T:
++		ctx->tuner_desc = &tuner_mxl5007t;
++		break;
++	default:
++		err("requested tuner id %d not enabled", tuner_id);
++		ret = -EINVAL;
++		goto exit;
++		break;
++	}
++	if (ctx->tuner_desc->tuner_scripts == NULL) {
++		ctx->tuner_desc->tuner_script_sets = NULL;
++	}
++
++exit:
++	return ret;
++}
++
++static int af903x_device_init(struct af903x_dev_ctx *ctx, int boot)
++{
++	int errcount = 0;
++	int i, ret = 0;
++
++	info("device init ...");
++
++	/* select tuner based on available tuner_id */
++	ret = af903x_set_bus_tuner(ctx, ctx->conf.tuner_id[0]);
++	if (ret) {
++		deb_data("af903x_set_bus_tuner failed: %d\n", ret);
++		goto exit;
++	}
++
++	if (ctx->conf.chip_num == 2) {
++		ret = af903x_usb_setup(ctx);
++		if (ret) {
++			deb_data("af903x_usb_setup failed: %d\n", ret);
++			goto exit;
++		}
++
++		ret = af903x_init_nim_suspend_regs(ctx->udev);
++		if (ret) {
++			deb_data("af903x_init_nim_suspend_regs failed!\n");
++			goto exit;
++		}
++	}
++
++	for (i = 0; i < ctx->conf.chip_num; i++) {  
++		ret = af903x_ap_ctrl(ctx, i, false);
++		if (ret) {
++			deb_data("%d: af903x_ap_ctrl failed!\n", i);
++			errcount++;
++		}
++	}
++
++	if (ctx->conf.chip_num == 2) {
++		ret = af903x_nim_suspend(ctx->udev, true);
++		if (ret < 0) {
++			deb_data("af903x_nim_suspend failed: %d!\n", ret);
++			errcount++;
++		}
++	}
++	if (ctx->conf.rf_loop_thru) {
++		ret = af903x_init_rf_loop_thru(ctx);
++		if (ret) {
++			deb_data("af903x_init_rf_loop_thru failed!\n");
++			errcount++;
++		}
++	}
++	deb_data("\t%s success!!\n", __func__);
++
++exit:
++	if (errcount)
++		warn("%s: #errors: %d, last error %d", __func__,
++			errcount, ret);
++	return ret;
++}
++
++static int af903x_pid_filter_ctrl(struct dvb_usb_adapter *adap, int onoff)
++{
++	int ret = 0;
++	struct usb_device *udev = adap->dev->udev;
++
++	deb_data("%s: onoff %d\n", __func__, onoff);
++
++	/* switch pid filter on/off */
++	ret = af9035_wr_reg_bits(udev, adap->id, PRO_OFDM,
++		PID_EN, 0, 1, onoff ? 1 : 0);
++	return ret;
++}
++
++static int af903x_pid_filter(struct dvb_usb_adapter *adap, int index,
++	u16 pidnum, int onoff)
++{
++	struct usb_device *udev = adap->dev->udev;
++	int ret = 0;
++	u8 buf[2];
++
++	info("set pid filter, chip: %d, index %d, pid 0x%x : %s",
++		adap->id, index, pidnum, onoff ? "ON" : "OFF");
++
++	if (onoff) {
++		/* TEST TEST TEST */
++		if (adap->feedcount == 0) {
++			ret = af9035_wr_reg_bits(udev, adap->id, PRO_OFDM,
++				PID_RST, 0, 1, 1);
++			if (ret)
++				goto exit;
++		}
++		/* enable pid filter */
++		ret = af9035_wr_reg_bits(udev, adap->id, PRO_OFDM,
++			PID_EN, 0, 1, 1);
++		if (ret < 0)
++			goto exit;
++
++		buf[0] = pidnum & 0xff;
++		buf[1] = pidnum >> 8;
++
++		ret = af9035_wr_regs(udev, adap->id, PRO_OFDM,
++			PID_LSB, 2, buf);
++		if (ret < 0)
++			goto exit;
++	}
++	/* enable/disable following index */
++	ret = af9035_wr_reg_bits(udev, adap->id, PRO_OFDM,
++		PID_INX_EN, 0, 1, onoff ? 1 : 0);
++	if (ret < 0)
++		goto exit;
++	/* select index to change */
++	ret = af9035_wr_reg(udev, adap->id, PRO_OFDM, PID_INX, index);
++exit:
++	return ret;
++}
++
++static int af903x_powerctrl(struct dvb_usb_device *d, int onoff)
++{
++	struct usb_device *udev = d->udev;
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&udev->dev);
++	int ret, i, j;
++	u8 temp;
++
++	deb_data("%s: chip = %d, onoff = %s\n", __func__,
++		d->adapter->id, onoff ? "ON" : "OFF");
++
++	if (onoff) {
++		/* wakeup device */
++		ret = af903x_nim_suspend(udev, false);
++		if (ret)
++			goto exit;
++		msleep(10);
++
++		/* init gpioH7 */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_EN, 0, 1, 1);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_ON, 0, 1, 1);
++		if (ret)
++			goto exit;
++
++		/* tuner on */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_O, 0, 1, 1);
++		if (ret)
++			goto exit;
++
++		deb_data("%s: tuner power still off, run af903x_fe_start "
++			"chip_num = %d, arch = %d\n",
++			__func__, ctx->conf.chip_num, ctx->architecture);
++		ret = af903x_fe_start(ctx);
++		if (ret)
++			goto exit;
++
++		/* Power up case */
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM, AFE_MEM0,
++				3, 1, 0);
++			if (ret)
++				goto exit;
++		}
++	} else {
++		/* init gpioH7 */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_EN, 0, 1, 1);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_ON, 0, 1, 1);
++		if (ret)
++			goto exit;
++
++		deb_data("%s: tuner power still on, run af903x_fe_stop "
++			"chip_num = %d, arch = %d\n",
++			__func__, ctx->conf.chip_num, ctx->architecture);
++		ret = af903x_fe_stop(ctx);
++		if (ret)
++			goto exit;
++
++		/* tuner off */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH7_O, 0, 1, 0);
++		if (ret)
++			goto exit;
++
++		/* Power down case */
++		for (i = ctx->conf.chip_num - 1; i >= 0; i--) {
++			ret = af9035_wr_reg(udev, i, PRO_OFDM, SUSPEND_FLAG, 1);
++			if (ret)
++				goto exit;
++			ret = af9035_wr_reg(udev, i, PRO_OFDM, TRIGGER_OFSM, 0);
++			if (ret)
++				goto exit;
++			for (j = 0; j < 128; j++) {
++				ret = af9035_rd_reg(udev, i, PRO_OFDM,
++					SUSPEND_FLAG, &temp);
++				if (ret)
++					goto exit;
++				if (!temp)
++					break;
++				msleep(10);
++			}
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM, AFE_MEM0,
++				3, 1, 1);
++			if (ret)
++				goto exit;
++		}
++
++		/* tuner off */
++		ret = af903x_nim_suspend(udev, true);
++		msleep(10);
++	}
++exit:
++	return ret;
++}
++
++static int af903x_identify_state(struct usb_device *udev,
++			struct dvb_usb_device_properties *props,
++			struct dvb_usb_device_description **desc, int *cold)
++{
++	struct af903x_dev_ctx *ctx = NULL;
++	int ret = 0;
++	u8 btmp = 0;
++	u32 version;
++
++	deb_data("%s\n", __func__);
++
++	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
++	if (ctx == NULL) {
++		err("Alloc dev out of memory");
++		return -ENOMEM;
++	}
++
++	/* init mutex */
++	mutex_init(&ctx->af903x_mutex);
++
++	ctx->udev = udev;
++	dev_set_drvdata(&ctx->udev->dev, ctx);
++
++	/* default values */
++	af903x_config.dual_ts = false;
++	af903x_config.architecture = ARCHITECTURE_DCA;
++	af903x_config.chip_num = 1;
++	af903x_config.dca_pip = false;
++	af903x_config.rf_loop_thru = false;
++
++	/* dual_ts option */
++	ret = af9035_rd_regs(udev, 0, PRO_LINK, EEPROM_TSMODE, 1, &btmp);
++	if (ret)
++		goto exit;
++	deb_data("EEPROM_TSMODE = 0x%02X\n", btmp);
++
++	switch (btmp) {
++	case 0:
++		deb_data("TSMode = TS1 mode\n");
++		break;
++	case 1:
++		deb_data("TSMode = DCA+PIP mode\n");
++		af903x_config.architecture = ARCHITECTURE_PIP;
++		af903x_config.dca_pip = true;
++		af903x_config.dual_ts = true;
++		af903x_config.chip_num = 2;
++		break;
++	case 2:
++		deb_data("TSMode = DCA mode\n");
++		af903x_config.architecture = ARCHITECTURE_DCA;
++		af903x_config.chip_num = 2;
++		break;
++	case 3:
++		deb_data("TSMode = PIP mode\n");
++		af903x_config.architecture = ARCHITECTURE_PIP;
++		af903x_config.chip_num = 2;
++		af903x_config.dual_ts = true;
++		break;
++	case 5:
++		deb_data("TSMode = FC0012 PIP RF Loop Thru mode\n");
++		af903x_config.architecture = ARCHITECTURE_DCA;
++		af903x_config.chip_num = 2;
++		af903x_config.dual_ts = true;
++		af903x_config.dca_pip = true;
++		af903x_config.rf_loop_thru = true;
++		break;
++	default:
++		err("unsupported TSMode = 0x%02X, assume single tuner mode",
++			btmp);
++		break;
++	}
++
++	/* get the tuner type */
++	ret = af9035_rd_regs(udev, 0, PRO_LINK, EEPROM_TUNERID, 1, &btmp);
++	if (ret < 0)
++		goto exit;
++	af903x_config.tuner_id[0] = btmp;
++	deb_data("EEPROM_TUNERID0 = 0x%02X\n", btmp);
++
++	if (af903x_config.dual_ts) {
++		ret = af9035_rd_regs(udev, 0, PRO_LINK,
++			EEPROM_TUNERID + EEPROM_SHIFT, 1, &btmp);
++		if (ret < 0)
++			goto exit;
++		af903x_config.tuner_id[1] = btmp;
++		deb_data("EEPROM_TUNERID1 = 0x%02X\n", btmp);
++
++		if (af903x_config.tuner_id[0] != af903x_config.tuner_id[1]) {
++			warn("device with two different tuners is currently not"
++				" supported. Switch to single tuner");
++			af903x_config.chip_num = 1;
++			af903x_config.dual_ts = false;
++			af903x_config.dca_pip = false;
++		}
++	}
++
++	if (udev->speed != USB_SPEED_HIGH) {
++		props->adapter[0].fe[0].pid_filter_count = 5;
++		info("USB 1 low speed mode - connect to USB 2 port");
++		/* for USB 1 the pid filter is needed */
++		if (pid_filter_off)
++			pid_filter_off = 0;
++		if (af903x_config.chip_num > 1) {
++			af903x_config.chip_num = 1;
++			af903x_config.dual_ts = false;
++			af903x_config.dca_pip = false;
++			warn("Dual mode not supported in USB 1");
++		}
++	} else {
++		/* for replugging */
++		if (props->adapter[0].fe[0].pid_filter_count == 5)
++			props->adapter[0].fe[0].pid_filter_count = 32;
++	}
++
++	/* check remote control support */
++	ret = af9035_rd_regs(udev, 0, PRO_LINK, EEPROM_IRMODE, 1, &btmp);
++	if (ret)
++		goto exit;
++	af903x_config.ir_tab_load = btmp ? true : false;
++	deb_data("EEPROM_IRMODE = 0x%02X, ", btmp);
++	deb_data("ir_tab_load %s\n", btmp ? "ON" : "OFF");
++
++	af903x_config.raw_ir = (btmp == 0x05) ? true : false;
++	deb_data("raw_ir %s\n", af903x_config.raw_ir ? "ON" : "OFF");
++
++	if (btmp == 0) {
++		dvb_usb_af903x_disable_rc = 1;
++	} else {
++		ret = af9035_rd_regs(udev, 0, PRO_LINK, EEPROM_IRTYPE, 1, &btmp);
++		if (ret)
++			goto exit;
++		af903x_config.ir_type = btmp;
++
++		switch (af903x_config.ir_type) {
++		case 0: /* NEC */
++		default:
++			props->rc.core.protocol = RC_TYPE_NEC;
++			props->rc.core.allowed_protos = RC_TYPE_NEC;
++			props->rc.core.rc_codes = RC_MAP_NEC_TERRATEC_CINERGY_XS;
++			break;
++		case 1: /* RC6 */
++			props->rc.core.protocol = RC_TYPE_RC6;
++			props->rc.core.allowed_protos = RC_TYPE_RC6;
++			props->rc.core.rc_codes = RC_MAP_RC6_MCE;
++			break;
++		}
++	}
++
++	info("%d Tuners of Type=0x%02x, Arch Mode=%s, Remote=%s",
++		af903x_config.chip_num, af903x_config.tuner_id[0],
++		af903x_config.architecture == ARCHITECTURE_PIP ? "PIP" : "DCA",
++		af903x_config.ir_type == 1 ? "RC6" : "NEC");
++
++	/* Select Stream Buffer Size and pid filter option */
++	if (pid_filter_off) {
++		props->adapter[0].fe[0].stream.u.bulk.buffersize =
++			USB20_FRAME_SIZE;
++		props->adapter[0].fe[0].caps &=
++			~DVB_USB_ADAP_NEED_PID_FILTERING;
++	} else {
++		props->adapter[0].fe[0].stream.u.bulk.buffersize =
++			USB11_FRAME_SIZE;
++	}
++
++	if (af903x_config.chip_num > 1) {
++		props->adapter[1].fe[0].stream.u.bulk.buffersize =
++			props->adapter[0].fe[0].stream.u.bulk.buffersize;
++		props->adapter[1].fe[0].caps =
++			props->adapter[0].fe[0].caps;
++	}
++	props->num_adapters = af903x_config.chip_num;
++
++	/* select firmware */
++	switch (af903x_config.tuner_id[0]) {
++	case TUNER_MXL5007T:
++		props->firmware = "dvb-usb-af9035-04.fw";
++		break;
++	case TUNER_FC0012:
++	default:
++		props->firmware = "dvb-usb-af9035-03.fw";
++		break;
++	}
++
++	/* double read check for fw version */
++	ret = af903x_get_fw_version(udev, PRO_LINK, &version);
++	if (ret) {
++		deb_data("%s: af903x_get_fw_version(1st) failed, ret = %d\n",
++			__func__, ret);
++	}
++	deb_data("fw_version: LINK: 0x%X\n", version);
++	msleep(10); /* CHECK: needed ? */
++	ret = af903x_get_fw_version(udev, PRO_LINK, &version);
++	if (ret) {
++		deb_data("%s: af903x_get_fw_version(2nd) failed, ret = %d\n",
++			__func__, ret);
++		goto exit;
++	}
++	deb_data("fw_version: LINK: 0x%X\n", version);
++
++	if (af903x_config.chip_num > 1) {
++		if (version) {
++			/* warm-boot/S1 */
++			ret = af903x_nim_suspend(udev, false);
++		} else {
++			/* plug/cold-boot/S4 */
++			ret = af903x_nim_reset(udev);
++		}
++		if (ret) {
++			deb_data("af903x_nim_suspend/reset failed: %d\n", ret);
++			goto exit;
++		}
++	}
++	if (version) {
++		ret = af903x_tuner_wakeup(udev);
++		if (ret) {
++			deb_data("af903x_tuner_wakeup failed: %d\n", ret);
++			goto exit;
++		}
++	}
++
++	memcpy(&ctx->conf, &af903x_config, sizeof(struct afa_config));
++
++	ctx->booted = (version != 0);
++	ctx->architecture = af903x_config.architecture;
++
++	/* initialize data */
++	ctx->frame_sz = props->adapter[0].fe[0].stream.u.bulk.buffersize / 4;
++	ctx->frequency[0] = ctx->frequency[1] = 666000000;
++	ctx->bandwidth[0] = ctx->bandwidth[1] = 8000000;	/* 8MHz */
++	ctx->filter_cnt = 0;
++	ctx->filter_index = 0;
++	ctx->fe0_slave_start = false;
++	ctx->desired_freq[0] = ctx->desired_freq[1] = 0;
++	ctx->desired_bw[0] = ctx->desired_bw[1] = 6000000;
++
++exit:
++	/* always request firmware to be loaded */
++	*cold = 1;
++	return ret;
++}
++
++static int af903x_name(struct dvb_usb_adapter *adap)
++{
++	const char *desc = adap->dev->desc->name;
++	char *fe_name[] = {"_1", "_2", "_3", "_4"};
++	char *name = adap->fe_adap[0].fe->ops.info.name;
++
++	strlcpy(name, desc, 128);
++	if (adap->id < 4)
++		strlcat(name, fe_name[adap->id], 128);
++
++	return 0;
++}
++
++static int af903x_frontend_attach(struct dvb_usb_adapter *adap)
++{
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&adap->dev->udev->dev);
++	int ret;
++
++	deb_data("%s: chip = %d\n", __func__, adap->id);
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
++	adap->fe_adap[0].fe = af903x_fe_attach(&adap->dev->i2c_adap, adap->id, ctx);
++
++	ret = af903x_name(adap);
++	return adap->fe_adap[0].fe == NULL ? -ENODEV : 0;
++#else
++	adap->fe = af903x_fe_attach(&adap->dev->i2c_adap, adap->id, ctx);
++
++	ret = af903x_name(adap);
++	return adap->fe == NULL ? -ENODEV : 0;
++#endif
++}
++
++static int af903x_streaming_ctrl(struct dvb_usb_adapter *adap, int onoff)
++{
++	struct usb_device *udev = adap->dev->udev;
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&udev->dev);
++	int ret;
++	bool overflow = false;
++
++	deb_data("%s: chip = %d: %s\n", __func__,
++		adap->id, onoff ? "ON" : "OFF");
++
++	if (onoff) {
++		ret = af903x_is_psb_overflow(ctx, adap->id, &overflow);
++		deb_data("af903x_is_psb_overflow for chip = %d: %d\n",
++			adap->id, overflow ? 1 : 0);
++	} else
++		ret = af9035_wr_reg_bits(udev, adap->id, PRO_OFDM,
++			PID_RST, 0, 1, 1);
++	return 0;
++}
++
++/* first, the firmware is only loaded into the driver. The downloading of the
++   firmware onto the device is done later */
++static int af903x_download_firmware(struct usb_device *udev,
++	const struct firmware *fw)
++{
++	struct af903x_dev_ctx *ctx = NULL;
++	u8 *fw_seg, *fw_start = NULL, *fw_end;
++	u8 fw_parts[2];
++	struct af903x_fw_segment *fw_segs;
++	u8 nparts, nsegs;
++	u32 part_len, seglen, fwlen, addr;
++	int i, ret = 0;
++	u8 tmp;
++	u32 link_ver, ofdm_ver;
++
++        deb_data("%s\n", __func__);
++
++	ctx = dev_get_drvdata(&udev->dev);
++
++	if (memcmp(fw->data, "AF9035", 6)) {
++		err("firmware not for AF9035");
++		ret = -1;
++		goto end_of_fw;
++	}
++	if ((fw->data[6] != 'B') || (fw->data[7] != 'X')) {
++		err("incorrect version of firmware (expect version 2)");
++		ret = -1;
++		goto end_of_fw;
++	}
++	fw_seg = (u8 *)fw->data + 8;
++	fw_end = (u8 *)fw->data + fw->size;
++
++	part_len = *fw_seg++;
++	part_len += (*fw_seg++) << 8;
++	part_len += (*fw_seg++) << 16;
++	part_len += (*fw_seg++) << 24;
++	if ((fw_seg + part_len) != fw_end) {
++		err("incorrect length of firmware");
++		ret = -1;
++		goto end_of_fw;
++	}
++	fw_seg += 32;
++
++	ctx->link_ver = (*fw_seg++) << 24;
++	ctx->link_ver += (*fw_seg++) << 16;
++	ctx->link_ver += (*fw_seg++) << 8;
++	ctx->link_ver += *fw_seg++;
++
++	ctx->ofdm_ver = (*fw_seg++) << 24;
++	ctx->ofdm_ver += (*fw_seg++) << 16;
++	ctx->ofdm_ver += (*fw_seg++) << 8;
++	ctx->ofdm_ver += *fw_seg++;
++
++	/* firmware code length in LE format */
++	fwlen = *fw_seg++;
++	fwlen += (*fw_seg++) << 8;
++	fwlen += (*fw_seg++) << 16;
++	fwlen += (*fw_seg++) << 24;
++
++	/* number of segments */
++	nsegs = *fw_seg;
++	fw_seg += 4;
++
++	/* number of partitions */
++	nparts = *fw_seg;
++	fw_seg += 4;
++	if (nparts > 2) {
++		err("incorrect number of partitions in firmware (found %d, "
++			"expect 2 max)", nparts);
++		ret = -1;
++		goto end_of_fw;
++	}
++	fw_parts[0] = nsegs;
++	if (nparts > 1)
++		fw_parts[1] = nsegs;
++	else
++		fw_parts[1] = 0;
++
++	fw_start = fw_seg;
++	if (fw_start + fwlen > fw_end) {
++		err("incorrect length of firmware (code length insufficient)");
++		ret = -1;
++		goto end_of_fw;
++	}
++	fw_seg += fwlen;
++
++	fw_segs = kmalloc(nparts*nsegs*sizeof(struct af903x_fw_segment),
++		GFP_KERNEL);
++	if (fw_segs == NULL) {
++		err("Alloc fw_segs out of memory");
++		ret = -ENOMEM;
++		goto exit_free_codes;
++	}
++	for (i = 0; i < nparts*nsegs; i++) {
++		fw_segs[i].type = *fw_seg++;
++		/* length of segment in LE format */
++		seglen = *fw_seg++;
++		seglen += (*fw_seg++) << 8;
++		seglen += (*fw_seg++) << 16;
++		seglen += (*fw_seg++) << 24;
++		fw_segs[i].length = seglen;
++	}
++
++	/* check */
++	if (*fw_seg++ != nsegs) {
++		err("check value for nsegs incorrect");
++		ret = -1;
++		goto exit_free_segs;
++	}
++	if (*fw_seg++ != nparts) {
++		err("check value for nparts incorrect");
++		ret = -1;
++		goto exit_free_segs;
++	}
++	fw_seg += 3;
++
++	/* number of entries in script in LE format */
++	ctx->script_sets = kmalloc(sizeof(*ctx->script_sets),
++					GFP_KERNEL);
++	if (ctx->script_sets == NULL) {
++		err("Alloc script_sets out of memory");
++		ret = -ENOMEM;
++		goto exit_free_segs;
++	}
++	ctx->script_sets[0] = *fw_seg++;
++	ctx->script_sets[0] += (*fw_seg++) << 8;
++
++	ctx->scripts = kmalloc(ctx->script_sets[0]*sizeof(*ctx->scripts),
++		GFP_KERNEL);
++	if (ctx->scripts == NULL) {
++		err("Alloc scripts out of memory");
++		ret = -ENOMEM;
++		goto exit_free_script_sets;
++	}
++	for (i = 0; i < ctx->script_sets[0]; i++) {
++		/* address in LE format */
++		addr = *fw_seg++;
++		addr += (*fw_seg++) << 8;
++		addr += (*fw_seg++) << 16;
++		addr += (*fw_seg++) << 24;
++		ctx->scripts[i].address = addr;
++		/* value */
++		ctx->scripts[i].value = *fw_seg++;
++	}
++
++	goto end_of_fw;
++
++exit_free_script_sets:
++	kfree(ctx->script_sets);
++exit_free_segs:
++	kfree(fw_segs);
++exit_free_codes:
++end_of_fw:
++	/* in case of error leave here */
++	if (ret)
++		return ret;
++
++	if (ctx->booted) {
++		ret = af903x_get_fw_version(udev, PRO_OFDM, &ofdm_ver);
++		if (ret) {
++			deb_data("%s: af903x_get_fw_version failed, ret = %d\n",
++				__func__, ret);
++		}
++		if (ctx->ofdm_ver == ofdm_ver) {
++			info("Device in warm state with OFDM FW 0x%X", ofdm_ver);
++		} else {
++			info("Reboot required: FW file = 0x%X, Inside FW = 0x%X",
++				ctx->ofdm_ver, ofdm_ver);
++			if (ctx->conf.chip_num > 1) {
++				ret = af903x_disable_gpio_pins(udev);
++				if (ret)
++					goto exit;
++			}
++			for (i = ctx->conf.chip_num-1; i >= 0; i--) {
++				ret = af903x_reboot(udev, i);
++				if (ret) {
++					deb_data("af903x_reboot (chip = %d): "
++						"error = 0x%08x\n",
++						i, ret);
++					goto exit;
++				}
++			}
++			ctx->booted = false;
++		}
++	}
++	ret = af9035_rd_reg_bits(udev, 0, PRO_LINK, IO_MUX_POWER_CLK, 0, 4, &tmp);
++	deb_data("%s: read reg IO_MUX_POWER_CLK: %d\n", __func__, tmp);
++	if (ret)
++		goto exit;
++
++	/* Write secondary I2C address to device */
++	/* Enable or disable clock out for 2nd chip power saving */
++	if (ctx->conf.chip_num > 1) {
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, GANY_2ND_DEMOD_I2C_ADDR,
++			AF903X_CHIP2_I2C_ADDR);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, CLK_O_EN, 1);
++		if (ret)
++			goto exit;
++	} else {
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, GANY_2ND_DEMOD_I2C_ADDR,
++			0x00);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, CLK_O_EN, 0);
++		if (ret)
++			goto exit;
++	}
++
++	/* Detect the HostA or HostB */
++	ret = af9035_rd_reg_bits(udev, 0, PRO_LINK, IO_MUX_PWRON_HOSTA,
++		0, 1, &tmp);
++	if (ret)
++		goto exit;
++
++	if ((fw_start != NULL) && (ctx->booted == false)) {
++		ret = af903x_load_firmware(udev, fw_start, fw_segs, fw_parts);
++		if (ret) {
++			deb_data("%s: af903x_load_firmware failed, ret = %d\n",
++				__func__, ret);
++			goto exit;
++		}
++		ctx->booted = true;
++
++		ret = af903x_get_fw_version(udev, PRO_LINK, &link_ver);
++		if (ret) {
++			deb_data("%s: failure in af903x_get_fw_version: LINK, "
++				"ret = %d\n", __func__, ret);
++			goto exit;
++		}
++		deb_data("\tFwVer LINK = 0x%08X\n", link_ver);
++		ret = af903x_get_fw_version(udev, PRO_OFDM, &ofdm_ver);
++		if (ret) {
++			deb_data("%s: failure in af903x_get_fw_version: OFDM, "
++				"ret = %d\n", __func__, ret);
++			goto exit;
++		}
++		deb_data("\tFwVer OFDM = 0x%08X\n", ofdm_ver);
++		if ((link_ver == 0) || (ofdm_ver == 0)) {
++			deb_data("%s: firmware not properly loaded\n", __func__);
++			ctx->booted = false;
++		}
++	}
++
++	ret = af903x_device_init(ctx, true);
++	if (ret) {
++		err("device_init Fail: %d\n", ret);
++	}
++exit:
++	kfree(fw_segs);
++	return ret;
++}
++
++#define AF903X_POLL 250
++static int af903x_rc_query(struct dvb_usb_device *d)
++{
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&d->udev->dev);
++	unsigned int key;
++	unsigned char b[4];
++	int ret;
++
++	if (dvb_usb_af903x_disable_rc)
++		return 0;
++	if (ctx->conf.raw_ir != 1)
++		return 0;
++
++	ret = af903x_ir_get(d->udev, (u32 *)b);
++	if (ret)
++		goto exit;
++
++	if ((b[2] + b[3]) == 0xff) {
++		if ((b[0] + b[1]) == 0xff) {
++			/* NEC */
++			key = b[0] << 8 | b[2];
++		} else {
++			/* ext. NEC */
++			key = b[0] << 16 | b[1] << 8 | b[2];
++		}
++	} else {
++		key = b[0] << 24 | b[1] << 16 | b[2] << 8 | b[3];
++	}
++
++	if (d->rc_dev != NULL)
++		rc_keydown(d->rc_dev, key, 0);
++
++exit:
++	return 0;
++}
++
++enum af903x_table_entry {
++	AFATECH_1000,
++	AFATECH_1001,
++	AFATECH_1002,
++	AFATECH_1003,
++	AFATECH_AF9035,
++	TERRATEC_T6,		/* Terratec T6 */
++	TERRATEC_T5_REV2,	/* Terratec T5 Rev.2 */
++	AVERMEDIA_TWINSTAR,	/* Avermedia TwinStar */
++	AVERMEDIA_A867,		/* Avermedia HD Volar / A867 */
++	AVERMEDIA_A333,		/* Avermedia A333 */
++	AVERMEDIA_B867,
++	AVERMEDIA_1867,
++	AVERMEDIA_0337,
++	AVERMEDIA_0867,
++	AVERMEDIA_F337,
++	AVERMEDIA_3867,
++};
++
++struct usb_device_id af903x_usb_table[] = {
++	[AFATECH_1000] = {USB_DEVICE(USB_VID_AFATECH,
++				USB_PID_AFATECH_AF9035_1000)},
++	[AFATECH_1001] = {USB_DEVICE(USB_VID_AFATECH,
++				USB_PID_AFATECH_AF9035_1001)},
++	[AFATECH_1002] = {USB_DEVICE(USB_VID_AFATECH,
++				USB_PID_AFATECH_AF9035_1002)},
++	[AFATECH_1003] = {USB_DEVICE(USB_VID_AFATECH,
++				USB_PID_AFATECH_AF9035_1003)},
++	[AFATECH_AF9035] = {USB_DEVICE(USB_VID_AFATECH,
++				USB_PID_AFATECH_AF9035_9035)},
++	[TERRATEC_T6] = {USB_DEVICE(USB_VID_TERRATEC,
++				USB_PID_TERRATEC_T6)},
++	[TERRATEC_T5_REV2] = {USB_DEVICE(USB_VID_TERRATEC,
++				USB_PID_TERRATEC_T5_REV2)},
++	[AVERMEDIA_TWINSTAR] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_A825)},
++	[AVERMEDIA_A333] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_A333)},
++	[AVERMEDIA_B867] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_B867)},
++	[AVERMEDIA_1867] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_1867)},
++	[AVERMEDIA_0337] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_0337)},
++	[AVERMEDIA_A867] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_A867)},
++	[AVERMEDIA_0867] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_0867)},
++	[AVERMEDIA_F337] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_F337)},
++	[AVERMEDIA_3867] = {USB_DEVICE(USB_VID_AVERMEDIA,
++				USB_PID_AVERMEDIA_3867)},
++	{ 0},		/* Terminating entry */
++};
++MODULE_DEVICE_TABLE(usb, af903x_usb_table);
++
++struct dvb_usb_device_properties af903x_properties[] = {
++	{
++		.caps = DVB_USB_IS_AN_I2C_ADAPTER,
++		.usb_ctrl          = DEVICE_SPECIFIC,
++		.download_firmware = af903x_download_firmware,
++		.firmware          = "",	/* default */
++//		.size_of_priv = sizeof(struct af903x_state),
++		.no_reconnect      = 1,
++		.i2c_algo          = &af903x_i2c_algo,
++		.power_ctrl	   = af903x_powerctrl,
++		.identify_state    = af903x_identify_state,
++		
++		.num_adapters = 2,
++		.adapter = {
++			{
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
++			.num_frontends = 1,
++			.fe = {{
++#endif
++				.caps = DVB_USB_ADAP_HAS_PID_FILTER |
++				DVB_USB_ADAP_NEED_PID_FILTERING |
++				DVB_USB_ADAP_PID_FILTER_CAN_BE_TURNED_OFF,
++				.pid_filter_count = 32,
++				.pid_filter       = af903x_pid_filter,
++				.pid_filter_ctrl  = af903x_pid_filter_ctrl,
++				.frontend_attach  = af903x_frontend_attach,
++				.streaming_ctrl   = af903x_streaming_ctrl,
++				.stream = { 
++					.type = USB_BULK,
++					.count = 4,
++					.endpoint = 0x84,
++					.u = {
++						.bulk = {
++							.buffersize = 65424,
++						}
++					}
++				}
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
++			}},
++#endif
++			},
++			{
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
++			.num_frontends = 1,
++			.fe = {{
++#endif
++				.caps = DVB_USB_ADAP_HAS_PID_FILTER |
++				DVB_USB_ADAP_NEED_PID_FILTERING |
++				DVB_USB_ADAP_PID_FILTER_CAN_BE_TURNED_OFF,
++				.pid_filter_count = 32,
++				.pid_filter       = af903x_pid_filter,
++				.pid_filter_ctrl  = af903x_pid_filter_ctrl,
++				.frontend_attach  = af903x_frontend_attach,
++				.streaming_ctrl   = af903x_streaming_ctrl,
++				.stream = {
++					.type = USB_BULK,
++					.count = 4,
++					.endpoint = 0x85,
++					.u = {
++					    .bulk = {
++						.buffersize = 65424,
++					    }
++					}
++				}
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,2,0)
++			}},
++#endif
++			},
++		},
++		.rc.core = {
++			.protocol	= RC_TYPE_NEC,
++			.module_name	= "af903x",
++			.rc_query	= af903x_rc_query,
++			.rc_interval	= AF903X_POLL,
++			.allowed_protos	= RC_TYPE_NEC,
++			.rc_codes	= NULL, /* will be set in
++						   af903x_identify_state */
++		},
++		.num_device_descs =6,
++		.devices =  {
++			{
++				"ITEtech AF903x USB2.0 DVB-T Recevier",
++				{ &af903x_usb_table[AFATECH_1000],
++				  &af903x_usb_table[AFATECH_1001],
++				  &af903x_usb_table[AFATECH_1002], 
++				  &af903x_usb_table[AFATECH_1003],
++				  &af903x_usb_table[AFATECH_AF9035], NULL},
++				{ NULL },
++			},
++			{
++				"Terratec T6",
++				{ &af903x_usb_table[TERRATEC_T6], NULL},
++				{ NULL },
++			},
++			{
++				"Terratec T5 Rev.2",
++				{ &af903x_usb_table[TERRATEC_T5_REV2], NULL},
++				{ NULL },
++			},
++			{
++				"Avermedia TwinStar",
++				{ &af903x_usb_table[AVERMEDIA_TWINSTAR], NULL},
++				{ NULL },
++			},
++			{
++				"AVerMedia A333 DVB-T Receiver",
++				{ &af903x_usb_table[AVERMEDIA_A333],
++				  &af903x_usb_table[AVERMEDIA_B867], NULL},
++				{ NULL },
++			},
++			{
++				"AVerMedia A867 DVB-T Receiver",
++				{ &af903x_usb_table[AVERMEDIA_1867],
++				  &af903x_usb_table[AVERMEDIA_0337],
++				  &af903x_usb_table[AVERMEDIA_A867],
++				  &af903x_usb_table[AVERMEDIA_0867],
++				  &af903x_usb_table[AVERMEDIA_F337],
++				  &af903x_usb_table[AVERMEDIA_3867], NULL},
++				{ NULL },
++			},
++			{NULL},
++		}
++	}
++};
++
++int af903x_device_count = ARRAY_SIZE(af903x_properties);
++
++static int af903x_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msg[],
++			int num)
++{
++	struct dvb_usb_device *d = i2c_get_adapdata(adap);
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&d->udev->dev);
++	int ret, i = 0;
++	int fe_num = 0;
++
++	while (i < num) {
++		if (msg[i].addr == ctx->tuner_desc->tuner_addr)
++			fe_num = 0;
++		else
++			fe_num = 1;
++
++		/* assume tuner command */
++		if ((i+1 < num) && (msg[i+1].flags & I2C_M_RD)) {
++			/* read command */
++			ret = af903x_rd_tuner_regs(ctx,
++				fe_num, msg[i].buf[0],
++				msg[i+1].len, msg[i+1].buf);
++			i += 2;
++		} else {
++			/* write command */
++			ret = af903x_wr_tuner_regs(ctx,
++				fe_num, msg[i].buf[0],
++				msg[i].len-1, &msg[i].buf[1]);
++			i++;
++		}
++		if (ret < 0)
++			goto exit;
++	}
++	ret = i;
++exit:
++	return ret;
++}
++
++static u32 af903x_i2c_func(struct i2c_adapter *adapter)
++{
++	return I2C_FUNC_I2C;
++}
++
++struct i2c_algorithm af903x_i2c_algo = {
++	.master_xfer   = af903x_i2c_xfer,
++	.functionality = af903x_i2c_func,
++};
++
++static int af903x_probe(struct usb_interface *intf,
++		const struct usb_device_id *id)
++{
++	int i;
++
++	deb_info("ITEtech af903x USB #%d plugged in\n", intf->minor);
++
++	for (i = 0; i < af903x_device_count; i++)
++	{
++		if (dvb_usb_device_init(intf, &af903x_properties[i],
++			THIS_MODULE, NULL, adapter_nr) == 0) {
++			deb_data("dvb_usb_device_init success!!\n");
++			return 0;
++		}
++	}
++	info("DEV af903x Error");
++
++	return -ENODEV;
++}
++
++static void af903x_disconnect(struct usb_interface *intf)
++{
++	struct usb_device *udev = interface_to_usbdev(intf);
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&udev->dev);
++	int minor = intf->minor;
++	int i;
++
++	for (i = 0; i < ctx->conf.chip_num; i++)
++		try_module_get(THIS_MODULE);
++
++	kfree(ctx->script_sets);
++	kfree(ctx->scripts);
++	kfree(ctx);
++	dev_set_drvdata(&udev->dev, NULL);
++
++	dvb_usb_device_exit(intf);
++
++	deb_info("ITEtech af903x USB #%d now disconnected\n", minor);
++}
++
++#ifdef TODO
++static int af903x_suspend(struct usb_interface *intf, u32 state)
++{
++	struct usb_device *udev = interface_to_usbdev(intf);
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&udev->dev);
++	int i, ret = 0;
++
++	if (DevicePower) {
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af903x_ap_ctrl(ctx, i, false);
++			if (ret) {
++				deb_data("%s: af903x_ap_ctrl error %d\n",
++					__func__, ret);
++				goto exit;
++			}
++		}
++		DeviceReboot = true;
++	}
++exit:
++	return ret;
++}
++
++static int af903x_resume(struct usb_interface *intf)
++{
++	struct usb_device *udev = interface_to_usbdev(intf);
++	struct af903x_dev_ctx *ctx = dev_get_drvdata(&udev->dev);
++	int ret = 0;
++
++	if (DeviceReboot) {
++		ret = af903x_device_init(ctx, false);
++		if (ret) {
++			err("%s failed", __func__);
++			goto exit;
++		}
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af903x_ap_ctrl(ctx, i, true);
++			if (ret) {
++				deb_data("%s: af903x_ap_ctrl error %d\n",
++					__func__, ret);
++				goto exit;
++			}
++		}
++	}
++exit:
++	return ret;
++}
++#endif
++
++static struct usb_driver af903x_driver = {
++	.name       = "dvb_usb_af903x",
++	.probe      = af903x_probe,
++	.disconnect = af903x_disconnect,
++	.id_table   = af903x_usb_table,
++#ifdef TODO
++	.suspend    = af903x_suspend,
++	.resume     = af903x_resume,
++#endif
++};
++
++static int __init af903x_module_init(void)
++{
++	int ret;
++
++	deb_data("dvb_usb_af903x Module is loaded\n");
++
++	ret = usb_register(&af903x_driver);
++
++	if (ret) {
++		err("usb_register failed. Error number %d", ret);
++		return ret;
++	}
++	return 0;
++}
++
++static void __exit af903x_module_exit(void)
++{
++	deb_data("dvb_usb_af903x Module is unloaded!\n");
++	usb_deregister(&af903x_driver);
++}
++
++module_init (af903x_module_init);
++module_exit (af903x_module_exit);
++
++MODULE_AUTHOR("Hans-Frieder Vogt <hfvogt@gmx.net>");
++MODULE_DESCRIPTION("AF903X USB 2 Driver");
++MODULE_VERSION("1.02");
++MODULE_LICENSE("GPL");
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-fe.c b/drivers/media/dvb/dvb-usb/af903x-fe.c
+--- a/drivers/media/dvb/dvb-usb/af903x-fe.c	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-fe.c	2012-03-11 12:33:52.204795520 +0100
+@@ -0,0 +1,2070 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2011 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ * and the IT9135 driver by Jason Dong
++ * Copyright (C) 2011 ITE Technologies, INC.
++ * and the Cinergy T Stick driver
++ * http://linux.terratec.de/files/Cinergy_T_Stick/terratec_af9035.zip
++ * Copyright (C) 2009 Antti Palosaari <crope@iki.fi>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#include "af903x-fe.h"
++#include "af903x-fe-priv.h"
++#include "dvb_frontend.h"
++#include "fc0012.h"
++#include "mxl5007t.h"
++
++#define AF903X_FE_FREQ_MIN 44250000
++#define AF903X_FE_FREQ_MAX 867250000
++
++static u32 compute_div(u32 a, u32 b, u32 x)
++{
++	u32 res = 0, c = 0, i = 0;
++
++	if (a > b) {
++		c = a / b;
++		a = a - c * b;
++	}
++
++	for (i = 0; i < x; i++) {
++		if (a >= b) {
++			res += 1;
++			a -= b;
++		}
++		a <<= 1;
++		res <<= 1;
++	}
++
++	res = (c << x) + res;
++
++	return res;
++}
++
++static long compute_fcw(u32 adc_frequency, u32 if_frequency, bool inversion)
++{
++	long if_freq, adc_freq, adc_freq_half, adc_freq_sample;
++	long inv_bfs, ctrl_word;
++
++	adc_freq = adc_frequency;
++	if_freq = if_frequency;
++	adc_freq_half = adc_freq / 2;
++
++	if (inversion == true)
++		if_freq *= -1;
++
++	adc_freq_sample = if_freq;
++
++	if (adc_freq_sample >= 0)
++		inv_bfs = 1;
++	else {
++		inv_bfs = -1;
++		adc_freq_sample *= -1;
++	}
++
++	while (adc_freq_sample > adc_freq_half)
++		adc_freq_sample -= adc_freq;
++
++	/* Sample, spectrum at positive frequency */
++	if (adc_freq_sample >= 0)
++		inv_bfs *= -1;
++	else
++		adc_freq_sample *= -1;	/* Absolute value */
++
++	ctrl_word = compute_div(adc_freq_sample, adc_freq, 23ul);
++
++	if (inv_bfs == -1) {
++		ctrl_word *= -1;
++	}
++
++	return ctrl_word;
++}
++
++static int af903x_fe_mask_dca_output(struct af903x_dev_ctx *ctx)
++{
++	int ret = 0, i;
++
++	if ((ctx->conf.chip_num > 1) &&
++	    (ctx->architecture == ARCHITECTURE_DCA)) {
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af9035_wr_reg_bits(ctx->udev, i, PRO_OFDM,
++				DCA_UPPER_OUT_EN, 0, 1, 0);
++			if (ret < 0)
++				goto exit;
++		}
++		msleep(5);
++	}
++
++exit:
++	return ret;
++}
++
++static int af903x_fe_set_arch(struct af903x_dev_ctx *ctx, enum af903x_arch architecture)
++{
++	struct usb_device *udev = ctx->udev;
++	int ret, i;
++	u16 frame_sz;
++	u8 packet_sz;
++	u8 buffer[2], standAlone[2];
++	u8 upperChip[2], upperHost[2], lowerChip[2], lowerHost[2];
++	u8 dcaEnable[2], phaseLatch[2], fpgaLatch[2];
++	bool pip_valid = false;
++
++	deb_data("%s: architecture: %d\n", __func__, architecture);
++
++	if (architecture == ARCHITECTURE_DCA) {
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			standAlone[i] = 0;
++			upperChip[i] = 0;
++			upperHost[i] = 0;
++			lowerChip[i] = 0;
++			lowerHost[i] = 0;
++			dcaEnable[i] = 1;
++			phaseLatch[i] = 0;
++			fpgaLatch[i] = 0;
++		}
++		if (ctx->conf.chip_num == 1) {
++			standAlone[0] = 1;
++			dcaEnable[0] = 0;
++		} else {
++			upperChip[ctx->conf.chip_num - 1] = 1;
++			upperHost[0] = 1;
++			lowerChip[0] = 1;
++			lowerHost[ctx->conf.chip_num - 1] = 1;
++			phaseLatch[0] = 1;
++			phaseLatch[ctx->conf.chip_num - 1] = 1;
++			fpgaLatch[0] = 0x77;
++			fpgaLatch[ctx->conf.chip_num - 1] = 0x77;
++		}
++	} else {
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			standAlone[i] = 1;
++			upperChip[i] = 0;
++			upperHost[i] = 0;
++			lowerChip[i] = 0;
++			lowerHost[i] = 0;
++			dcaEnable[i] = 0;
++			phaseLatch[i] = 0;
++			fpgaLatch[i] = 0;
++		}
++	}
++
++	if (ctx->inited == true) {
++		ret = af903x_fe_mask_dca_output(ctx);
++		if (ret)
++			goto exit;
++	}
++
++	/* set upper chip first in order to avoid I/O conflict */
++	for (i = ctx->conf.chip_num; i > 0; i--) {
++		/* set dca_upper_chip */
++		ret = af9035_wr_reg_bits(udev, i - 1, PRO_OFDM, DCA_UPPER_CHIP,
++			0, 1, upperChip[i - 1]);
++		if (ret)
++			goto exit;
++		if (i == 1) {
++			if (ctx->host_if) {
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTA_DCA_UPPER, 0, 1, upperHost[i - 1]);
++				if (ret)
++					goto exit;
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTB_DCA_UPPER, 0, 1, 0);
++				if (ret)
++					goto exit;
++			} else {
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTB_DCA_UPPER, 0, 1, upperHost[i - 1]);
++				if (ret)
++					goto exit;
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTA_DCA_UPPER, 0, 1, 0);
++				if (ret)
++					goto exit;
++			}
++		} else {
++			ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++				HOSTB_DCA_UPPER, 0, 1, upperHost[i - 1]);
++			if (ret)
++				goto exit;
++			ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++				HOSTA_DCA_UPPER, 0, 1, 0);
++			if (ret)
++				goto exit;
++		}
++
++		/* set dca_lower_chip */
++		ret = af9035_wr_reg_bits(udev, i - 1, PRO_OFDM, DCA_LOWER_CHIP,
++			0, 1, lowerChip[i - 1]);
++		if (ret)
++			goto exit;
++		if (i == 1) {
++			if (ctx->host_if) {
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTA_DCA_LOWER, 0, 1, lowerHost[i - 1]);
++				if (ret)
++					goto exit;
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTB_DCA_LOWER, 0, 1, 0);
++				if (ret)
++					goto exit;
++			} else {
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTB_DCA_LOWER, 0, 1, lowerHost[i - 1]);
++				if (ret)
++					goto exit;
++				ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++					HOSTA_DCA_LOWER, 0, 1, 0);
++				if (ret)
++					goto exit;
++			}
++		} else {
++			ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++				HOSTB_DCA_LOWER, 0, 1, lowerHost[i - 1]);
++			if (ret)
++				goto exit;
++			ret = af9035_wr_reg_bits(udev, i - 1, PRO_LINK,
++				HOSTA_DCA_LOWER, 0, 1, 0);
++			if (ret)
++				goto exit;
++		}
++
++		/* set phase latch */
++		ret = af9035_wr_reg_bits(udev, i - 1, PRO_OFDM, DCA_PLATCH,
++			0, 1, phaseLatch[i - 1]);
++		if (ret)
++			goto exit;
++
++		/* set fpga latch */
++		ret = af9035_wr_reg_bits(udev, i - 1, PRO_OFDM, DCA_FPGA_LATCH,
++			0, 8, fpgaLatch[i - 1]);
++		if (ret)
++			goto exit;
++	}
++
++	for (i = 0; i < ctx->conf.chip_num; i++) {
++		/* set stand alone */
++		ret = af9035_wr_reg_bits(udev, i, PRO_OFDM, DCA_STAND_ALONE,
++			0, 1, standAlone[i]);
++		if (ret)
++			goto exit;
++
++		/* set DCA enable */
++		ret = af9035_wr_reg_bits(udev, i, PRO_OFDM, DCA_ENABLE,
++			0, 1, dcaEnable[i]);
++		if (ret)
++			goto exit;
++	}
++
++	if (ctx->inited == true) {
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af9035_wr_reg(udev, i, PRO_OFDM, TRIGGER_OFSM, 0);
++			if (ret)
++				goto exit;
++		}
++	}
++
++	frame_sz = ctx->frame_sz;
++	if (udev->speed == USB_SPEED_HIGH) {
++		packet_sz = (u8)(USB20_MAX_PACKET_SIZE / 4);
++	} else {
++		packet_sz = (u8)(USB11_MAX_PACKET_SIZE / 4);
++	}
++
++	if ((ctx->conf.chip_num > 1) && (architecture == ARCHITECTURE_PIP))
++		pip_valid = true;
++
++	/* Reset EP4 */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2_SW_RST, 0, 1, 1);
++	if (ret)
++		goto exit;
++
++	/* Reset EP5 */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF2_SW_RST, 0, 1, 1);
++	if (ret)
++		goto exit;
++
++	/* Disable EP4 */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, EP4_TX_EN, 5, 1, 0);
++	if (ret)
++		goto exit;
++
++	/* Disable EP5 */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, EP5_TX_EN, 6, 1, 0);
++	if (ret)
++		goto exit;
++
++	/* Disable EP4 NAK */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, EP4_TX_NAK, 5, 1, 0);
++	if (ret)
++		goto exit;
++
++	/* Disable EP5 NAK */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, EP5_TX_NAK, 6, 1, 0);
++	if (ret)
++		goto exit;
++
++	/* Enable EP4 */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, EP4_TX_EN, 5, 1, 1);
++	if (ret)
++		goto exit;
++
++	/* Set EP4 transfer length */
++	buffer[0] = (u8)frame_sz;
++	buffer[1] = (u8)(frame_sz >> 8);
++	ret = af9035_wr_regs(udev, 0, PRO_LINK, EP4_TX_LEN_LSB, 2, buffer);
++
++	/* Set EP4 packet size */
++	ret = af9035_wr_reg(udev, 0, PRO_LINK, EP4_MAX_PKT, packet_sz);
++	if (ret)
++		goto exit;
++
++	if (pip_valid == true) {
++		/* Enable EP5 */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, EP5_TX_EN, 6, 1, 1);
++		if (ret)
++			goto exit;
++
++		/* Set EP5 transfer length */
++		buffer[0] = (u8)frame_sz;
++		buffer[1] = (u8)(frame_sz >> 8);
++		ret = af9035_wr_regs(udev, 0, PRO_LINK, EP5_TX_LEN_LSB, 2, buffer);
++
++		/* Set EP5 packet size */
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, EP5_MAX_PKT, packet_sz);
++		if (ret)
++			goto exit;
++	}
++
++
++	/* Disable 15 SER/PAR mode */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF_MPEG_SER_MODE,
++		0, 1, 0);
++	if (ret)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF_MPEG_PAR_MODE,
++		0, 1, 0);
++	if (ret)
++		goto exit;
++
++	if (pip_valid == true) {
++		/* Enable mp2if2 */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF2_EN, 0, 1, 1);
++		if (ret)
++			goto exit;
++
++		for (i = 1; i < ctx->conf.chip_num; i++) {
++			/* Enable serial mode */
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM,
++				MP2IF_MPEG_SER_MODE, 0, 1, 1);
++			if (ret)
++				goto exit;
++
++			/* Enable HostB serial */
++			ret = af9035_wr_reg_bits(udev, i, PRO_LINK,
++				HOSTB_MPEG_SER_MODE, 0, 1, 1);
++			if (ret)
++				goto exit;
++		}
++
++		/* Enable tsis */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, TSIS_ENABLE, 0, 1, 1);
++		if (ret)
++			goto exit;
++	} else {
++		/* Disable mp2if2 */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF2_EN,
++			0, 1, 0);
++		if (ret)
++			goto exit;
++
++		for (i = 1; i < ctx->conf.chip_num; i++) {
++			/* Disable serial mode */
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM,
++				MP2IF_MPEG_SER_MODE, 0, 1, 0);
++			if (ret)
++				goto exit;
++
++			/* Disable HostB serial */
++			ret = af9035_wr_reg_bits(udev, i, PRO_LINK,
++				HOSTB_MPEG_SER_MODE, 0, 1, 0);
++			if (ret)
++				goto exit;
++		}
++
++		/* Disable tsis */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, TSIS_ENABLE, 0, 1, 0);
++		if (ret)
++			goto exit;
++	}
++
++	/* Negate EP4 reset */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2_SW_RST, 0, 1, 0);
++	if (ret)
++		goto exit;
++
++	/* Negate EP5 reset */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF2_SW_RST, 0, 1, 0);
++	if (ret)
++		goto exit;
++
++	if (pip_valid == true) {
++		/* Split 15 PSB to 1K + 1K and enable flow control */
++		ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF2_HALF_PSB,
++			0, 1, 0);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF_STOP_EN,
++			0, 1, 1);
++		if (ret)
++			goto exit;
++
++		for (i = 1; i < ctx->conf.chip_num; i++) {
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM,
++				MPEG_FULL_SPEED, 0, 1, 0);
++			if (ret)
++				goto exit;
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM,
++				MP2IF_STOP_EN, 0, 1, 0);
++			if (ret)
++				goto exit;
++		}
++	}
++
++	ctx->architecture = architecture;
++
++exit:
++	return ret;
++}
++
++static int af903x_fe_set_stream_datagram(struct af903x_dev_ctx *ctx)
++{
++	struct usb_device *udev = ctx->udev;
++	int ret = 0, i;
++
++	deb_data("%s\n", __func__);
++
++	/* Enable DVB-T interrupt if next stream type is STREAM_TYPE_DVBT_DATAGRAM */
++	for (i = 0; i < ctx->conf.chip_num; i++) {
++		ret = af9035_wr_reg_bits(udev, i, PRO_LINK, DVBT_INTEN,
++			2, 1, 1);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, i, PRO_OFDM, MPEG_FULL_SPEED,
++			0, 1, 0);
++		if (ret)
++			goto exit;
++	}
++
++	/* Enable DVB-T mode */
++	for (i = 0; i < ctx->conf.chip_num; i++) {
++		ret = af9035_wr_reg_bits(udev, i, PRO_LINK, DVBT_ENABLE,
++			0, 1, 1);
++		if (ret)
++			goto exit;
++	}
++
++	/* Enter sub mode */
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF_MPEG_SER_MODE,
++		0, 1, 0);
++	if (ret)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, 0, PRO_OFDM, MP2IF_MPEG_PAR_MODE,
++		0, 1, 0);
++	if (ret)
++		goto exit;
++	/* Fix current leakage */
++	if (ctx->conf.chip_num > 1) {
++		if (ctx->host_if) {
++			ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++				HOSTB_MPEG_SER_MODE, 0, 1, 0);
++			if (ret)
++				goto exit;
++			ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++				HOSTB_MPEG_PAR_MODE, 0, 1, 1);
++			if (ret)
++				goto exit;
++		} else {
++			ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++				HOSTA_MPEG_SER_MODE, 0, 1, 0);
++			if (ret)
++				goto exit;
++			ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++				HOSTA_MPEG_PAR_MODE, 0, 1, 1);
++			if (ret)
++				goto exit;
++		}
++	} else {
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++			HOSTA_MPEG_SER_MODE, 0, 1, 0);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++			HOSTA_MPEG_PAR_MODE, 0, 1, 1);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++			HOSTB_MPEG_SER_MODE, 0, 1, 0);
++		if (ret)
++			goto exit;
++		ret = af9035_wr_reg_bits(udev, 0, PRO_LINK,
++			HOSTB_MPEG_PAR_MODE, 0, 1, 1);
++		if (ret)
++			goto exit;
++	}
++
++exit:
++	return ret;
++}
++
++static int af903x_fe_get_coeff_param(struct af903x_coeff_param *coeff)
++{
++	int ret = 0;
++	int i;
++
++	for (i = 0; i < af903x_coeff_tab_count; i++) {
++		if ((coeff->adc_freq == coeff_tab[i].adc_freq) &&
++		    (coeff->bandwidth == coeff_tab[i].bandwidth)) {
++			memcpy(coeff, &coeff_tab[i], sizeof(*coeff));
++			break;
++		}
++	}
++
++	if (i == af903x_coeff_tab_count)
++		ret = -EINVAL;
++
++	return ret;
++}
++
++static int af903x_fe_select_bw(struct af903x_dev_ctx *ctx, int chip,
++				u32 bandwidth, u32 adc_freq)
++{
++	int ret = 0;
++	struct af903x_coeff_param coeff;
++	u32 coeff1_2048Nu, coeff1_4096Nu;
++	u32 coeff1_8191Nu, coeff1_8192Nu, coeff1_8193Nu;
++	u32 coeff2_2k, coeff2_4k, coeff2_8k;
++	u16 bfsfcw_fftindex_ratio, fftindex_bfsfcw_ratio;
++	u8 buffer[36];
++	u8 bw;
++	u8 adc_multiplier;
++
++	deb_data("%s: chip: %d, bandwidth: %d, adc_freq: %d\n", __func__,
++		chip, bandwidth, adc_freq);
++
++	switch (bandwidth) {
++	case 5000000:
++		bw = 3;
++		break;
++	case 6000000:
++		bw = 0;
++		break;
++	case 7000000:
++		bw = 1;
++		break;
++	case 8000000:
++	default:
++		bw = 2;
++		break;
++	}
++
++	ret = af9035_wr_reg_bits(ctx->udev, chip, PRO_OFDM, REG_BW, 0, 2, bw);
++	if (ret < 0)
++		goto exit;
++
++	/* Program CFOE */
++	coeff.adc_freq = adc_freq;
++	coeff.bandwidth = bandwidth;
++	ret = af903x_fe_get_coeff_param(&coeff);
++	if (ret)
++		goto exit;
++	coeff1_2048Nu = coeff.coeff1_2048Nu;
++	coeff1_4096Nu = coeff.coeff1_4096Nu;
++	coeff1_8191Nu = coeff.coeff1_8191Nu;
++	coeff1_8192Nu = coeff.coeff1_8192Nu;
++	coeff1_8193Nu = coeff.coeff1_8193Nu;
++	coeff2_2k = coeff.coeff2_2k;
++	coeff2_4k = coeff.coeff2_4k;
++	coeff2_8k = coeff.coeff2_8k;
++	bfsfcw_fftindex_ratio = coeff.bfsfcw_fftindex_ratio;
++	fftindex_bfsfcw_ratio = coeff.fftindex_bfsfcw_ratio;
++
++	/* Get ADC multiplier */
++	ret = af9035_rd_reg(ctx->udev, 0, PRO_OFDM, ADC_X_2, &adc_multiplier);
++	if (ret)
++		goto exit;
++
++	if (adc_multiplier == 1) {
++		coeff1_2048Nu /= 2;
++		coeff1_4096Nu /= 2;
++		coeff1_8191Nu /= 2;
++		coeff1_8192Nu /= 2;
++		coeff1_8193Nu /= 2;
++		coeff2_2k /= 2;
++		coeff2_4k /= 2;
++		coeff2_8k /= 2;
++	}
++
++	/* Write coeff1_2048Nu */
++	/* big endian to make 8051 happy */
++	buffer[0] = (coeff1_2048Nu >> 24) & 0x03;
++	buffer[1] = (coeff1_2048Nu >> 16) & 0xff;
++	buffer[2] = (coeff1_2048Nu >> 8) & 0xff;
++	buffer[3] = coeff1_2048Nu & 0xff;
++
++	/* Write coeff2_2k */
++	/* big endian to make 8051 happy */
++	buffer[4] = (coeff2_2k >> 24) & 0x01;
++	buffer[5] = (coeff2_2k >> 16) & 0xff;
++	buffer[6] = (coeff2_2k >> 8) & 0xff;
++	buffer[7] = coeff2_2k & 0xff;
++
++	/* Write coeff1_8191Nu */
++	/* big endian to make 8051 happy */
++	buffer[8] = (coeff1_8191Nu >> 24) & 0x03;
++	buffer[9] = (coeff1_8191Nu >> 16) & 0xff;
++	buffer[10] = (coeff1_8191Nu >> 8) & 0xff;
++	buffer[11] = coeff1_8191Nu & 0xff;
++
++	/* Write coeff1_8192Nu */
++	/* big endian to make 8051 happy */
++	buffer[12] = (coeff1_8192Nu >> 24) & 0x03;
++	buffer[13] = (coeff1_8192Nu >> 16) & 0xff;
++	buffer[14] = (coeff1_8192Nu >> 8) & 0xff;
++	buffer[15] = coeff1_8192Nu & 0xff;
++
++	/* Write coeff1_8193Nu */
++	/* big endian to make 8051 happy */
++	buffer[16] = (coeff1_8193Nu >> 24) & 0x03;
++	buffer[17] = (coeff1_8193Nu >> 16) & 0xff;
++	buffer[18] = (coeff1_8193Nu >> 8) & 0xff;
++	buffer[19] = coeff1_8193Nu & 0xff;
++
++	/* Write coeff2_8k */
++	/* big endian to make 8051 happy */
++	buffer[20] = (coeff2_8k >> 24) & 0x01;
++	buffer[21] = (coeff2_8k >> 16) & 0xff;
++	buffer[22] = (coeff2_8k >> 8) & 0xff;
++	buffer[23] = coeff2_8k & 0xff;
++
++	/* Write coeff1_4096Nu */
++	/* big endian to make 8051 happy */
++	/* Bit[7:2] will be written soon and so don't have to care them */
++	buffer[24] = (coeff1_4096Nu >> 24) & 0x03;
++	buffer[25] = (coeff1_4096Nu >> 16) & 0xff;
++	buffer[26] = (coeff1_4096Nu >> 8) & 0xff;
++	buffer[27] = coeff1_4096Nu & 0xff;
++
++	/* Write coeff2_4k */
++	/* big endian to make 8051 happy */
++	buffer[28] = (coeff2_4k >> 24) & 0x01;
++	buffer[29] = (coeff2_4k >> 16) & 0xff;
++	buffer[30] = (coeff2_4k >> 8) & 0xff;
++	buffer[31] = coeff2_4k & 0xff;
++
++	/* big endian to make 8051 happy ? */
++	buffer[33] = (bfsfcw_fftindex_ratio >> 8) & 0xff;
++	buffer[32] = bfsfcw_fftindex_ratio & 0xff;
++
++	/* big endian to make 8051 happy ? */
++	buffer[35] = (fftindex_bfsfcw_ratio >> 8) & 0xff;
++	buffer[34] = fftindex_bfsfcw_ratio & 0xff;
++
++	ret = af9035_wr_regs(ctx->udev, chip, PRO_OFDM, COEFF_1_2048, 36, buffer);
++	if (ret < 0)
++		goto exit;
++
++	ctx->bandwidth[chip] = bandwidth;
++
++exit:
++	return ret;
++}
++
++/* frequency in Hz */
++static int af903x_fe_set_freq(struct af903x_dev_ctx *ctx, int chip, u32 frequency)
++{
++	int ret = 0;
++	int band;
++
++	deb_data("%s: chip: %d, frequency: %d (bandwidth: %d)\n", __func__,
++		chip, frequency, ctx->bandwidth[chip]);
++
++	/* Clear easy mode flag first */
++	ret = af9035_wr_reg(ctx->udev, chip, PRO_OFDM, TRAINING_MODE, 0x00);
++	if (ret)
++		goto exit;
++
++	/* Clear empty_channel_status lock flag */
++	ret = af9035_wr_reg(ctx->udev, chip, PRO_OFDM, EMPTY_CHANNEL_STATUS, 0x00);
++	if (ret)
++		goto exit;
++
++	/* Clear MPEG2 lock flag */
++	ret = af9035_wr_reg_bits(ctx->udev, chip, PRO_OFDM, MP2IF_SYNC_LK, 0, 1, 0);
++	if (ret)
++		goto exit;
++
++	/* determine frequency band */
++	if ((frequency >= AF903X_FE_FREQ_MIN) && (frequency <= 230000000))
++		band = 0; /* VHF */
++	else if ((frequency >= 350000000) && (frequency <= 900000000))
++		band = 1; /* UHF */
++	else if ((frequency >= 1450000000) && (frequency <= 1680000000))
++		band = 2; /* L-Band */
++	else
++		return -EOPNOTSUPP;
++
++	ret = af9035_wr_reg(ctx->udev, chip, PRO_OFDM, FRE_BAND, band);
++	if (ret)
++		goto exit;
++
++	if (ctx->tuner_desc->set_tuner != NULL) {
++		if (ctx->conf.chip_num > 1 && chip == 0) {
++			ret = ctx->tuner_desc->set_tuner(ctx, chip,
++				ctx->bandwidth[chip], frequency + 100000);
++			if (ret)
++				goto exit;
++		} else if (ctx->conf.chip_num > 1 && chip == 1) {
++			ret = ctx->tuner_desc->set_tuner(ctx, chip,
++				ctx->bandwidth[chip], frequency - 100000);
++			if (ret)
++				goto exit;
++		} else {
++			ret = ctx->tuner_desc->set_tuner(ctx, chip,
++				ctx->bandwidth[chip], frequency);
++			if (ret)
++				goto exit;
++		}
++	}
++
++	/* Trigger ofsm */
++	ret = af9035_wr_reg(ctx->udev, chip, PRO_OFDM, TRIGGER_OFSM, 0);
++	if (ret)
++		goto exit;
++
++	ctx->frequency[chip] = frequency;
++
++exit:
++	return ret;
++}
++
++static int af903x_fe_load_script(struct af903x_dev_ctx *ctx,
++		u16 *script_sets,
++		struct af903x_val_set *scripts,
++		u16 *tuner_script_sets,
++		struct af903x_val_set *tuner_scripts)
++{
++	int ret;
++	int i, j, begin_scr, end_scr;
++	u8 value1 = 0, value2 = 0, support_relay = 0, chip_num = 0;
++	u8 buffer_lens = 1;
++	u8 buffer[20] = {0,};
++	u32 tunerAddr, tunerAddrTemp;
++
++
++	/* Query SupportRelayCommandWrite */
++	ret = af9035_rd_reg(ctx->udev, 0, PRO_OFDM, SUPPORT_RELAY_CMD_WR,
++		&support_relay);
++	if (ret)
++		goto exit;
++
++	if (support_relay && ctx->conf.chip_num == 2)
++		chip_num = 1;
++	else
++		chip_num = ctx->conf.chip_num;
++
++	/* Enable RelayCommandWrite */
++	if (support_relay) {
++		ret = af9035_wr_reg(ctx->udev, 0, PRO_OFDM, RELAY_CMD_WR, 1);
++		if (ret)
++			goto exit;
++	}
++
++	if ((script_sets[0] != 0) && (scripts != NULL)) {
++		begin_scr = 0;
++		end_scr = script_sets[0];
++
++		for (i = 0; i < chip_num; i++) {
++			/* Load OFSM init script */
++			for (j = begin_scr; j < end_scr; j++) {
++				tunerAddr = tunerAddrTemp = scripts[j].address;
++				buffer[0] = scripts[j].value;
++
++				while (j < end_scr && buffer_lens < 20) {
++					tunerAddrTemp += 1;
++					if (tunerAddrTemp != scripts[j+1].address)
++						break;
++
++					buffer[buffer_lens] = scripts[j+1].value;
++					buffer_lens ++;
++					j ++;
++				}
++
++				ret = af9035_wr_regs(ctx->udev, i, PRO_OFDM,
++					tunerAddr, buffer_lens, buffer);
++				if (ret)
++					goto exit_relay;
++				buffer_lens = 1;
++			}
++		}
++	}
++
++	/* Distinguish chip type */
++	ret = af9035_rd_reg(ctx->udev, 0, PRO_LINK, CHIP_VERSION, &value1);
++	if (ret)
++		goto exit_relay;
++	ret = af9035_rd_reg(ctx->udev, 0, PRO_LINK, 0x384F, &value2);
++	if (ret)
++		goto exit_relay;
++
++	if ((tuner_script_sets[0] != 0) && (tuner_scripts != NULL)) {
++		if (tuner_script_sets[1] == tuner_script_sets[0] &&
++		    !(value1 == 0xF8 && value2 == 0xEA)) {
++			begin_scr = tuner_script_sets[0];
++			end_scr = tuner_script_sets[0] + tuner_script_sets[1];
++		} else {
++			begin_scr = 0;
++			end_scr = tuner_script_sets[0];
++		}
++
++		for (i = 0; i < chip_num; i++) {
++			/* Load tuner init script */
++			for (j = begin_scr; j < end_scr; j++) {
++				tunerAddr = tunerAddrTemp =
++					tuner_scripts[j].address;
++				buffer[0] = tuner_scripts[j].value;
++
++				while (j < end_scr && buffer_lens < 20) {
++					tunerAddrTemp += 1;
++					if (tunerAddrTemp != tuner_scripts[j+1].address)
++						break;
++
++					buffer[buffer_lens] = tuner_scripts[j+1].value;
++					buffer_lens++;
++					j++;
++				}
++
++				ret = af9035_wr_regs(ctx->udev, i, PRO_OFDM,
++					tunerAddr, buffer_lens, buffer);
++				if (ret)
++					goto exit_relay;
++				buffer_lens = 1;
++			}
++		}
++	}
++
++exit_relay:
++	/* Disable RelayCommandWrite */
++	if (support_relay) {
++		ret = af9035_wr_reg(ctx->udev, 0, PRO_OFDM, RELAY_CMD_WR, 0);
++		if (ret)
++			goto exit;
++	}
++
++exit:
++	return ret;
++}
++
++static int af903x_get_post_vitber(struct af903x_dev_ctx *ctx, int chip,
++			u32 *post_err_cnt, u32 *post_bit_cnt, u16 *abort_cnt)
++{
++	int ret = 0;
++	u32 err_cnt, bit_cnt;
++	u8 buffer[7];
++	u16 abort;
++
++	*post_err_cnt = 0;
++	*post_bit_cnt = 0;
++
++	ret = af9035_rd_regs(ctx->udev, chip, PRO_OFDM, RSD_ABORT_PACKET_CNT,
++		7, buffer);
++	if (ret)
++		goto exit;
++
++	abort = (buffer[1] << 8) + buffer[0];
++	err_cnt = (buffer[4] << 16) + (buffer[3] << 8) + buffer[2];
++	bit_cnt = (buffer[6] << 8) + buffer[5];
++	if (bit_cnt == 0) {
++		*post_err_cnt = 1;
++		*post_bit_cnt = 2;
++		*abort_cnt = 1000;
++		goto exit;
++	}
++
++	*abort_cnt = abort;
++	bit_cnt -= (u32)abort;
++	if (bit_cnt == 0) {
++		*post_err_cnt = 1;
++		*post_bit_cnt = 2;
++	} else {
++		*post_err_cnt = err_cnt - (u32)abort * 8 * 8;
++		*post_bit_cnt = bit_cnt * 204 * 8;
++	}
++
++exit:
++	return ret;
++}
++
++int af903x_fe_start(struct af903x_dev_ctx *ctx)
++{
++	struct usb_device *udev = ctx->udev;
++	int ret = 0;
++	u32 crystal_freq;
++	u32 adc_freq;
++	u32 crystal = 0;
++	u32 adc = 0;
++	u32 fcw = 0;
++	u8 buffer[4];
++	u8 i;
++	long ctrl_word;
++	u8 adc_multiplier;
++
++	ctx->inited = false;
++
++	deb_data("%s: chip_num = %d, arch = %d\n", __func__,
++		ctx->conf.chip_num, ctx->architecture);
++	if (ctx->tuner_desc == NULL) {
++		goto exit;
++	}
++
++	ret = af9035_rd_reg_bits(udev, 0, PRO_LINK, IO_MUX_POWER_CLK,
++		0, 4, &ctx->adf);
++	if (ret)
++		goto exit;
++
++	if (ctx->adf >= clk_tab_count) {
++		err("%s: invalid index into clock table", __func__);
++		ret = -EINVAL;
++	}
++	crystal_freq = clk_tab[ctx->adf].crystal_freq;
++	adc_freq = clk_tab[ctx->adf].adc_freq;
++	deb_data("%s: crystal_freq = %d, adc_freq = %d\n", __func__,
++		crystal_freq, adc_freq);
++
++	/* Write secondary I2C address to device */
++	/* Enable or disable clock out for 2nd chip power saving */
++	if (ctx->conf.chip_num > 1) {
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, GANY_2ND_DEMOD_I2C_ADDR,
++			AF903X_CHIP2_I2C_ADDR);
++		if (ret)
++			goto exit;
++
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, CLK_O_EN, 1);
++		if (ret)
++			goto exit;
++	} else {
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, GANY_2ND_DEMOD_I2C_ADDR,
++			0x00);
++		if (ret)
++			goto exit;
++
++		ret = af9035_wr_reg(udev, 0, PRO_LINK, CLK_O_EN, 0);
++		if (ret)
++			goto exit;
++	}
++
++	/* Detect the HostA or HostB */
++	ret = af9035_rd_reg_bits(udev, 0, PRO_LINK, IO_MUX_PWRON_HOSTA,
++		0, 1, &ctx->host_if);
++	if (ret)
++		goto exit;
++	deb_data("%s: host_if = %d\n", __func__, ctx->host_if);
++
++	/* Open tuner */
++	for (i = 0; i < ctx->conf.chip_num; i++) {
++		deb_data("%s: enable tuner %d\n", __func__, i);
++		/* Set 0xD827 to 0 as open drain for tuner i2c */
++		ret = af9035_wr_reg(udev, i, PRO_LINK, PADODPU, 0);
++		if (ret)
++			goto exit;
++ 
++		/* Set 0xD829 to 0 as push pull for tuner AGC */
++		ret = af9035_wr_reg(udev, i, PRO_LINK, AGC_O_D, 0);
++		if (ret)
++			goto exit;
++	}
++	if (ctx->tuner_desc->open_tuner != NULL) {
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			deb_data("%s: call open_tuner %d\n", __func__, i);
++			ret = ctx->tuner_desc->open_tuner(ctx, i);
++			if (ret)
++				goto exit;
++		}
++	}
++	for (i = 0; i < ctx->conf.chip_num; i++) {
++		deb_data("%s: tell firmware type of tuner %d\n", __func__, i);
++		/* Tell firmware the type of tuner. */
++		ret = af9035_wr_reg(udev, i, PRO_LINK, LINK_OFSM_DUMMY_15_8,
++			ctx->tuner_desc->tunerId);
++		if (ret)
++			goto exit;
++	}
++
++	/* Initialize OFDM */
++	if (ctx->booted) {
++		deb_data("%s: initialize OFDM\n", __func__);
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			/* Set read-update bit to 1 for constellation */
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM,
++				FEQ_READ_UPDATE, 0, 1, 1);
++			if (ret)
++				goto exit;
++
++			/* Enable FEC Monitor */
++			ret = af9035_wr_reg_bits(udev, i, PRO_OFDM,
++				FEC_VTB_RSD_MON_EN, 0, 1, 1);
++			if (ret)
++				goto exit;
++		}
++
++		/* Compute crystal clock and load them to device */
++		crystal = compute_div(crystal_freq * 1000,
++				1000000ul, 19ul);
++		buffer[0] = crystal & 0xff;
++		buffer[1] = (crystal >> 8) & 0xff;
++		buffer[2] = (crystal >> 16) & 0xff;
++		buffer[3] = (crystal >> 24) & 0xff;
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af9035_wr_regs(udev, i, PRO_OFDM,
++				XTAL_CLK, 4, buffer);
++			if (ret)
++				goto exit;
++		}
++
++		/* Compute ADC and load them to device */
++		adc = compute_div(adc_freq, 1000000ul, 19ul);
++		buffer[0] = adc & 0xff;
++		buffer[1] = (adc >> 8) & 0xff;
++		buffer[2] = (adc >> 16) & 0xff;
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af9035_wr_regs(udev, i, PRO_OFDM,
++				ADC_FREQ, 3, buffer);
++			if (ret)
++				goto exit;
++		}
++
++		/* Compute FCW and load them to device */
++		ctrl_word = compute_fcw(adc_freq,
++				ctx->tuner_desc->if_freq,
++				ctx->tuner_desc->inversion);
++		/* Get ADC multiplier */
++		ret = af9035_rd_reg(udev, 0, PRO_OFDM, ADC_X_2, &adc_multiplier);
++		if (ret)
++			goto exit;
++		if (adc_multiplier == 1) {
++			ctrl_word /= 2;
++		}
++		fcw = ctrl_word & 0x7fffff;
++
++		buffer[0] = fcw & 0xff;
++		buffer[1] = (fcw >> 8) & 0xff;
++		buffer[2] = (fcw >> 16) & 0x7f;
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af9035_wr_regs(udev, i, PRO_OFDM, BFS_FCW,
++				3, buffer);
++			if (ret)
++				goto exit;
++		}
++	}
++
++	/* Load script */
++	if (ctx->scripts != NULL) {
++		deb_data("%s: load scripts\n", __func__);
++		ret = af903x_fe_load_script(ctx,
++				ctx->script_sets, ctx->scripts,
++				ctx->tuner_desc->tuner_script_sets,
++				ctx->tuner_desc->tuner_scripts);
++		if (ret)
++			goto exit;
++	}
++
++	/* Set the desired stream type */
++	ret = af903x_fe_set_stream_datagram(ctx);
++	if (ret)
++		goto exit;
++
++	/* Set the desired architecture type */
++	ret = af903x_fe_set_arch(ctx, ctx->architecture);
++	if (ret)
++		goto exit;
++
++	for (i = 0; i< ctx->conf.chip_num; i++) {
++		/* Set H/W MPEG2 locked detection */
++		ret = af9035_wr_reg(udev, i, PRO_LINK, LOCK3_OUT, 1);
++		if (ret)
++			goto exit;
++
++		/* Set registers for driving power 0xD830 */
++		ret = af9035_wr_reg(udev, i, PRO_LINK, PADMISCDR2, 1);
++		if (ret)
++			goto exit;
++
++		/* Set registers for driving power 0xD831 */
++		ret = af9035_wr_reg(udev, i, PRO_LINK, PADMISCDR4, 0);
++		if (ret)
++			goto exit;
++
++		/* Set registers for driving power 0xD832 */
++		ret = af9035_wr_reg(udev, i, PRO_LINK, PADMISCDR8, 0);
++		if (ret)
++			goto exit;
++	}
++
++	ctx->inited = true;
++
++exit:
++	return ret;
++}
++
++int af903x_fe_stop(struct af903x_dev_ctx *ctx)
++{
++	int ret = 0, i;
++
++	if (ctx->tuner_desc->close_tuner != NULL) {
++		for (i = ctx->conf.chip_num - 1; i >= 0; i--) {
++			ret = ctx->tuner_desc->close_tuner(ctx, i);
++			if (ret)
++				goto exit;
++		}
++	}
++	ctx->inited = false;
++exit:
++	return ret;
++}
++
++static int af903x_fe_is_locked(struct af903x_dev_ctx *ctx, int chip, bool *locked)
++{
++	int ret;
++	int begin, end, i, j;
++	u8 channels[2], tmp;
++	bool is_lock = false;
++
++	if (ctx->architecture == ARCHITECTURE_DCA) {
++		begin = 0;
++		end = ctx->conf.chip_num;
++		chip = 0;	/* if in DCA mode ignore the chip id */
++	} else {
++		begin = chip;
++		end = begin + 1;
++	}
++
++	channels[0] = 2;
++	channels[1] = 2;
++	/* empty loop */
++	for (j = 0; j < 10; j++) {
++		if (ctx->architecture == ARCHITECTURE_DCA) {
++			for (i = begin; i < end; i++) {
++				ret = af9035_rd_reg(ctx->udev, i, PRO_OFDM,
++					EMPTY_CHANNEL_STATUS, &channels[i]);
++				if (ret)
++					goto exit;
++			}
++			if ((channels[0] == 1) || (channels[1] == 1)) {
++				ctx->status[chip] |= FE_HAS_SIGNAL;
++				break;
++			}
++			if ((channels[0] == 2) && (channels[1] == 2)) {
++				goto exit;
++			}
++		} else {
++			ret = af9035_rd_reg(ctx->udev, chip, PRO_OFDM,
++				EMPTY_CHANNEL_STATUS, &tmp);
++			if (ret)
++				goto exit;
++			if (tmp == 1) {
++				ctx->status[chip] |= FE_HAS_SIGNAL;
++				break;
++			}
++			if (tmp == 2) {
++				goto exit;
++			}
++		}
++		msleep(25);
++	}
++
++	if (!(ctx->status[chip] & FE_HAS_SIGNAL))
++		goto exit;
++
++	/* mpeg2 loop */
++	for (j = 0; j < 40; j++) {
++		ret = af9035_rd_reg_bits(ctx->udev, chip, PRO_OFDM,
++			MP2IF_SYNC_LK, 0, 1, &tmp);
++		if (ret)
++			goto exit;
++		if (tmp) {
++			ctx->status[chip] |= FE_HAS_CARRIER
++					| FE_HAS_VITERBI
++					| FE_HAS_SYNC;
++			break;
++		}
++		msleep(25);
++	}
++
++	if (!(ctx->status[chip] & FE_HAS_SYNC))
++		goto exit;
++
++	/* tps loop */
++	for (j = 0; j < 10; j++) {
++		for (i = begin; i < end; i++) {
++			/* TPS check */
++			ret = af9035_rd_reg_bits(ctx->udev, i, PRO_OFDM,
++				D_TPSD_LOCK, 0, 1, &tmp);
++			if (ret)
++				goto exit;
++			if (tmp) {
++				is_lock = true;
++				break;
++			}
++		}
++
++		if (is_lock)
++			break;
++
++		msleep(25);
++	}
++
++exit:
++	if (is_lock)
++		*locked = true;
++	else
++		*locked = false;
++
++	return ret;
++}
++
++/*
++   bandwidth in Hz
++   frequency in Hz
++ */
++static int af903x_fe_acquire_ch(struct af903x_dev_ctx *ctx, int chip,
++			u32 bandwidth, u32 frequency)
++{
++	int ret = 0;
++	int i, begin, end;
++	u32 adc_freq = clk_tab[ctx->adf].adc_freq;
++	bool locked;
++
++	if (ctx->architecture == ARCHITECTURE_DCA) {
++		begin = 0;
++		end = ctx->conf.chip_num;
++	} else {
++		begin = chip;
++		end = begin + 1;
++	}
++
++	for (i = begin; i < end; i++) {
++		ret = af903x_fe_select_bw(ctx, i, bandwidth, adc_freq);
++		if (ret)
++			goto exit;
++	}
++
++	ret = af903x_fe_mask_dca_output(ctx);
++	if (ret)
++		goto exit;
++
++	/* Set frequency */
++	for (i = begin; i < end; i++) {
++		ret = af903x_fe_set_freq(ctx, i, frequency);
++		if (ret)
++			goto exit;
++	}
++
++	ret = af903x_fe_is_locked(ctx, chip, &locked);
++exit:
++	return ret;
++}
++
++static int af903x_fe_get_snr(struct af903x_dev_ctx *ctx, int chip, u16 *snr)
++{
++	int ret;
++	u32 snr_val, snr_min, snr_max, temp;
++	u8 reg[3];
++
++	ret = af9035_rd_regs(ctx->udev, 0, PRO_OFDM, QNT_VBC_ERR,
++		sizeof(reg), reg);
++	if (ret)
++		goto exit;
++	snr_val = (reg[2] << 16) | (reg[1] << 8) | reg[0];
++
++	if (ctx->transmission_mode[chip] == TRANSMISSION_MODE_2K)
++		snr_val *= 4;
++	else if (ctx->transmission_mode[chip] == TRANSMISSION_MODE_4K)
++		snr_val *= 2;
++
++	switch (ctx->constellation[chip]) {
++	case QPSK:
++		snr_min = 0xb4711;
++		snr_max = 0x191451;
++		break;
++	case QAM_16:
++		snr_min = 0x4f0d5;
++		snr_max = 0xc7925;
++		break;
++	case QAM_64:
++		snr_min = 0x256d0;
++		snr_max = 0x626be;
++		break;
++	default:
++		ret = -EINVAL;
++		goto exit;
++	}
++
++	if (snr_val < snr_min)
++		*snr = 0;
++	else if (snr_val < snr_max) {
++		temp = (snr_val - snr_min) >> 5;
++		temp *= 0xffff;
++		temp /= (snr_max - snr_min) >> 5;
++		*snr = (u16)temp;
++	} else
++		*snr = 0xffff;
++
++exit:
++	return ret;
++}
++
++static int af903x_fe_get_ch_stat(struct af903x_dev_ctx *ctx, int chip,
++	struct af903x_ch_stat *st)
++{
++	int ret = 0;
++
++	u32 post_err_cnt, post_bit_cnt;
++	u16 rsd_abort_cnt;
++
++	if (time_after(jiffies, ctx->ch_stat[chip].last_updated + 500 * HZ / 1000)) {
++
++		if (ctx->architecture == ARCHITECTURE_PIP) {
++			ret = af903x_get_post_vitber(ctx, chip,
++				&post_err_cnt, &post_bit_cnt, &rsd_abort_cnt);
++		} else {
++			ret = af903x_get_post_vitber(ctx, 0,
++				&post_err_cnt, &post_bit_cnt, &rsd_abort_cnt);
++		}
++		if (ret == 0) {
++			ctx->ch_stat[chip].post_vit_err_cnt = post_err_cnt;
++			ctx->ch_stat[chip].post_vit_bit_cnt = post_bit_cnt;
++			ctx->ch_stat[chip].abort_cnt = rsd_abort_cnt;
++			ctx->ch_stat[chip].last_updated = jiffies;
++			*st = ctx->ch_stat[chip];
++		}
++	} else {
++		*st = ctx->ch_stat[chip];
++	}
++
++	return ret;
++}
++
++int af903x_fe_power_ctrl(struct af903x_dev_ctx *ctx, int chip, int ctrl)
++{
++	int ret = 0;
++	u8 temp;
++	int begin, end, i, j;
++
++	deb_data("%s: chip = %d, on: %s\n", __func__, chip, ctrl ? "ON" : "OFF");
++	if (ctx->architecture == ARCHITECTURE_DCA) {
++		begin = 0;
++		end = ctx->conf.chip_num;
++	} else {
++		begin = chip;
++		end = begin + 1;
++	}
++
++	if (ctrl) {
++		/* Power up case */
++		for (i = begin; i < end; i++) {
++			ret = af9035_wr_reg_bits(ctx->udev, i, PRO_OFDM, AFE_MEM0,
++				3, 1, 0);
++			if (ret)
++				goto exit;
++		}
++	} else {
++		/* Power down case */
++		for (i = begin; i < end; i++) {
++			ret = af9035_wr_reg(ctx->udev, i, PRO_OFDM, SUSPEND_FLAG, 1);
++			if (ret)
++				goto exit;
++			ret = af9035_wr_reg(ctx->udev, i, PRO_OFDM, TRIGGER_OFSM, 0);
++			if (ret)
++				goto exit;
++
++			for (j = 0; j < 150; j++) {
++				ret = af9035_rd_reg(ctx->udev, i, PRO_OFDM,
++					SUSPEND_FLAG, &temp);
++				if (ret)
++					goto exit;
++				if (!temp)
++					break;
++				msleep(10);
++			}
++			ret = af9035_wr_reg_bits(ctx->udev, i, PRO_OFDM, AFE_MEM0,
++				3, 1, 1);
++			if (ret)
++				goto exit;
++		}
++	}
++exit:
++	return ret;
++}
++
++static int af903x_fe_ap_reset(struct af903x_dev_ctx *ctx, int chip)
++{
++	int ret;
++
++	deb_data("%s: chip = %d\n", __func__, chip);
++
++	ctx->frequency[chip] = 0;
++	ctx->bandwidth[chip] = 6000000;	/* CHECK: why 6MHz ? */
++
++	ret = af903x_ap_ctrl(ctx, chip, false);
++	if (ret)
++		deb_data("af903x_ap_ctrl Fail!\n");
++
++	/* disable PID filter */
++	ret = af9035_wr_reg_bits(ctx->udev, chip, PRO_OFDM, PID_EN, 0, 1, 0);
++	if (ret < 0)
++		deb_data("af9033_control_pid_filter Fail!\n");
++
++	return ret;
++}
++
++/* bandwidth in Hz
++   frequency in Hz */
++static int af903x_tuner_set_freq_bw(struct af903x_dev_ctx *ctx, int chip,
++	u32 freq, u32 bandwidth)
++{
++	int ret = 0;
++	bool lock = true;
++
++	deb_data("%s: chip: %d, Freq= %d, BW=%d\n", __func__,
++		chip, freq, bandwidth);
++
++	if (freq) {
++		ctx->desired_freq[chip] = freq;
++		/* special treatment for FC0012 */
++		/* CHECK CHECK CHECK: static definition of slave questionable */
++		if ((ctx->tuner_desc->tunerId == TUNER_FC0012) &&
++		    (ctx->conf.chip_num == 2) &&
++		    (ctx->desired_freq[0] == ctx->frequency[1])) {
++			ctx->desired_freq[0] = freq + 50000;
++			deb_data("\tAF9035+FC0012 master freq shift %d\n",
++				freq + 50000);
++		}
++	} else {
++		freq = ctx->desired_freq[chip];
++	}
++
++	if (bandwidth) {
++		ctx->desired_bw[chip] = bandwidth;
++	} else {
++		bandwidth = ctx->desired_bw[chip];
++    	}
++
++	deb_data("\tReal Freq= %d, BW=%d\n", ctx->desired_freq[chip],
++		ctx->desired_bw[chip]);
++
++	if ((bandwidth == ctx->bandwidth[chip]) &&
++	    (freq == ctx->frequency[chip]) &&
++	    (!ctx->conf.dca_pip)) {
++		deb_data("\t%s: skip SetFreq, freq & bw is the same\n",
++			__func__);
++		goto exit;
++	}
++
++	if (!(ctx->active_tuner & (1 << chip))){
++		deb_data("\tSkip SetFreq - Tuner is still off!\n");
++		goto exit;
++	}
++	
++	if (ctx->desired_freq[chip] != 0 &&
++	    ctx->desired_bw[chip] != 0) {
++		deb_data("\tAcquireChannel : Real Freq= %d, BW= %d\n",
++			ctx->desired_freq[chip], ctx->desired_bw[chip]);
++		ret = af903x_fe_acquire_ch(ctx,
++			chip, ctx->desired_bw[chip],
++			ctx->desired_freq[chip]);
++		if (ret) {
++			deb_data("\taf903x_fe_acquire_ch fail! %d\n", ret);
++			goto exit;
++		}
++	}
++
++	ret = af903x_fe_is_locked(ctx, chip, &lock);
++	if (ret) {
++		deb_data("\taf903x_fe_is_locked is failed!\n");
++	} else {
++		deb_data("\tThe signal is %slocked\n", lock ? "" : "not ");
++		if (lock) {
++			msleep(500);
++		}
++	}
++
++exit:
++	return ret;
++}
++
++static int af903x_set_arch(struct af903x_dev_ctx *ctx, enum af903x_arch architecture)
++{
++	int ret = 0;
++
++	deb_data("%s: architecture = %s\n", __func__,
++		architecture == ARCHITECTURE_DCA ? "DCA" :
++		(architecture == ARCHITECTURE_PIP ? "PIP" : "???"));
++
++	if (ctx->architecture == architecture) {
++		deb_data("\talready running architecture %s, skip .....\n",
++			architecture == ARCHITECTURE_DCA ? "DCA" :
++			(architecture == ARCHITECTURE_PIP ? "PIP" : "???"));
++	} else {
++		deb_data("\tcall af903x_fe_set_arch with arch %s\n",
++			architecture == ARCHITECTURE_DCA ?  "DCA" : "PIP");
++		ret = af903x_fe_set_arch(ctx, architecture);
++		if (ret)
++			deb_data("%s: af903x_fe_set_arch failed, ret: %d!\n",
++				__func__, ret);
++	}
++	return ret;
++}
++
++static int af903x_rf_loop_thru_ctrl(struct af903x_dev_ctx *ctx, int param)
++{
++	struct usb_device *udev = ctx->udev;
++	int ret = 0;
++	u8 reg;
++
++        deb_data("%s: param: %d\n", __func__, param);
++
++	switch (param) {
++	case 1:
++	default:
++		reg = 0x6e;
++		ret = af903x_wr_tuner_regs(ctx, 0, 0x09, 1, &reg);
++    		if (ret)
++			goto exit;
++        	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH2_O,
++			0, 1, 1);
++    		if (ret < 0)
++			goto exit;
++		break;
++	case 2:
++		reg = 0x6f;
++		ret = af903x_wr_tuner_regs(ctx, 0, 0x09, 1, &reg);
++    		if (ret)
++			goto exit;
++        	ret = af9035_wr_reg_bits(udev, 0, PRO_LINK, GPIOH2_O,
++			0, 1, 0);
++    		if (ret < 0)
++			goto exit;
++		break;
++	}
++
++exit:
++	if (ret)
++		deb_data("%s failed !!!\n", __func__);
++	return ret;
++}
++
++static int af903x_pip_to_dca(struct af903x_dev_ctx *ctx)
++{
++	int ret = 0;
++
++	deb_data("%s: filter_cnt=%d, filter_index=%d\n", __func__,
++		ctx->filter_cnt, ctx->filter_index);
++
++	ctx->filter_cnt--;
++
++	if (ctx->filter_cnt == 1) {
++		if (ctx->filter_index == 0) { /* close filter 0. */
++			ret = af903x_set_arch(ctx, ARCHITECTURE_DCA);
++			ret = af903x_tuner_set_freq_bw(ctx, 0,
++				ctx->frequency[1], 0);
++		} else {
++			ret = af903x_set_arch(ctx, ARCHITECTURE_DCA);
++			ret = af903x_tuner_set_freq_bw(ctx, 0,
++				ctx->frequency[0], 0);
++		}
++	}
++	return ret;
++}
++
++static int af903x_dca_to_pip(struct af903x_dev_ctx *ctx)
++{
++	int ret = 0;
++
++	deb_data("%s: filter_cnt=%d, filter_index=%d\n", __func__,
++		ctx->filter_cnt, ctx->filter_index);
++
++	ctx->filter_index = ctx->filter_cnt;
++	ctx->filter_cnt++;
++
++	if (ctx->filter_cnt == 1) {
++		ret = af903x_set_arch(ctx, ARCHITECTURE_DCA);
++		msleep(50);
++	} else if (ctx->filter_cnt == 2) {
++		ret = af903x_set_arch(ctx, ARCHITECTURE_PIP);
++		msleep(50);
++	}
++	return ret;
++}
++
++static int af903x_fe_activate(struct af903x_dev_ctx *ctx, int chip)
++{
++	int i, ret = 0;
++
++	deb_data("%s: chip = %d\n", __func__, chip);
++
++	if (ctx->conf.dca_pip) {
++		ret = af903x_dca_to_pip(ctx);
++	}
++	if ((ctx->architecture == ARCHITECTURE_PIP) &&
++	    (ctx->filter_cnt == 2)) {
++		if (ctx->conf.rf_loop_thru)
++			ret = af903x_rf_loop_thru_ctrl(ctx, 2);
++
++	} else if (ctx->architecture == ARCHITECTURE_DCA) {
++		for (i = 0; i < ctx->conf.chip_num; i++) {
++			ret = af903x_ap_ctrl(ctx, i, true);
++		}
++		if (ctx->conf.rf_loop_thru)
++			ret = af903x_rf_loop_thru_ctrl(ctx, 1);
++	}
++	ctx->active_fe |= (1 << chip);
++
++	return ret;
++}
++
++static int af903x_fe_deactivate(struct af903x_dev_ctx *ctx, int chip)
++{
++	int i, ret = 0;
++
++	deb_data("%s: chip = %d\n", __func__, chip);
++
++	ctx->active_fe &= ~(1 << chip);
++
++	if (ctx->conf.dca_pip) {
++		ret = af903x_pip_to_dca(ctx);
++	}
++	if (ctx->architecture == ARCHITECTURE_DCA) {
++		if (ctx->filter_cnt == 1) {
++			if (ctx->conf.rf_loop_thru)
++				ret = af903x_rf_loop_thru_ctrl(ctx, 1);
++		} else {
++			for (i = 0; i < ctx->conf.chip_num; i++) {
++				ret = af903x_fe_ap_reset(ctx, i);
++			}
++		}
++	} else {
++		ret = af903x_fe_ap_reset(ctx, chip);
++	}
++	return ret;
++}
++
++static int af903x_fe_init(struct dvb_frontend *fe)
++{
++	int ret = 0;
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++
++	deb_data("%s: chip = %d, dvb->num: %d\n", __func__, id, fe->dvb->num);
++
++	if ((id == 1) && (!(ctx->active_fe & 0x01))) {
++		/* ensure that frontend 0 is active if we access frontend 1 */
++		ret = af903x_fe_activate(ctx, 0);
++		ctx->fe0_slave_start = true;
++	}
++	if ((id == 0) && (ctx->fe0_slave_start)) {
++		ctx->fe0_slave_start = false;
++		return 0;
++	}
++	ret = af903x_fe_activate(ctx, id);
++	return 0;
++}
++
++static int af903x_fe_sleep(struct dvb_frontend *fe)
++{
++	int ret = 0;
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++
++        deb_data("%s: chip = %d, dvb->num: %d\n", __func__, id, fe->dvb->num);
++
++	if ((id == 0) && (ctx->active_fe & 0x02)) {
++		/* don't power off frontend 0 if frontend 1 is still running */
++		ctx->fe0_slave_start = true;
++		return 0;
++	}
++	ret = af903x_fe_deactivate(ctx, id);
++	if ((id == 1) && (ctx->fe0_slave_start)) {
++		ret = af903x_fe_deactivate(ctx, 0);
++		ctx->fe0_slave_start = false;
++	}
++	return 0;
++}
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++static int af903x_fe_get_frontend(struct dvb_frontend* fe)
++{
++	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
++#else
++static int af903x_fe_get_frontend(struct dvb_frontend* fe,
++				struct dvb_frontend_parameters *p)
++{
++#endif
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	struct usb_device *udev = ctx->udev;
++	int id = (fe == ctx->fe[1]);
++	int ret = 0;
++	u8 reg[8];
++
++	deb_data("%s: chip = %d\n", __func__, id);
++
++	ret = af9035_rd_regs(udev, id, PRO_OFDM, REG_TPSD_TX_MODE,
++		sizeof(reg), reg);
++	if (ret)
++		goto exit;
++
++	/* constellation type */
++	if (reg[3] < 3)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++		p->modulation = fe_con[reg[3]];
++	ctx->constellation[id] = p->modulation;
++#else
++		p->u.ofdm.constellation = fe_con[reg[3]];
++	ctx->constellation[id] = p->u.ofdm.constellation;
++#endif
++
++	/* FFT mode */
++	if (reg[0] < 3)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++		p->transmission_mode = fe_mode[reg[0]];
++	ctx->transmission_mode[id] = p->transmission_mode;
++#else
++		p->u.ofdm.transmission_mode = fe_mode[reg[0]];
++	ctx->transmission_mode[id] = p->u.ofdm.transmission_mode;
++#endif
++
++	/* guard interval */
++	if (reg[1] < 4)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++		p->guard_interval = fe_gi[reg[1]];
++#else
++		p->u.ofdm.guard_interval = fe_gi[reg[1]];
++#endif
++
++	/* TPS hierachy and alpha value */
++	if (reg[2] < 4)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++		p->hierarchy = fe_hi[reg[2]];
++
++	/* code rate */
++	p->code_rate_HP = (reg[6] < 6) ? fe_code[reg[6]] : FEC_NONE;
++	p->code_rate_LP = (reg[7] < 6) ? fe_code[reg[7]] : FEC_NONE;
++#else
++		p->u.ofdm.hierarchy_information = fe_hi[reg[2]];
++
++	/* code rate */
++	p->u.ofdm.code_rate_HP = (reg[6] < 6) ? fe_code[reg[6]] : FEC_NONE;
++	p->u.ofdm.code_rate_LP = (reg[7] < 6) ? fe_code[reg[7]] : FEC_NONE;
++#endif
++
++exit:
++	return ret;
++}
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++static int af903x_fe_set_frontend(struct dvb_frontend* fe)
++{
++	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
++#else
++static int af903x_fe_set_frontend(struct dvb_frontend* fe,
++				struct dvb_frontend_parameters *fep)
++{
++#endif
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++	int ret = 0;
++
++	ctx->status[id] = 0;
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++	deb_data("%s: chip = %d, RF = %d, BW = %d\n", __func__,
++		id, p->frequency, p->bandwidth_hz);
++
++	ret = af903x_tuner_set_freq_bw(ctx, id, p->frequency,
++		p->bandwidth_hz);
++#else
++	u32 bw;
++
++	switch (fep->u.ofdm.bandwidth) {
++	case BANDWIDTH_6_MHZ:
++		bw = 6000000;
++		break;
++	case BANDWIDTH_7_MHZ:
++		bw = 7000000;
++		break;
++	case BANDWIDTH_8_MHZ:
++	default:
++		bw = 8000000;
++		break;
++	}
++
++	deb_data("%s: chip = %d, RF = %d, BW = %d\n", __func__,
++		id, fep->frequency, bw);
++
++	ret = af903x_tuner_set_freq_bw(ctx, id, fep->frequency, bw);
++#endif
++	if (ret)
++		printk("af903x_tuner_set_freq_bw failed: %d\n", ret);
++
++	return 0;
++}
++
++static int af903x_fe_read_status(struct dvb_frontend *fe, fe_status_t *stat)
++{
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++	int ret;
++	bool lock = false;
++
++	ret = af903x_fe_is_locked(ctx, id, &lock);
++	if (ret) {
++		deb_data("%s: af903x_fe_is_locked failed (ret = %d)\n",
++			__func__, ret);
++		goto exit;
++	}
++	deb_data("%s: chip %d is %slocked\n", __func__, id,
++		lock ? "" : "not ");
++
++exit:
++	if (lock) {
++		*stat = ctx->status[id] | FE_HAS_LOCK;
++	} else {
++		*stat = ctx->status[id];
++	}
++	return 0;
++}
++
++static int af903x_fe_read_ber(struct dvb_frontend *fe, u32 *ber)
++{
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++	struct af903x_ch_stat ch_stat;
++	int ret;
++
++	ret = af903x_fe_get_ch_stat(ctx, id, &ch_stat);
++	if (ret) {
++		*ber = 0;
++		goto exit;
++	}
++
++	deb_data("%s: chip = %d, postVitErrorCount: %d, postVitBitCount: %d\n",
++		__func__, id,
++		ch_stat.post_vit_err_cnt, ch_stat.post_vit_bit_cnt);
++
++	*ber = ch_stat.post_vit_err_cnt *
++		(0xFFFFFFFF / ch_stat.post_vit_bit_cnt);
++exit:
++	return ret;
++}
++
++static int af903x_fe_read_snr(struct dvb_frontend* fe, u16 *snr)
++{
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++	int ret;
++
++	ret = af903x_fe_get_snr(ctx, id, snr);
++	if (ret) {
++		*snr = 0;
++		goto exit;
++	}
++
++	deb_data("%s: chip = %d, SignalSnr :%d\n", __func__, id, *snr);
++exit:
++	return ret;
++}
++
++static int af903x_fe_read_unc_blocks(struct dvb_frontend *fe, u32 *unc)
++{
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++	struct af903x_ch_stat ch_stat;
++	int ret;
++
++	ret = af903x_fe_get_ch_stat(ctx, id, &ch_stat);
++	if (ret) {
++		return ret;
++	}
++
++	deb_data("%s: chip = %d, unc. blocks: %d\n", __func__, id,
++		ch_stat.abort_cnt);
++
++	*unc = ch_stat.abort_cnt;
++        return 0;
++}
++
++static int af903x_fe_read_signal_strength(struct dvb_frontend *fe, u16 *strength)
++{
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++	int ret;
++	u8 sig_strength = 0;
++
++	deb_data("%s: chip = %d\n", __func__, id);
++
++	ret = af9035_rd_reg(ctx->udev, id, PRO_OFDM,
++		SIGNAL_STRENGTH, &sig_strength);
++        if (ret) {
++		deb_data("%s failed\n", __func__);
++		*strength = 0;
++		return ret;
++	}
++
++	deb_data("%s: strength is %d\n", __func__, sig_strength);
++	*strength = ((u32)sig_strength * 0xFFFF) / 100;
++	return 0;
++}
++
++static void af903x_fe_release(struct dvb_frontend *fe)
++{
++	struct af903x_dev_ctx *ctx = fe->demodulator_priv;
++	int id = (fe == ctx->fe[1]);
++
++	deb_data("%s: chip = %d\n", __func__, id);
++	kfree(fe);
++}
++
++static struct mxl5007t_config af903x_mxl5007t_config[] = {
++	{
++		.xtal_freq_hz = MxL_XTAL_24_MHZ,
++		.if_freq_hz = MxL_IF_4_57_MHZ,
++		.invert_if = 1,
++		.loop_thru_enable = 0,
++		.clk_out_enable = 0,
++		.clk_out_amp = MxL_CLKOUT_AMP_0_94V,
++	} , {
++		.xtal_freq_hz = MxL_XTAL_24_MHZ,
++		.if_freq_hz = MxL_IF_4_57_MHZ,
++		.invert_if = 1,
++		.loop_thru_enable = 1,
++		.clk_out_enable = 1,
++		.clk_out_amp = MxL_CLKOUT_AMP_0_94V,
++	}
++};
++
++static struct dvb_frontend_ops af903x_ops;
++struct dvb_frontend *af903x_fe_attach(struct i2c_adapter *i2c_adap, int id,
++	struct af903x_dev_ctx *ctx)
++{
++	struct usb_device *udev = ctx->udev;
++	struct dvb_frontend *frontend;
++	int ret = 0;
++
++	deb_data("%s: chip = %d\n", __func__, id);
++
++	frontend = kzalloc(sizeof(*frontend), GFP_KERNEL);
++	if (frontend == NULL)
++		return NULL;
++
++	frontend->demodulator_priv = ctx;
++	memcpy(&frontend->ops, &af903x_ops, sizeof(af903x_ops));
++
++	ctx->fe[id] = frontend;
++
++	/* attach the tuner */
++	switch(ctx->tuner_desc->tunerId) {
++	case TUNER_AF9007:
++		break;
++	case TUNER_FC0012:
++		ret = dvb_attach(fc0012_attach, frontend, i2c_adap,
++			id == 0 ? ctx->tuner_desc->tuner_addr :
++			ctx->tuner_desc->tuner_addr + 1, FC_XTAL_36_MHZ)
++			== NULL ?  -ENODEV : 0;
++		break;
++	case TUNER_MXL5007T:
++		if (id == 0) {
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH12_EN, 1);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH12_ON, 1);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH12_O, 0);
++                        msleep(30);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH12_O, 1);
++                        msleep(300);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH4_EN, 1);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH4_ON, 1);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH4_O, 0);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH3_EN, 1);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH3_ON, 1);
++                        ret = af9035_wr_reg(udev, 0, PRO_LINK, GPIOH3_O, 1);
++		}
++		ret = dvb_attach(mxl5007t_attach, frontend, i2c_adap,
++			id == 0 ? ctx->tuner_desc->tuner_addr :
++			ctx->tuner_desc->tuner_addr + 1,
++			&af903x_mxl5007t_config[id]) == NULL ? -ENODEV : 0;
++		break;
++	default:
++		err("tuner 0x%02x currently not supported!",
++			ctx->tuner_desc->tunerId);
++		kfree(frontend);
++		return NULL;
++	}
++	/* divert the functions to our own (to allow
++	   additional command to the demodulator as a preparation) */
++	ctx->tuner_init = frontend->ops.tuner_ops.init;
++	frontend->ops.tuner_ops.init = NULL;
++	ctx->tuner_sleep = frontend->ops.tuner_ops.sleep;
++	frontend->ops.tuner_ops.sleep = NULL;
++
++	return frontend;
++}
++
++static struct dvb_frontend_ops af903x_ops = {
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++	.delsys = { SYS_DVBT },
++#endif
++	.info = {
++		.name = "AF903X USB DVB-T",
++#if LINUX_VERSION_CODE < KERNEL_VERSION(3,3,0)
++		.type = FE_OFDM,
++#endif
++		.frequency_min      = AF903X_FE_FREQ_MIN,
++		.frequency_max      = AF903X_FE_FREQ_MAX,
++		.frequency_stepsize = 62500,
++		.caps = FE_CAN_INVERSION_AUTO |
++			FE_CAN_FEC_1_2 | FE_CAN_FEC_2_3 | FE_CAN_FEC_3_4 |
++			FE_CAN_FEC_5_6 | FE_CAN_FEC_7_8 | FE_CAN_FEC_AUTO |
++			FE_CAN_QPSK | FE_CAN_QAM_16 | FE_CAN_QAM_64 | FE_CAN_QAM_AUTO |
++			FE_CAN_TRANSMISSION_MODE_AUTO |
++			FE_CAN_GUARD_INTERVAL_AUTO |
++			FE_CAN_RECOVER |
++			FE_CAN_HIERARCHY_AUTO,
++	},
++
++	.release              = af903x_fe_release,
++
++	.init                 = af903x_fe_init,
++	.sleep                = af903x_fe_sleep,
++
++	.set_frontend         = af903x_fe_set_frontend,
++	.get_frontend         = af903x_fe_get_frontend,
++
++	.read_status          = af903x_fe_read_status,
++	.read_ber             = af903x_fe_read_ber,
++	.read_signal_strength = af903x_fe_read_signal_strength,
++	.read_snr             = af903x_fe_read_snr,
++	.read_ucblocks	      = af903x_fe_read_unc_blocks,
++};
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-fe.h b/drivers/media/dvb/dvb-usb/af903x-fe.h
+--- a/drivers/media/dvb/dvb-usb/af903x-fe.h	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-fe.h	2012-03-10 10:48:03.473572855 +0100
+@@ -0,0 +1,164 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#ifndef _AF903X_FE_H_
++#define _AF903X_FE_H_
++
++#include "dvb_frontend.h"
++#include "af903x.h"
++#include "af903x-core.h"
++#include "af903x-reg.h"
++#include "af903x-tuners.h"
++
++/* Define USB frame size */
++#define USB20_MAX_PACKET_SIZE	512
++#define USB20_FRAME_SIZE	(188 * 348)
++#define USB11_MAX_PACKET_SIZE	64
++#define USB11_FRAME_SIZE	(188 * 21)
++
++/* I2C address of secondary chip when Diversity mode or PIP mode is active. */
++#define AF903X_CHIP2_I2C_ADDR	0x3a
++
++struct af903x_val_set {
++	u32 address;	/* The address of target register */
++	u8 value;	/* The value of target register   */
++};
++
++enum af903x_arch {
++	ARCHITECTURE_NONE = 0,	/* Invalid (Null) Architecture */
++	ARCHITECTURE_DCA,	/* Diversity combine architecture. Only valid
++				   when chip number > 1. */
++	ARCHITECTURE_PIP	/* Picture in picture. Only valid when chip
++				   number > 1. */
++};
++
++struct afa_config {
++	/* hardware */
++	u8 chip_num;
++	u8 tuner_id[2];
++	/* configuration */
++	bool dual_ts;
++	enum af903x_arch architecture;
++	bool dca_pip;
++	bool rf_loop_thru;
++	/* remote control */
++	bool ir_tab_load;
++	bool raw_ir;
++	u8 ir_type;
++};
++
++struct af903x_dev_ctx;
++
++typedef int (*OpenTuner)(struct af903x_dev_ctx *ctx, int chip);
++typedef int (*CloseTuner)(struct af903x_dev_ctx *ctx, int chip);
++typedef int (*SetTuner)(struct af903x_dev_ctx *ctx, int chip,
++	u32 bandwidth, u32 frequency);
++
++/*
++ * The type definition of TunerDescription
++ */
++struct tuner_desc {
++	OpenTuner open_tuner;
++	CloseTuner close_tuner;
++	SetTuner set_tuner;
++	struct af903x_val_set *tuner_scripts;
++	u16 *tuner_script_sets;
++	u8 tuner_addr;		/* i2c address */
++	u8 reg_addr_len;	/* normally 1 */
++	u32 if_freq;
++	bool inversion;
++	u16 tunerId;
++};
++
++struct af903x_ch_stat {
++	u16 abort_cnt;
++	u32 post_vit_bit_cnt;
++	u32 post_vit_err_cnt;
++	unsigned long last_updated;
++};
++
++struct af903x_dev_ctx {
++	/* Basic structure */
++	struct mutex af903x_mutex;	/* needs to be first entry in struct */
++	struct usb_device *udev;
++	struct dvb_frontend *fe[2];
++	/* firmware */
++	u16 *script_sets;
++	struct af903x_val_set *scripts;
++	u32 link_ver;
++	u32 ofdm_ver;
++	/* configuration */
++	struct afa_config conf;
++	struct tuner_desc *tuner_desc;
++	u8 host_if;
++	u8 adf;
++	enum af903x_arch architecture;
++	/* ep configuration */
++	u16 frame_sz;
++	/* state */
++	u32 desired_freq[2];
++	u32 desired_bw[2];
++	u32 frequency[2];	/* frequency in Hz */
++	u32 bandwidth[2];	/* bandwidth in Hz */
++	fe_modulation_t constellation[2];
++	fe_transmit_mode_t transmission_mode[2];
++	u8 filter_cnt;
++	u8 filter_index;
++	/* state flags */
++	u8 active_fe;		/* bit field */
++	u8 active_tuner;	/* bit field */
++	bool inited;		/* set if af903x_fe_start successful */
++	bool booted;		/* true if device has successfully booted */
++	bool fe0_slave_start;	/* set if frontend 0 was started to support fe 1 */
++	/* statistics */
++	fe_status_t status[2];
++	struct af903x_ch_stat ch_stat[2];
++	/* tuner functions */
++	int (*tuner_init)(struct dvb_frontend *);
++	int (*tuner_sleep)(struct dvb_frontend *);
++};
++
++static inline int af903x_wr_tuner_regs(struct af903x_dev_ctx *ctx, int chip,
++	u16 reg_addr, int len, u8 *buf)
++{
++	return af9035_wr_tuner_regs(ctx->udev, chip,
++		ctx->tuner_desc->tuner_addr, reg_addr,
++		ctx->tuner_desc->reg_addr_len,
++		len, buf);
++}
++
++static inline int af903x_rd_tuner_regs(struct af903x_dev_ctx *ctx, int chip,
++	u16 reg_addr, int len, u8 *buf)
++{
++	return af9035_rd_tuner_regs(ctx->udev, chip,
++		ctx->tuner_desc->tuner_addr, reg_addr,
++		ctx->tuner_desc->reg_addr_len,
++		len, buf);
++}
++
++extern struct dvb_frontend *af903x_fe_attach(struct i2c_adapter *i2c_adap,
++        int id, struct af903x_dev_ctx *ctx);
++extern int af903x_fe_start(struct af903x_dev_ctx *ctx);
++extern int af903x_fe_stop(struct af903x_dev_ctx *ctx);
++extern int af903x_fe_power_ctrl(struct af903x_dev_ctx *ctx, int chip,
++	int ctrl);
++
++extern int af903x_ap_ctrl(struct af903x_dev_ctx *ctx, int chip, bool on);
++
++#endif
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-fe-priv.h b/drivers/media/dvb/dvb-usb/af903x-fe-priv.h
+--- a/drivers/media/dvb/dvb-usb/af903x-fe-priv.h	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-fe-priv.h	2012-02-19 18:04:32.000000000 +0100
+@@ -0,0 +1,202 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2011 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ * and the IT9135 driver by Jason Dong
++ * Copyright (C) 2011 ITE Technologies, INC.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#ifndef _AF903X_FE_PRIV_H_
++#define _AF903X_FE_PRIV_H_
++
++enum bandwidth {
++	Bandwidth_6M = 0,	/* Signal bandwidth is 6MHz */
++	Bandwidth_7M,		/* Signal bandwidth is 7MHz */
++	Bandwidth_8M,		/* Signal bandwidth is 8MHz */
++	Bandwidth_5M		/* Signal bandwidth is 5MHz */
++};
++
++fe_code_rate_t fe_code[] = {
++	FEC_1_2,
++	FEC_2_3,
++	FEC_3_4,
++	FEC_5_6,
++	FEC_7_8,
++	FEC_NONE,
++};
++
++fe_guard_interval_t fe_gi[] = {
++	GUARD_INTERVAL_1_32,
++	GUARD_INTERVAL_1_16,
++	GUARD_INTERVAL_1_8,
++	GUARD_INTERVAL_1_4,
++};
++
++fe_hierarchy_t fe_hi[] = {
++	HIERARCHY_NONE,
++	HIERARCHY_1,
++	HIERARCHY_2,
++	HIERARCHY_4,
++};
++
++fe_transmit_mode_t fe_mode[] = {
++	TRANSMISSION_MODE_2K,
++	TRANSMISSION_MODE_8K,
++	TRANSMISSION_MODE_4K,
++};
++
++fe_modulation_t fe_con[] = {
++	QPSK,
++	QAM_16,
++	QAM_64,
++};
++
++enum priority {
++	Priority_HIGH = 0,          /* DVB-T and DVB-H - identifies high-priority stream */
++	Priority_LOW                /* DVB-T and DVB-H - identifies low-priority stream  */
++};
++
++enum code_rate {
++	CodeRate_1_OVER_2 = 0,      /* Signal uses FEC coding ratio of 1/2 */
++	CodeRate_2_OVER_3,          /* Signal uses FEC coding ratio of 2/3 */
++	CodeRate_3_OVER_4,          /* Signal uses FEC coding ratio of 3/4 */
++	CodeRate_5_OVER_6,          /* Signal uses FEC coding ratio of 5/6 */
++	CodeRate_7_OVER_8,          /* Signal uses FEC coding ratio of 7/8 */
++	CodeRate_NONE               /* None, NXT doesn't have this one     */
++};
++
++/*
++ * The definition of clock table
++ */
++struct af903x_freq_clk {
++	u32 crystal_freq;
++	u32 adc_freq;
++};
++
++static const struct af903x_freq_clk clk_tab[] =
++{
++	{ 20480, 20480000 },	/* FPGA     */
++	{ 16384, 20480000 },	/* 16.38MHz */
++	{ 20480, 20480000 },	/* 20.48MHz */
++	{ 36000, 20250000 },	/* 36.00MHz */
++	{ 30000, 20156250 },	/* 30.00MHz */
++	{ 26000, 20583333 },	/* 26.00MHz */
++	{ 28000, 20416667 },	/* 28.00MHz */
++	{ 32000, 20500000 },	/* 32.00MHz */
++	{ 34000, 20187500 },	/* 34.00MHz */
++	{ 24000, 20500000 },	/* 24.00MHz */
++	{ 22000, 20625000 },	/* 22.00MHz */
++	{ 12000, 20250000 }	/* 12.00MHz */
++};
++
++static int clk_tab_count = ARRAY_SIZE(clk_tab);
++
++struct af903x_coeff_param {
++	u32 adc_freq;
++	u32 bandwidth;	/* in Hz! */
++	u32 coeff1_2048Nu;
++	u32 coeff1_4096Nu;
++	u32 coeff1_8191Nu;
++	u32 coeff1_8192Nu;
++	u32 coeff1_8193Nu;
++	u32 coeff2_2k;
++	u32 coeff2_4k;
++	u32 coeff2_8k;
++	u16 bfsfcw_fftindex_ratio;
++	u16 fftindex_bfsfcw_ratio;
++};
++
++static struct af903x_coeff_param coeff_tab[] = {
++	/* adc_freq 20156250 */
++	{20156250, 5000000, 0x02449b5c, 0x01224dae, 0x00912b60, 0x009126d7,
++	 0x0091224e, 0x01224dae, 0x009126d7, 0x0048936b, 0x0387, 0x0122},
++	{20156250, 6000000, 0x02b8ba6e, 0x015c5d37, 0x00ae340d, 0x00ae2e9b,
++	 0x00ae292a, 0x015c5d37, 0x00ae2e9b, 0x0057174e, 0x02f1, 0x015c},
++	{20156250, 7000000, 0x032cd980, 0x01966cc0, 0x00cb3cba, 0x00cb3660,
++	 0x00cb3007, 0x01966cc0, 0x00cb3660, 0x00659b30, 0x0285, 0x0196},
++	{20156250, 8000000, 0x03a0f893, 0x01d07c49, 0x00e84567, 0x00e83e25,
++	 0x00e836e3, 0x01d07c49, 0x00e83e25, 0x00741f12, 0x0234, 0x01d0},
++	/* adc_freq 20187500 */
++	{20187500, 5000000, 0x0243b546, 0x0121daa3, 0x0090f1d9, 0x0090ed51,
++	 0x0090e8ca, 0x0121daa3, 0x0090ed51, 0x004876a9, 0x0388, 0x0122},
++	{20187500, 6000000, 0x02b7a654, 0x015bd32a, 0x00adef04, 0x00ade995,
++	 0x00ade426, 0x015bd32a, 0x00ade995, 0x0056f4ca, 0x02f2, 0x015c},
++	{20187500, 7000000, 0x032b9761, 0x0195cbb1, 0x00caec30, 0x00cae5d8,
++	 0x00cadf81, 0x0195cbb1, 0x00cae5d8, 0x006572ec, 0x0286, 0x0196},
++	{20187500, 8000000, 0x039f886f, 0x01cfc438, 0x00e7e95b, 0x00e7e21c,
++	 0x00e7dadd, 0x01cfc438, 0x00e7e21c, 0x0073f10e, 0x0235, 0x01d0},
++	/* adc_freq 20250000 */
++	{20250000, 5000000, 0x0241eb3b, 0x0120f59e, 0x00907f53, 0x00907acf,
++	 0x0090764b, 0x0120f59e, 0x00907acf, 0x00483d67, 0x038b, 0x0121},
++	{20250000, 6000000, 0x02b580ad, 0x015ac057, 0x00ad6597, 0x00ad602b,
++	 0x00ad5ac1, 0x015ac057, 0x00ad602b, 0x0056b016, 0x02f4, 0x015b},
++	{20250000, 7000000, 0x03291620, 0x01948b10, 0x00ca4bda, 0x00ca4588,
++	 0x00ca3f36, 0x01948b10, 0x00ca4588, 0x006522c4, 0x0288, 0x0195},
++	{20250000, 8000000, 0x039cab92, 0x01ce55c9, 0x00e7321e, 0x00e72ae4,
++	 0x00e723ab, 0x01ce55c9, 0x00e72ae4, 0x00739572, 0x0237, 0x01ce},
++	/* adc_freq 20583333 */
++	{20583333, 5000000, 0x02388f54, 0x011c47aa, 0x008e2846, 0x008e23d5,
++	 0x008e1f64, 0x011c47aa, 0x008e23d5, 0x004711ea, 0x039a, 0x011c},
++	{20583333, 6000000, 0x02aa4598, 0x015522cc, 0x00aa96bb, 0x00aa9166,
++	 0x00aa8c12, 0x015522cc, 0x00aa9166, 0x005548b3, 0x0300, 0x0155},
++	{20583333, 7000000, 0x031bfbdc, 0x018dfdee, 0x00c7052f, 0x00c6fef7,
++	 0x00c6f8bf, 0x018dfdee, 0x00c6fef7, 0x00637f7b, 0x0293, 0x018e},
++	{20583333, 8000000, 0x038db21f, 0x01c6d910, 0x00e373a3, 0x00e36c88,
++	 0x00e3656d, 0x01c6d910, 0x00e36c88, 0x0071b644, 0x0240, 0x01c7},
++	/* adc_freq 20416667 */
++	{20416667, 5000000, 0x023d337f, 0x011e99c0, 0x008f515a, 0x008f4ce0,
++	 0x008f4865, 0x011e99c0, 0x008f4ce0, 0x0047a670, 0x0393, 0x011f},
++	{20416667, 6000000, 0x02afd765, 0x0157ebb3, 0x00abfb39, 0x00abf5d9,
++	 0x00abf07a, 0x0157ebb3, 0x00abf5d9, 0x0055faed, 0x02fa, 0x0158},
++	{20416667, 7000000, 0x03227b4b, 0x01913da6, 0x00c8a518, 0x00c89ed3,
++	 0x00c8988e, 0x01913da6, 0x00c89ed3, 0x00644f69, 0x028d, 0x0191},
++	{20416667, 8000000, 0x03951f32, 0x01ca8f99, 0x00e54ef7, 0x00e547cc,
++	 0x00e540a2, 0x01ca8f99, 0x00e547cc, 0x0072a3e6, 0x023c, 0x01cb},
++	/* adc_freq 20480000 */
++	{20480000, 5000000, 0x023b6db7, 0x011db6db, 0x008edfe5, 0x008edb6e,
++	 0x008ed6f7, 0x011db6db, 0x008edb6e, 0x00476db7, 0x0396, 0x011e},
++	{20480000, 6000000, 0x02adb6db, 0x0156db6e, 0x00ab7312, 0x00ab6db7,
++	 0x00ab685c, 0x0156db6e, 0x00ab6db7, 0x0055b6db, 0x02fd, 0x0157},
++	{20480000, 7000000, 0x03200000, 0x01900000, 0x00c80640, 0x00c80000,
++	 0x00c7f9c0, 0x01900000, 0x00c80000, 0x00640000, 0x028f, 0x0190},
++	{20480000, 8000000, 0x03924925, 0x01c92492, 0x00e4996e, 0x00e49249,
++	 0x00e48b25, 0x01c92492, 0x00e49249, 0x00724925, 0x023d, 0x01c9},
++	/* adc_freq 20500000 */
++	{20500000, 5000000, 0x023adeff, 0x011d6f80, 0x008ebc36, 0x008eb7c0,
++	 0x008eb34a, 0x011d6f80, 0x008eb7c0, 0x00475be0, 0x0396, 0x011d},
++	{20500000, 6000000, 0x02ad0b99, 0x015685cc, 0x00ab4840, 0x00ab42e6,
++	 0x00ab3d8c, 0x015685cc, 0x00ab42e6, 0x0055a173, 0x02fd, 0x0157},
++	{20500000, 7000000, 0x031f3832, 0x018f9c19, 0x00c7d44b, 0x00c7ce0c,
++	 0x00c7c7ce, 0x018f9c19, 0x00c7ce0c, 0x0063e706, 0x0290, 0x0190},
++	{20500000, 8000000, 0x039164cb, 0x01c8b266, 0x00e46056, 0x00e45933,
++	 0x00e45210, 0x01c8b266, 0x00e45933, 0x00722c99, 0x023e, 0x01c9},
++	/* adc_freq 20625000 */
++	{20625000, 5000000, 0x02376948, 0x011bb4a4, 0x008ddec1, 0x008dda52,
++	 0x008dd5e3, 0x011bb4a4, 0x008dda52, 0x0046ed29, 0x039c, 0x011c},
++	{20625000, 6000000, 0x02a8e4bd, 0x0154725e, 0x00aa3e81, 0x00aa392f,
++	 0x00aa33de, 0x0154725e, 0x00aa392f, 0x00551c98, 0x0302, 0x0154},
++	{20625000, 7000000, 0x031a6032, 0x018d3019, 0x00c69e41, 0x00c6980c,
++	 0x00c691d8, 0x018d3019, 0x00c6980c, 0x00634c06, 0x0294, 0x018d},
++	{20625000, 8000000, 0x038bdba6, 0x01c5edd3, 0x00e2fe02, 0x00e2f6ea,
++	 0x00e2efd2, 0x01c5edd3, 0x00e2f6ea, 0x00717b75, 0x0242, 0x01c6}
++};
++
++static int af903x_coeff_tab_count = ARRAY_SIZE(coeff_tab);
++
++#endif
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x.h b/drivers/media/dvb/dvb-usb/af903x.h
+--- a/drivers/media/dvb/dvb-usb/af903x.h	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x.h	2012-02-19 18:04:37.000000000 +0100
+@@ -0,0 +1,51 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2011 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ * and the IT9135 driver by Jason Dong
++ * Copyright (C) 2011 ITE Technologies, INC.
++ * and the Cinergy T Stick driver
++ * http://linux.terratec.de/files/Cinergy_T_Stick/terratec_af9035.zip
++ * Copyright (C) 2009 Antti Palosaari <crope@iki.fi>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#ifndef _AF903X_H_
++#define _AF903X_H_
++
++#define DVB_USB_LOG_PREFIX "af903x"
++#include "dvb-usb.h"
++
++#include <linux/version.h>
++
++extern int dvb_usb_af903x_debug;
++
++#ifdef CONFIG_DVB_USB_DEBUG
++#define deb_info(args...)   dprintk(dvb_usb_af903x_debug,0x01,args)
++#define deb_fw(args...)     dprintk(dvb_usb_af903x_debug,0x02,args)
++#define deb_fwdata(args...) dprintk(dvb_usb_af903x_debug,0x04,args)
++#define deb_data(args...)   dprintk(dvb_usb_af903x_debug,0x08,args)
++#else
++#define deb_info(args...)   {}
++#define deb_fw(args...)     {}
++#define deb_fwdata(args...) {}
++#define deb_data(args...)   {}
++#endif
++
++#endif
++
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-reg.h b/drivers/media/dvb/dvb-usb/af903x-reg.h
+--- a/drivers/media/dvb/dvb-usb/af903x-reg.h	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-reg.h	2012-03-11 11:07:43.309770233 +0100
+@@ -0,0 +1,214 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2011 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#ifndef _AF903X_REG_H_
++#define _AF903X_REG_H_
++
++#define GANY_ONLY 0x42F5
++#define EEPROM_FLB_OFS  8
++
++#define EEPROM_IRMODE      (GANY_ONLY+EEPROM_FLB_OFS+0x10)   /* 0:disabled, 1:HID */
++#define EEPROM_SELSUSPEND  (GANY_ONLY+EEPROM_FLB_OFS+0x28)   /* Selective Suspend Mode */
++#define EEPROM_TSMODE      (GANY_ONLY+EEPROM_FLB_OFS+0x28+1) /* 0:one ts, 1:dual ts */
++#define EEPROM_2WIREADDR   (GANY_ONLY+EEPROM_FLB_OFS+0x28+2) /* MPEG2 2WireAddr */
++#define EEPROM_SUSPEND     (GANY_ONLY+EEPROM_FLB_OFS+0x28+3) /* Suspend Mode */
++#define EEPROM_IRTYPE      (GANY_ONLY+EEPROM_FLB_OFS+0x28+4) /* 0:NEC, 1:RC6 */
++#define EEPROM_SAWBW1      (GANY_ONLY+EEPROM_FLB_OFS+0x28+5)
++#define EEPROM_XTAL1       (GANY_ONLY+EEPROM_FLB_OFS+0x28+6) /* 0:28800, 1:20480 */
++#define EEPROM_SPECINV1    (GANY_ONLY+EEPROM_FLB_OFS+0x28+7)
++#define EEPROM_TUNERID     (GANY_ONLY+EEPROM_FLB_OFS+0x30+4)
++#define EEPROM_IFFREQL     (GANY_ONLY+EEPROM_FLB_OFS+0x30) 
++#define EEPROM_IFFREQH     (GANY_ONLY+EEPROM_FLB_OFS+0x30+1)   
++#define EEPROM_IF1L        (GANY_ONLY+EEPROM_FLB_OFS+0x30+2)   
++#define EEPROM_IF1H        (GANY_ONLY+EEPROM_FLB_OFS+0x30+3)
++#define EEPROM_SHIFT       (0x10)       /* EEPROM Addr Shift for slave front end */
++
++#define GANY_2ND_DEMOD_I2C_ADDR		0x417f  /* write only ? */
++#define GANY_IR_TABLE_ADDR		0x417f  /* read only ? */
++#define GANY_IR_TABLE_ADDR_15_8		(GANY_IR_TABLE_ADDR+0)
++#define GANY_IR_TABLE_ADDR_7_0		(GANY_IR_TABLE_ADDR+1)
++
++/* LINK registers */
++#define CHIP_VERSION		0x1222
++
++#define IO_MUX_POWER_CLK	0xd800
++#define IO_MUX_PWRON_HOSTA	0xd802
++#define PWRDW_HWEN		0xd809
++#define PWRDW			0xd80b
++#define CLK_O_EN		0xd81a
++
++#define	PADODPU			0xd827
++#define THIRDODPU		0xd828
++#define AGC_O_D			0xd829
++
++#define PADMISCDR2		0xd830
++#define PADMISCDR4		0xd831
++#define PADMISCDR8		0xd832
++#define PADMISCDRSR		0xd833
++
++#define GPIOH1_O		0xd8af
++#define GPIOH1_EN		0xd8b0
++#define GPIOH1_ON		0xd8b1
++#define GPIOH3_O		0xd8b3
++#define GPIOH3_EN		0xd8b4
++#define GPIOH3_ON		0xd8b5
++#define GPIOH2_O		0xd8b7
++#define GPIOH2_EN		0xd8b8
++#define GPIOH2_ON		0xd8b9
++#define GPIOH5_O		0xd8bb
++#define GPIOH5_EN		0xd8bc
++#define GPIOH5_ON		0xd8bd
++#define GPIOH4_O		0xd8bf
++#define GPIOH4_EN		0xd8c0
++#define GPIOH4_ON		0xd8c1
++#define GPIOH7_O		0xd8c3
++#define GPIOH7_EN		0xd8c4
++#define GPIOH7_ON		0xd8c5
++
++#define GPIOH8_O		0xd8cf
++#define GPIOH8_EN		0xd8d0
++#define GPIOH8_ON		0xd8d1
++
++#define GPIOH12_O		0xd8df
++#define GPIOH12_EN		0xd8e0
++#define GPIOH12_ON		0xd8e1
++
++#define GPIOT3_O		0xd8e7
++#define GPIOT3_EN		0xd8e8
++#define GPIOT3_ON		0xd8e9
++
++#define GPIOT2_O		0xd8eb
++#define GPIOT2_EN		0xd8ec
++#define GPIOT2_ON		0xd8ed
++
++#define LOCK3_OUT		0xd8fd
++
++#define HOSTA_MPEG_PAR_MODE	0xd916
++#define HOSTA_MPEG_SER_MODE	0xd917
++#define HOSTA_DCA_UPPER		0xd919
++#define HOSTA_DCA_LOWER		0xd91a
++#define HOSTB_MPEG_PAR_MODE	0xd91b
++#define HOSTB_MPEG_SER_MODE	0xd91c
++#define HOSTB_MPEG_SER_DO7	0xd91d
++#define HOSTB_DCA_UPPER		0xd91e
++#define HOSTB_DCA_LOWER		0xd91f
++
++#define P_DMB_SW_RST		0xdc33
++
++#define EP0_TX_EN		0xdd11
++#define EP4_TX_EN		0xdd11
++#define EP5_TX_EN		0xdd11
++#define EP0_TX_NAK		0xdd13
++#define EP4_TX_NAK		0xdd13
++#define EP5_TX_NAK		0xdd13
++#define EP4_TX_LEN_LSB		0xdd88
++#define EP4_TX_LEN_MSB		0xdd89
++#define EP4_MAX_PKT		0xdd0c
++#define EP5_TX_LEN_LSB		0xdd8a
++#define EP5_TX_LEN_MSB		0xdd8b
++#define EP5_MAX_PKT		0xdd0d
++
++#define I2C_CLK			0xf103
++
++#define DVBT_INTEN		0xf41f
++#define DVBT_ENABLE		0xf41a
++
++#define LINK_OFSM_DUMMY_15_8	0xf641
++
++/* DMOD registers */
++#define ADC_FREQ		0xf1cd
++
++#define D_TPSD_LOCK		0xf5a9
++#define FEQ_READ_UPDATE		0xf5ca
++
++#define FEC_VTB_RSD_MON_EN	0xf715
++
++#define DCA_PLATCH		0xf730
++#define DCA_UPPER_CHIP		0xf731
++#define DCA_LOWER_CHIP		0xf732
++#define DCA_STAND_ALONE		0xf73c
++#define DCA_UPPER_OUT_EN	0xf73d
++#define DCA_ENABLE		0xf776
++#define DCA_FPGA_LATCH		0xf778
++
++#define REG_TPSD_TX_MODE	0xf900
++#define REG_TPSD_GI		0xf901
++#define REG_TPSD_HIER		0xf902
++#define REG_TPSD_CONST		0xf903
++#define REG_BW			0xf904
++#define REG_PRIV		0xf905
++#define REG_TPSD_HP_CODE	0xf906
++#define REG_TPSD_LP_CODE	0xf907
++
++#define MP2IF_PSB_OVERFLOW	0xf980
++#define MP2IF_MPEG_SER_MODE	0xf985
++#define MP2IF_MPEG_PAR_MODE	0xf986
++
++#define MPEG_FULL_SPEED		0xf990
++#define PID_RST			0xf992
++#define PID_EN			0xf993
++#define PID_INX_EN		0xf994
++#define PID_INX			0xf995
++#define PID_LSB			0xf996
++#define PID_MSB			0xf997
++
++#define MP2IF_SYNC_LK		0xf999
++
++#define MP2_SW_RST		0xf99d
++
++#define MP2IF2_EN		0xf9a3
++#define MP2IF2_SW_RST		0xf9a4
++#define MP2IF2_HALF_PSB		0xf9a5
++#define MP2IF_STOP_EN		0xf9b5
++#define REG_SYS_BUF_OVERFLOW	0xf9b9
++#define TSIS_ENABLE		0xf9cd
++
++#define AFE_MEM0		0xfb24
++
++
++/* API defined variables */
++
++#define TRIGGER_OFSM		0x0000
++
++/* COEFF Registers start at 0x0001 to 0x0020 */
++#define COEFF_1_2048		0x0001
++#define XTAL_CLK		0x0025 /* 4 bytes */
++#define BFS_FCW			0x0029 /* 3 bytes */
++#define QNT_VBC_ERR		0x002c /* 3 bytes */
++#define RSD_ABORT_PACKET_CNT	0x0032 /* 2 bytes */
++#define RSD_BIT_ERR_CNT		0x0034 /* 3 bytes */
++#define R_RSD_PACKET_UNIT	0x0037 /* 2 bytes */
++#define TPSD_LOCK		0x003c
++#define MPEG_LOCK		0x003d
++#define TRAINING_MODE		0x0040
++#define ADC_X_2			0x0045
++#define TUNER_ID		0x0046
++#define EMPTY_CHANNEL_STATUS	0x0047
++#define SIGNAL_STRENGTH		0x0048
++#define SIGNAL_QUALITY		0x0049
++#define EST_SIGNAL_LEVEL	0x004a
++#define FRE_BAND		0x004b
++#define SUSPEND_FLAG		0x004c
++#define SUPPORT_RELAY_CMD_WR	0x004d
++#define RELAY_CMD_WR		0x004e
++
++#endif /* _AF903X_REG_H_ */
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-tuners.c b/drivers/media/dvb/dvb-usb/af903x-tuners.c
+--- a/drivers/media/dvb/dvb-usb/af903x-tuners.c	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-tuners.c	2012-02-20 23:28:06.000000000 +0100
+@@ -0,0 +1,447 @@
++/*
++ * Linux driver for Afatech (now ITE Technologies) AF9035 USB2.0 DVB-T receiver
++ *
++ * Copyright (C) 2012 Hans-Frieder Vogt <hfvogt@gmx.net>
++ * based on the IT913x driver
++ * Copyright (C) 2011 Malcolm Priestley (tvboxspy@gmail.com)
++ * IT9137 (C) ITE Tech Inc.
++ * and the IT9135 driver by Jason Dong
++ * Copyright (C) 2011 ITE Technologies, INC.
++ * and the Cinergy T Stick driver
++ * http://linux.terratec.de/files/Cinergy_T_Stick/terratec_af9035.zip
++ * Copyright (C) 2009 Antti Palosaari <crope@iki.fi>
++ *
++ * This program is free software; you can redistribute it and/or modify
++ * it under the terms of the GNU General Public License Version 2, as
++ * published by the Free Software Foundation.
++ *
++ * This program is distributed in the hope that it will be useful,
++ * but WITHOUT ANY WARRANTY; without even the implied warranty of
++ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
++ * GNU General Public License for more details.
++ *
++ * You should have received a copy of the GNU General Public License
++ * along with this program; if not, write to the Free Software
++ * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
++ */
++
++#include "af903x-fe.h"
++
++static u16 af9007_script_sets[] = {
++	0x50
++};
++
++static struct af903x_val_set af9007_scripts[] = {
++	{0xF600, 0x5},
++	{0xF601, 0x8},
++	{0xF602, 0xb},
++	{0xF603, 0x0e},
++	{0xF604, 0x11},
++	{0xF605, 0x14},
++	{0xF606, 0x17},
++	{0xF607, 0x1f},
++	{0xF1E6, 0x01},
++	{0xF001, 0x00},
++	{0xF005, 0x01},
++	{0xF004, 0x00},
++	{0xF00A, 0x1B},
++	{0xF00B, 0x1C},
++	{0xF00C, 0x1B},
++	{0xF00D, 0x1C},
++	{0xF016, 0x10},
++	{0xF017, 0x04},
++	{0xF018, 0x05},
++	{0xF019, 0x04},
++	{0xF01A, 0x05},
++	{0xF021, 0x03},
++	{0xF022, 0x0A},
++	{0xF023, 0x0A},
++	{0xF000, 0x01},
++	{0xF047, 0x00},
++	{0xF007, 0x00},
++	{0xF12F, 0x00},
++	{0xF077, 0x00},
++	{0xF00A, 0x1A},
++	{0xF00B, 0x1B},
++	{0xF00C, 0x1A},
++	{0xF00D, 0x1B},
++	{0xF01F, 0x50},
++	{0xF020, 0x00},
++	{0xF029, 0x46},
++	{0xF02A, 0x00},
++	{0xF010, 0xDF},
++	{0xF011, 0x02},
++	{0xF00E, 0x44},
++	{0xF00F, 0x01},
++	{0xF014, 0xEB},
++	{0xF015, 0x02},
++	{0xF012, 0xF4},
++	{0xF013, 0x01},
++	{0x0066, 0x52},
++	{0xF01B, 0x26},
++	{0xF01C, 0x01},
++	{0xF01D, 0x12},
++	{0xF01E, 0x03},
++	{0xF025, 0xE8},
++	{0xF026, 0x00},
++	{0xF027, 0x5F},
++	{0xF028, 0x03},
++	{0x0044, 0xFF},
++	{0x0045, 0x03},
++	{0x0046, 0xFF},	/* TUNER_ID */
++	{0x0047, 0x03},
++	{0x0048, 0xFF},
++	{0x0049, 0x03},
++	{0x004a, 0xFF},
++	{0x004b, 0x03},
++	{0x004c, 0xEB},
++	{0x004d, 0x02},
++	{0x0053, 0x68},
++	{0x0054, 0x03},
++	{0x0059, 0x12},
++	{0x005a, 0x03},
++	{0xF02B, 0x00},
++	{0xF02C, 0x01},
++	{0xF03B, 0x9A},
++	{0xF03C, 0x01},
++	{0xF03D, 0x5A},
++	{0xF03E, 0x01},
++	{0xF03F, 0x96},
++	{0xF040, 0x46},
++	{0xF031, 0x0},
++	{0x006b, 0x0A},
++	{0x006c, 0x14},
++	{0x006d, 0x08},
++};
++
++static int af903x_af9007_init(struct af903x_dev_ctx *ctx, int chip)
++{
++	return 0;
++}
++
++static int af903x_af9007_sleep(struct af903x_dev_ctx *ctx, int chip)
++{
++	return 0;
++}
++
++static int af903x_af9007_set(struct af903x_dev_ctx *ctx, int chip,
++	u32 bandwidth, u32 frequency)
++{
++	return 0;
++}
++
++
++struct tuner_desc tuner_af9007 = {
++	af903x_af9007_init,
++	af903x_af9007_sleep,
++	af903x_af9007_set,
++	af9007_scripts,
++	af9007_script_sets,
++	0,			/* tuner i2c address: 0xc0 ? */
++	0,			/* length of tuner register address */
++	36167000,		/* tuner if */
++	true,			/* spectrum inverse */
++	TUNER_AF9007,		/* tuner id */
++};
++
++static u16 fc0012_script_sets[] = {
++	0x26
++};
++
++static struct af903x_val_set fc0012_scripts[] = {
++	{0x0046, 0x2e},	/* TUNER_ID */
++	{0x0057, 0x00},
++	{0x0058, 0x01},
++	{0x0059, 0x01},
++	{0x005f, 0x00},
++	{0x0060, 0x00},
++	{0x006d, 0x00},
++	{0x0071, 0x05},
++	{0x0072, 0x02},
++	{0x0074, 0x01},
++	{0x0075, 0x03},
++	{0x0076, 0x02},
++	{0x0077, 0x01},
++	{0x0078, 0x00},
++	{0x0079, 0x00},
++	{0x007a, 0x90},
++	{0x007b, 0x90},
++	{0x0093, 0x00},
++	{0x0094, 0x01},
++	{0x0095, 0x02},
++	{0x0096, 0x01},
++	{0x0098, 0x0a},
++	{0x009b, 0x05},
++	{0x009c, 0x80},
++	{0x00b3, 0x00},
++	{0x00c5, 0x01},
++	{0x00c6, 0x00},
++	{0x00c9, 0x5d},
++	{0xf007, 0x00},
++	{0xf01f, 0xa0},
++	{0xf020, 0x00},
++	{0xf029, 0x82},
++	{0xf02a, 0x00},
++	{0xf047, 0x00},
++	{0xf054, 0x00},
++	{0xf055, 0x00},
++	{0xf077, 0x01},
++	{0xf1e6, 0x00},
++};
++
++static int af903x_fc0012_init(struct af903x_dev_ctx *ctx, int chip)
++{
++	int ret;
++	struct dvb_frontend *fe = ctx->fe[chip];
++	struct usb_device *udev = ctx->udev;
++
++	/* Control tuner enable */
++	ret = af9035_wr_reg_bits(udev, chip, PRO_LINK, GPIOT2_O, 0, 1, 1);
++	if (ret < 0)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, chip, PRO_LINK, GPIOT2_EN, 0, 1, 1);
++	if (ret < 0)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, chip, PRO_LINK, GPIOT2_ON, 0, 1, 1);
++	if (ret < 0)
++		goto exit;
++
++	/* Control pin diode */
++	ret = af9035_wr_reg_bits(udev, chip, PRO_LINK, GPIOH8_EN, 0, 1, 1);
++	if (ret < 0)
++		goto exit;
++	ret = af9035_wr_reg_bits(udev, chip, PRO_LINK, GPIOH8_ON, 0, 1, 1);
++	if (ret < 0)
++		goto exit;
++
++	if (ctx->tuner_init)
++		ret = ctx->tuner_init(fe);
++	if (ret < 0)
++		goto exit;
++
++	if (chip == 1) {
++		u8 val;
++		val = 0x02;
++		ret = af903x_wr_tuner_regs(ctx, 0, 0x0b, 1, &val);
++		if (ret < 0)
++			goto exit;
++		val = 0x6f;
++		ret = af903x_wr_tuner_regs(ctx, 0, 0x09, 1, &val);
++	}
++
++exit:
++	return ret;
++}
++
++static int af903x_fc0012_sleep(struct af903x_dev_ctx *ctx, int chip)
++{
++	int ret;
++	struct dvb_frontend *fe = ctx->fe[chip];
++	struct usb_device *udev = ctx->udev;
++
++	ret = af9035_wr_reg(udev, chip, PRO_LINK, GPIOH8_ON, 0);
++	if (ret < 0)
++		goto exit;
++	ret = af9035_wr_reg(udev, chip, PRO_LINK, GPIOH8_EN, 0);
++	if (ret < 0)
++		goto exit;
++
++	if (ctx->tuner_sleep)
++		ret = ctx->tuner_sleep(fe);
++
++exit:
++	return ret;
++}
++
++static int af903x_fc0012_set(struct af903x_dev_ctx *ctx, int chip,
++	u32 bandwidth, u32 frequency_m)
++{
++	int ret;
++	u8 val = 0;
++	struct dvb_frontend *fe = ctx->fe[chip];
++	struct usb_device *udev = ctx->udev;
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
++	u32 freq_backup = p->frequency;
++#else
++	struct dvb_frontend_parameters params;
++#endif
++	u32 frequency = frequency_m / 1000;
++
++	if (frequency-45000 > 955000)
++		return -EINVAL;
++	switch (frequency) {
++	case 177500:
++		frequency = 177000;
++		break;
++	case 184500:
++		frequency = 185000;
++		break;
++	case 191500:
++		frequency = 192000;
++		break;
++	case 191625:
++		frequency = 192125;
++		break;
++	case 198500:
++		frequency = 199000;
++		break;
++	case 205625:
++		frequency = 206125;
++		break;
++	default:
++		if (frequency > 300000)
++			val = 1;
++	}
++	ret = af9035_wr_reg_bits(udev, chip, PRO_LINK, GPIOH8_O, 0, 1, val);
++	if (ret)
++		goto exit;
++
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++	p->frequency = frequency * 1000;
++	p->bandwidth_hz = bandwidth;
++
++	if (fe->ops.tuner_ops.set_params)
++		ret = fe->ops.tuner_ops.set_params(fe);
++	p->frequency= freq_backup;
++#else
++	params.frequency = frequency * 1000;
++	switch (bandwidth) {
++	case 6000000:
++		params.u.ofdm.bandwidth = BANDWIDTH_6_MHZ;
++		break;
++	case 7000000:
++		params.u.ofdm.bandwidth = BANDWIDTH_7_MHZ;
++		break;
++	case 8000000:
++	default:
++		params.u.ofdm.bandwidth = BANDWIDTH_8_MHZ;
++		break;
++	}
++	if (fe->ops.tuner_ops.set_params)
++		ret = fe->ops.tuner_ops.set_params(fe, &params);
++#endif
++exit:
++	return ret;
++}
++
++struct tuner_desc tuner_fc0012 = {
++	af903x_fc0012_init,
++	af903x_fc0012_sleep,
++	af903x_fc0012_set,
++	fc0012_scripts,
++	fc0012_script_sets,
++	0xc6,
++	1,
++	0,
++	true,
++	TUNER_FC0012,
++};
++
++static u16 mxl5007t_script_sets[] = {
++	0x1e
++};
++
++static struct af903x_val_set mxl5007t_scripts[] = {
++	{0x0046, 0x1b},	/* TUNER_ID */
++	{0x0057, 0x01},
++	{0x0058, 0x01},
++	{0x005f, 0x00},
++	{0x0060, 0x00},
++	{0x0068, 0x96},
++	{0x0071, 0x05},
++	{0x0072, 0x02},
++	{0x0074, 0x01},
++	{0x0079, 0x01},
++	{0x0093, 0x00},
++	{0x0094, 0x00},
++	{0x0095, 0x00},
++	{0x0096, 0x00},
++	{0x00b3, 0x01},
++	{0x00c1, 0x01},
++	{0x00c2, 0x00},
++	{0xf007, 0x00},
++	{0xf00c, 0x19},
++	{0xf00d, 0x1a},
++	{0xf012, 0xda},
++	{0xf013, 0x00},
++	{0xf014, 0x00},
++	{0xf015, 0x02},
++	{0xf01f, 0x82},
++	{0xf020, 0x00},
++	{0xf029, 0x82},
++	{0xf02a, 0x00},
++	{0xf077, 0x02},
++	{0xf1e6, 0x00},
++};
++
++static int af903x_mxl5007t_init(struct af903x_dev_ctx *ctx, int chip)
++{
++	int ret = 0;
++	struct dvb_frontend *fe = ctx->fe[chip];
++
++	/* no special treatment here ? */
++	if (ctx->tuner_init)
++		ret = ctx->tuner_init(fe);
++
++        return ret;
++}
++
++static int af903x_mxl5007t_sleep(struct af903x_dev_ctx *ctx, int chip)
++{
++	int ret = 0;
++	struct dvb_frontend *fe = ctx->fe[chip];
++
++	/* no special treatment here ? */
++	if (ctx->tuner_sleep)
++		ret = ctx->tuner_sleep(fe);
++
++        return ret;
++}
++
++static int af903x_mxl5007t_set(struct af903x_dev_ctx *ctx, int chip,
++	u32 bandwidth, u32 frequency)
++{
++	int ret = 0;
++	struct dvb_frontend *fe = ctx->fe[chip];
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,3,0)
++	struct dtv_frontend_properties *p = &fe->dtv_property_cache;
++
++	p->frequency = frequency;
++	p->bandwidth_hz = bandwidth;
++
++	if (fe->ops.tuner_ops.set_params)
++		ret = fe->ops.tuner_ops.set_params(fe);
++#else
++	struct dvb_frontend_parameters params;
++
++	params.frequency = frequency;
++	switch (bandwidth) {
++	case 6000000:
++		params.u.ofdm.bandwidth = BANDWIDTH_6_MHZ;
++		break;
++	case 7000000:
++		params.u.ofdm.bandwidth = BANDWIDTH_7_MHZ;
++		break;
++	default:
++		params.u.ofdm.bandwidth = BANDWIDTH_8_MHZ;
++		break;
++	}
++	if (fe->ops.tuner_ops.set_params)
++		ret = fe->ops.tuner_ops.set_params(fe, &params);
++#endif
++	return ret;
++}
++
++struct tuner_desc tuner_mxl5007t = {
++	af903x_mxl5007t_init,
++	af903x_mxl5007t_sleep,
++	af903x_mxl5007t_set,
++	mxl5007t_scripts,
++	mxl5007t_script_sets,
++	0xc0,			/* tuner i2c address */
++	1,			/* length of tuner register address */
++	4570000,		/* tuner if */
++	true,			/* spectrum inverse */
++	TUNER_MXL5007T,		/* tuner id */
++};
+diff -Nupr a/drivers/media/dvb/dvb-usb/af903x-tuners.h b/drivers/media/dvb/dvb-usb/af903x-tuners.h
+--- a/drivers/media/dvb/dvb-usb/af903x-tuners.h	1970-01-01 01:00:00.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/af903x-tuners.h	2012-02-17 21:45:05.000000000 +0100
+@@ -0,0 +1,62 @@
++#ifndef _AF903X_TUNERS_H_
++#define _AF903X_TUNERS_H_
++
++#define TUNER_ENV77H11D5	0x01
++#define TUNER_MT2060		0x02
++#define TUNER_MXL5003		0x03
++#define TUNER_TD1316AFIHP	0x04
++#define TUNER_FS803A		0x05
++#define TUNER_QT1010		0x06
++#define TUNER_ENV75H10D8	0x07
++#define TUNER_TDTMG252D		0x08
++#define TUNER_HTXR03A		0x09
++#define TUNER_TDQ44M		0x0A
++#define TUNER_TUA6045		0x0B
++#define TUNER_TUA6034		0x0C
++#define TUNER_MXL5005		0x0D
++#define TUNER_664X		0x0E
++#define TUNER_6630		0x0F
++#define TUNER_DTOS403		0x10
++#define TUNER_DTOS446		0x11
++#define TUNER_FS803A_DLNA	0x12
++#define TUNER_MT2060_7SAW	0x13
++#define TUNER_TDQ03		0x14
++#define TUNER_759X		0x15
++#define TUNER_DTN317		0x16
++#define TUNER_PDHTF05D		0x17
++#define TUNER_ENG37A30GF	0x18
++#define TUNER_FQD1216ME_MK5	0x19
++#define TUNER_TUA6041		0x1A
++#define TUNER_TDA18271		0x1B
++#define TUNER_TDQD1X001A	0x1C
++#define TUNER_MXL5005_RSSI	0x1D
++#define TUNER_75101		0x1E
++#define TUNER_5056		0x1F
++#define TUNER_MC44CD02		0x20
++#define TUNER_MT2260B0		0x21
++#define TUNER_TDA18291HN	0x22
++#define TUNER_MT2266		0x23
++#define TUNER_ITD3020		0x24
++#define TUNER_PEACOCK		0x25
++#define TUNER_XC3028L		0x26
++#define TUNER_TUA9001		0x27
++#define TUNER_FC0011		0x28
++#define TUNER_TUA6039		0x29
++#define TUNER_XC4000		0x2A
++#define TUNER_TDA18271_C2	0x2B
++#define TUNER_TUA8010		0x2C
++#define TUNER_MT2266_TA4029CTC	0x2D
++#define TUNER_FC0012		0x2E
++#define TUNER_TDA18271_C2_ASKEY	0x2F
++#define TUNER_FQD1218ME_MK5	0x30
++#define TUNER_ADMTV102		0x31
++#define TUNER_FC2580		0x32
++#define TUNER_MAX2169		0x33
++#define TUNER_TDA18292		0x34
++#define TUNER_PICTOR		0x35
++#define TUNER_E4000		0x36
++#define TUNER_MXL5007T		0xa0
++#define TUNER_TDA18218		0xa1	/* NXP TDA 18218HN */
++#define TUNER_AF9007		0xFF
++
++#endif
+diff -Nupr a/drivers/media/dvb/dvb-usb/dvb-usb-ids.h b/drivers/media/dvb/dvb-usb/dvb-usb-ids.h
+--- a/drivers/media/dvb/dvb-usb/dvb-usb-ids.h	2012-03-09 05:45:19.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/dvb-usb-ids.h	2012-03-11 11:03:08.239732345 +0100
+@@ -76,6 +76,11 @@
+ #define USB_PID_AFATECH_AF9005				0x9020
+ #define USB_PID_AFATECH_AF9015_9015			0x9015
+ #define USB_PID_AFATECH_AF9015_9016			0x9016
++#define USB_PID_AFATECH_AF9035_1000			0x1000
++#define USB_PID_AFATECH_AF9035_1001			0x1001
++#define USB_PID_AFATECH_AF9035_1002			0x1002
++#define USB_PID_AFATECH_AF9035_1003			0x1003
++#define USB_PID_AFATECH_AF9035_9035			0x9035
+ #define USB_PID_TREKSTOR_DVBT				0x901b
+ #define USB_VID_ALINK_DTU				0xf170
+ #define USB_PID_ANSONIC_DVBT_USB			0x6000
+@@ -221,6 +226,15 @@
+ #define USB_PID_AVERMEDIA_A850T				0x850b
+ #define USB_PID_AVERMEDIA_A805				0xa805
+ #define USB_PID_AVERMEDIA_A815M				0x815a
++#define USB_PID_AVERMEDIA_A825				0x0825
++#define USB_PID_AVERMEDIA_A333				0xa333
++#define USB_PID_AVERMEDIA_B867				0xb867
++#define USB_PID_AVERMEDIA_1867				0x1867
++#define USB_PID_AVERMEDIA_0337				0x0337
++#define USB_PID_AVERMEDIA_A867				0xa867
++#define USB_PID_AVERMEDIA_0867				0x0867
++#define USB_PID_AVERMEDIA_F337				0xf337
++#define USB_PID_AVERMEDIA_3867				0x3867
+ #define USB_PID_TECHNOTREND_CONNECT_S2400               0x3006
+ #define USB_PID_TECHNOTREND_CONNECT_CT3650		0x300d
+ #define USB_PID_TERRATEC_CINERGY_DT_XS_DIVERSITY	0x005a
+@@ -234,6 +248,8 @@
+ #define USB_PID_TERRATEC_H7_2				0x10a3
+ #define USB_PID_TERRATEC_T3				0x10a0
+ #define USB_PID_TERRATEC_T5				0x10a1
++#define USB_PID_TERRATEC_T5_REV2			0x10b7
++#define USB_PID_TERRATEC_T6				0x10b3
+ #define USB_PID_PINNACLE_EXPRESSCARD_320CX		0x022e
+ #define USB_PID_PINNACLE_PCTV2000E			0x022c
+ #define USB_PID_PINNACLE_PCTV_DVB_T_FLASH		0x0228
+diff -Nupr a/drivers/media/dvb/dvb-usb/Kconfig b/drivers/media/dvb/dvb-usb/Kconfig
+--- a/drivers/media/dvb/dvb-usb/Kconfig	2012-02-29 05:45:38.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/Kconfig	2012-03-11 10:55:36.168631623 +0100
+@@ -339,6 +339,14 @@ config DVB_USB_AF9015
+ 	help
+ 	  Say Y here to support the Afatech AF9015 based DVB-T USB2.0 receiver
+ 
++config DVB_USB_AF903X
++	tristate "Afatech AF903X DVB-T USB2.0 support"
++	depends on DVB_USB && EXPERIMENTAL
++	select MEDIA_TUNER_FC0012   if !MEDIA_TUNER_CUSTOMISE
++	select MEDIA_TUNER_MXL5007T if !MEDIA_TUNER_CUSTOMISE
++	help
++	  Say Y here to support the Afatech AF903X based DVB-T USB2.0 receiver
++
+ config DVB_USB_CE6230
+ 	tristate "Intel CE6230 DVB-T USB2.0 support"
+ 	depends on DVB_USB
+diff -Nupr a/drivers/media/dvb/dvb-usb/Makefile b/drivers/media/dvb/dvb-usb/Makefile
+--- a/drivers/media/dvb/dvb-usb/Makefile	2012-03-09 05:45:19.000000000 +0100
++++ b/drivers/media/dvb/dvb-usb/Makefile	2012-03-11 10:57:27.044061006 +0100
+@@ -75,6 +75,9 @@ obj-$(CONFIG_DVB_USB_DTV5100) += dvb-usb
+ dvb-usb-af9015-objs = af9015.o
+ obj-$(CONFIG_DVB_USB_AF9015) += dvb-usb-af9015.o
+ 
++dvb-usb-af903x-objs = af903x-core.o af903x-devices.o af903x-fe.o af903x-tuners.o
++obj-$(CONFIG_DVB_USB_AF903X) += dvb-usb-af903x.o
++
+ dvb-usb-cinergyT2-objs = cinergyT2-core.o cinergyT2-fe.o
+ obj-$(CONFIG_DVB_USB_CINERGY_T2) += dvb-usb-cinergyT2.o
+ 

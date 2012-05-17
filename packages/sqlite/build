@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. config/options
+
+local_cflags="-fno-fast-math"
+
+cd $BUILD/$1*
+do_configure \
+            --disable-readline \
+            --enable-threadsafe \
+            --enable-dynamic-extensions \
+
+make
+make_install

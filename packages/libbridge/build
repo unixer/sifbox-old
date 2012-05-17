@@ -1,0 +1,29 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+make -C libbridge CC="$TARGET_CC"
+make -C libqos CC="$TARGET_CC"
+
+mkdir -p .install/usr/lib/pkgconfig .install/usr/include/libbridge
+
+cp -P libbridge/libbridge.so .install/usr/lib/libbridge.so.2
+ln -s libbridge.so.2 .install/usr/lib/libbridge.so
+cp -P libqos/libqos.so .install/usr/lib
+
+cp -PR include/* .install/usr/include/libbridge
+
+cat > .install/usr/lib/pkgconfig/libbridge.pc << EOF
+prefix=$LIB_PREFIX
+exec_prefix=$LIB_PREFIX
+libdir=$LIB_PREFIX/lib
+includedir=$LIB_PREFIX/include
+
+Name: libbridge
+Description: Texas Instruments' DSP/BIOS bridge
+Version: 23.3.3
+Libs: -L${libdir} -lbridge
+Cflags: -I${includedir}/dspbridge
+EOF

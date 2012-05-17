@@ -1,0 +1,19 @@
+--- /dev/null	2012-04-17 20:28:42.648997011 +0200
++++ media-experimental-media_build_experimental/linux/drivers/media/dvb/frontends/kmem_wrap.c	2011-10-09 22:22:35.000000000 +0200
+@@ -0,0 +1,16 @@
++#include <linux/slab.h>
++
++void *kmalloc_wrap(int size)
++{
++       return kmalloc(size, GFP_KERNEL);
++}
++
++void *kzalloc_wrap(int size)
++{
++       return kzalloc(size, GFP_KERNEL);
++}
++
++void kfree_wrap(void *p)
++{
++       kfree(p);
++}

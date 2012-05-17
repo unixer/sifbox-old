@@ -1,0 +1,59 @@
+#!/bin/sh
+
+. config/options
+
+if [ "$DEBUG" = yes ]; then
+  DEBUG_CONFIG="--enable-debug=3"
+else
+  DEBUG_CONFIG="--disable-debug"
+fi
+
+if pkg_uses $1 xorg; then
+  XORG_CONFIG="--enable-xlib-hack"
+#  export LDFLAGS="$LDFLAGS -lX11"
+else
+  XORG_CONFIG="--disable-xlib-hack"
+fi
+
+if pkg_uses $1 mplayer; then
+  MPLAYER_CONFIG="--enable-mplayer"
+else
+  MPLAYER_CONFIG="--disable-mplayer"
+fi
+
+if pkg_uses $1 xine; then
+  XINE_CONFIG="--enable-xine"
+else
+  XINE_CONFIG="--disable-xine"
+fi
+
+if pkg_uses $1 gstreamer; then
+  GST_CONFIG="--enable-gstreamer"
+else
+  GST_CONFIG="--disable-gstreamer"
+fi
+
+if pkg_uses $1 vlc; then
+  VLC_CONFIG="--enable-vlc"
+else
+  VLC_CONFIG="--disable-vlc"
+fi
+
+cd $BUILD/$1*
+./configure --prefix=/usr \
+            --disable-static \
+            --enable-shared \
+            $MPLAYER_CONFIG \
+            $XINE_CONFIG \
+            $VLC_CONFIG \
+            $GST_CONFIG \
+            --disable-binding-python \
+            --disable-optimize \
+            --cross-compile \
+            --disable-doc \
+            --disable-logcolor \
+            $DEBUG_CONFIG \
+            $XORG_CONFIG
+
+make
+make_install

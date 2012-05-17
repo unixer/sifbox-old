@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+cd $1-tools
+do_installdev usr/bin toolchain
+do_installdev usr/share/aclocal toolchain
+do_installdev usr/share/gettext/archive.* toolchain
+cd ..
+
+cd $1-runtime
+do_installdev usr/include
+do_installdev usr/lib

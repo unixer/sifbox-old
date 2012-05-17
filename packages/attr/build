@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_configure \
+            --libexecdir=/usr/lib \
+            --enable-gettext=no \
+
+make
+make_install
+chmod a+x $PWD/.install/usr/lib/lib*.so*

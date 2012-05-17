@@ -1,0 +1,85 @@
+# this file is used for globally available functions to be used inside init scripts
+
+# use r/w directory for some configuration
+# file/directory is created in case it doesn't exist and 4th parameter is set to "create"
+# usage: make_persistent <dir|file> <source file/dir> <use link> [create|nocreate]
+make_persistent() {
+  type=$1
+  orig=$2
+  data=$3
+  opt=$4
+
+  # already run somewhen before, restore if possible
+  if [ -L "${orig}" ]; then
+    rm "${orig}"
+    if [ -r "${orig}.geexdefault" ]; then mv "${orig}.geexdefault" "${orig}"; fi
+  fi
+
+  [ "$opt" = "create" ] || opt="nocreate"
+
+  dirname_data=$( echo $data | sed -e 's/\/$//' -e 's,[^/]*$,,' )
+
+  [ -n "$dirname_data" ] && mkdir -p "$dirname_data"
+
+  # use original content if not yet existant
+  if [ "$type" = "dir" ]; then
+    [ -d "$data" ] || \
+        ( if [ -d "$orig" ]; then cp -dpR "$orig" "$data"; else [ "$opt" = "create" ] && mkdir "$data"; fi )
+  elif [ "$type" = "file" ]; then
+    [ -f "$data" ] || \
+        ( if [ -f "$orig" ]; then cp "$orig" "$data"; else [ "$opt" = "create" ] && echo -n >"$data"; fi )
+  else
+    exit
+  fi
+     
+  # make backup and create link
+  [ -e "$orig" ] && mv -f "$orig" "${orig}.geexdefault"
+  ( echo "$orig" | grep -q '^/' ) || orig="${PWD}/${orig}"
+  ( echo "$data" | grep -q '^/' ) || data="${PWD}/${data}"
+  ln -f -s "$data" "$orig"
+}
+
+# softlink-safe version of 'sed -i', same as '--follow-symlinks' of non-busybox-sed
+# usage: sed_in_place <file> <commands...>
+sed_in_place () {
+  file=$1
+  shift
+  cmds=$@
+  [ -w "$file" ] || ( echo "unable to sed_in_place(), file \"$file\" either not existent or writable" >&2; return -1 )
+  tmp=/tmp/sed.tmp
+  sed $cmds "$file" >"$tmp" && cat "$tmp" >"$file"
+  rm -f "$tmp"
+}
+
+# get value given for key $1 on kernel cmdline, otherwise return default $2
+cmdline_default () {
+  ret=`sed -n "s/.*$1=\([^ ]*\).*/\1/p" /proc/cmdline`
+  test -z $ret && ret=$2
+  [ -n "$LOGFILE" ] && echo "\"cmdline_default $1 $2\" returned $ret" >> $LOGFILE
+  echo $ret
+}
+
+wait_for_network () {
+  if [ -x /usr/bin/amionline ]; then
+    val=`/usr/bin/amionline`
+    while [ "$val" != "Network state is online" ]; do
+      val=`/usr/bin/amionline`
+      usleep 200000
+    done
+  else
+    # fallback to old method used by network package, should be eventually
+    # killed for good
+    while [ ! -f /var/ifup ]; do
+      usleep 200000
+    done
+  fi
+} 
+
+epoch_to_localtime () {
+  if [ -n "$1" ]; then
+    epoch_seconds=$1
+  else 
+    epoch_seconds=0
+  fi
+  date -d "1970.01.01-00:00:$epoch_seconds" +"%Y-%m-%d %T %Z"
+}

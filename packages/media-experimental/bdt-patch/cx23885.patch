@@ -1,0 +1,399 @@
+diff -uN a/drivers/media/video/cx23885/cx23885-cards.c b/drivers/media/video/cx23885/cx23885-cards.c
+--- a/drivers/media/video/cx23885/cx23885-cards.c	2011-10-15 11:45:29.000000000 +0800
++++ b/drivers/media/video/cx23885/cx23885-cards.c	2011-12-05 15:08:15.000000000 +0800
+@@ -437,7 +437,21 @@
+ 			.amux   = CX25840_AUDIO7,
+ 			.gpio0  = 0,
+ 		} },
++	},
++	[CX23885_BOARD_BST_PS8512] = {
++		.name		= "Bestunar PS8512",
++		.portb		= CX23885_MPEG_DVB,
++	},
++	[CX23885_BOARD_DVBSKY_S950] = {
++		.name		= "DVBSKY S950",
++		.portb		= CX23885_MPEG_DVB,
+ 	},
++	[CX23885_BOARD_DVBSKY_S952] = {
++		.name		= "DVBSKY S952",
++		.portb		= CX23885_MPEG_DVB,
++		.portc		= CX23885_MPEG_DVB,
++	},		
++
+ };
+ const unsigned int cx23885_bcount = ARRAY_SIZE(cx23885_boards);
+ 
+@@ -637,6 +651,18 @@
+ 		.subvendor = 0x1b55,
+ 		.subdevice = 0xe2e4,
+ 		.card      = CX23885_BOARD_NETUP_DUAL_DVB_T_C_CI_RF,
++	}, {
++		.subvendor = 0x14f1,
++		.subdevice = 0x8512,
++		.card      = CX23885_BOARD_BST_PS8512,
++	}, {
++		.subvendor = 0x4254,
++		.subdevice = 0x0950,
++		.card      = CX23885_BOARD_DVBSKY_S950,		
++	}, {
++		.subvendor = 0x4254,
++		.subdevice = 0x0952,
++		.card      = CX23885_BOARD_DVBSKY_S952,
+ 	},
+ };
+ const unsigned int cx23885_idcount = ARRAY_SIZE(cx23885_subids);
+@@ -1147,9 +1173,57 @@
+ 		/* enable irq */
+ 		cx_write(GPIO_ISM, 0x00000000);/* INTERRUPTS active low*/
+ 		break;
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_BST_PS8512:			
++		cx23885_gpio_enable(dev, GPIO_2, 1);
++		cx23885_gpio_clear(dev, GPIO_2);
++		msleep(100);		
++		cx23885_gpio_set(dev, GPIO_2);
++		break;
++	case CX23885_BOARD_DVBSKY_S952:		
++		cx_write(MC417_CTL, 0x00000037);/* enable GPIO3-18 pins */
++		
++		cx23885_gpio_enable(dev, GPIO_2, 1);
++		cx23885_gpio_enable(dev, GPIO_11, 1);
++		
++		cx23885_gpio_clear(dev, GPIO_2);
++		cx23885_gpio_clear(dev, GPIO_11);
++		msleep(100);		
++		cx23885_gpio_set(dev, GPIO_2);
++		cx23885_gpio_set(dev, GPIO_11);
++		
++		break;
+ 	}
+ }
+ 
++static int cx23885_ir_patch(struct i2c_adapter *i2c, u8 reg, u8 mask)
++{
++	struct i2c_msg msgs[2];
++	u8 tx_buf[2], rx_buf[1];
++	/* Write register address */
++	tx_buf[0] = reg;
++	msgs[0].addr = 0x4c;
++	msgs[0].flags = 0;
++	msgs[0].len = 1;
++	msgs[0].buf = (char *) tx_buf;
++	/* Read data from register */
++	msgs[1].addr = 0x4c;
++	msgs[1].flags = I2C_M_RD;
++	msgs[1].len = 1;
++	msgs[1].buf = (char *) rx_buf;	
++	
++	i2c_transfer(i2c, msgs, 2);
++
++	tx_buf[0] = reg;
++	tx_buf[1] = rx_buf[0] | mask;
++	msgs[0].addr = 0x4c;
++	msgs[0].flags = 0;
++	msgs[0].len = 2;
++	msgs[0].buf = (char *) tx_buf;
++	
++	return i2c_transfer(i2c, msgs, 1);
++}	
++	
+ int cx23885_ir_init(struct cx23885_dev *dev)
+ {
+ 	static struct v4l2_subdev_io_pin_config ir_rxtx_pin_cfg[] = {
+@@ -1181,7 +1255,7 @@
+ 	const size_t ir_rx_pin_cfg_count = ARRAY_SIZE(ir_rx_pin_cfg);
+ 
+ 	struct v4l2_subdev_ir_parameters params;
+-	int ret = 0;
++	int ret = 0;	
+ 	switch (dev->board) {
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1500:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1500Q:
+@@ -1232,6 +1306,20 @@
+ 		v4l2_subdev_call(dev->sd_cx25840, core, s_io_pin_config,
+ 				 ir_rx_pin_cfg_count, ir_rx_pin_cfg);
+ 		break;
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_DVBSKY_S952:
++		dev->sd_ir = cx23885_find_hw(dev, CX23885_HW_AV_CORE);
++		if (dev->sd_ir == NULL) {
++			ret = -ENODEV;
++			break;
++		}
++		v4l2_subdev_call(dev->sd_cx25840, core, s_io_pin_config,
++				 ir_rx_pin_cfg_count, ir_rx_pin_cfg);
++				 
++		cx23885_ir_patch(&(dev->i2c_bus[2].i2c_adap),0x1f,0x80);
++		cx23885_ir_patch(&(dev->i2c_bus[2].i2c_adap),0x23,0x80);
++		break;
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
+ 		if (!enable_885_ir)
+ 			break;
+@@ -1263,6 +1351,9 @@
+ 		break;
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_DVBSKY_S952:
+ 		cx23885_irq_remove(dev, PCI_MSK_AV_CORE);
+ 		/* sd_ir is a duplicate pointer to the AV Core, just clear it */
+ 		dev->sd_ir = NULL;
+@@ -1306,6 +1397,9 @@
+ 		break;
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_DVBSKY_S952:
+ 		if (dev->sd_ir)
+ 			cx23885_irq_add_enable(dev, PCI_MSK_AV_CORE);
+ 		break;
+@@ -1388,6 +1482,8 @@
+ 		ts1->ts_clk_en_val = 0x1; /* Enable TS_CLK */
+ 		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
+ 		break;
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_DVBWORLD_2005:
+ 		ts1->gen_ctrl_val  = 0x5; /* Parallel */
+@@ -1417,6 +1513,14 @@
+ 		ts2->ts_clk_en_val = 0x1; /* Enable TS_CLK */
+ 		ts2->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
+ 		break;
++	case CX23885_BOARD_DVBSKY_S952:
++		ts1->gen_ctrl_val  = 0x5; /* Parallel */
++		ts1->ts_clk_en_val = 0x1; /* Enable TS_CLK */
++		ts1->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
++		ts2->gen_ctrl_val  = 0xe; /* Serial bus + punctured clock */
++		ts2->ts_clk_en_val = 0x1; /* Enable TS_CLK */
++		ts2->src_sel_val   = CX23885_SRC_SEL_PARALLEL_MPEG_VIDEO;
++		break;
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1500:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1500Q:
+@@ -1468,6 +1572,9 @@
+ 	case CX23885_BOARD_GOTVIEW_X5_3D_HYBRID:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1500:
+ 	case CX23885_BOARD_MPX885:
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_DVBSKY_S952:
+ 		dev->sd_cx25840 = v4l2_i2c_new_subdev(&dev->v4l2_dev,
+ 				&dev->i2c_bus[2].i2c_adap,
+ 				"cx25840", 0x88 >> 1, NULL);
+diff -uN a/drivers/media/video/cx23885/cx23885-dvb.c b/drivers/media/video/cx23885/cx23885-dvb.c
+--- a/drivers/media/video/cx23885/cx23885-dvb.c	2011-08-07 11:45:25.000000000 +0800
++++ b/drivers/media/video/cx23885/cx23885-dvb.c	2012-02-13 14:39:29.000000000 +0800
+@@ -51,6 +51,7 @@
+ #include "stv6110.h"
+ #include "lnbh24.h"
+ #include "cx24116.h"
++#include "m88ds3103.h"
+ #include "cimax2.h"
+ #include "lgs8gxx.h"
+ #include "netup-eeprom.h"
+@@ -479,6 +480,30 @@
+ 	.if_khz = 5380,
+ };
+ 
++/* bestunar single dvb-s2 */
++static struct m88ds3103_config bst_ds3103_config = {
++	.demod_address = 0x68,
++	.ci_mode = 0,
++	.pin_ctrl = 0x82,
++	.ts_mode = 0,
++	.set_voltage = bst_set_voltage,
++};
++/* DVBSKY dual dvb-s2 */
++static struct m88ds3103_config dvbsky_ds3103_config_pri = {
++	.demod_address = 0x68,
++	.ci_mode = 0,
++	.pin_ctrl = 0x82,
++	.ts_mode = 0,
++	.set_voltage = bst_set_voltage,	
++};
++static struct m88ds3103_config dvbsky_ds3103_config_sec = {
++	.demod_address = 0x68,
++	.ci_mode = 0,
++	.pin_ctrl = 0x82,
++	.ts_mode = 1,
++	.set_voltage = dvbsky_set_voltage_sec,	
++};
++
+ static int cx23885_dvb_set_frontend(struct dvb_frontend *fe,
+ 				    struct dvb_frontend_parameters *param)
+ {
+@@ -1118,6 +1143,32 @@
+ 				goto frontend_detach;
+ 		}
+ 		break;
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++		i2c_bus = &dev->i2c_bus[1];	
++		fe0->dvb.frontend = dvb_attach(m88ds3103_attach,
++					&bst_ds3103_config,
++					&i2c_bus->i2c_adap);
++		break;	
++			
++	case CX23885_BOARD_DVBSKY_S952:
++		switch (port->nr) {
++		/* port B */
++		case 1:
++			i2c_bus = &dev->i2c_bus[1];
++			fe0->dvb.frontend = dvb_attach(m88ds3103_attach,
++						&dvbsky_ds3103_config_pri,
++						&i2c_bus->i2c_adap);
++			break;
++		/* port C */
++		case 2:
++			i2c_bus = &dev->i2c_bus[0];
++			fe0->dvb.frontend = dvb_attach(m88ds3103_attach,
++						&dvbsky_ds3103_config_sec,
++						&i2c_bus->i2c_adap);		
++			break;
++		}
++		break;
+ 	default:
+ 		printk(KERN_INFO "%s: The frontend of your DVB/ATSC card "
+ 			" isn't supported yet\n",
+diff -uN a/drivers/media/video/cx23885/cx23885-f300.c b/drivers/media/video/cx23885/cx23885-f300.c
+--- a/drivers/media/video/cx23885/cx23885-f300.c	2010-07-04 05:22:08.000000000 +0800
++++ b/drivers/media/video/cx23885/cx23885-f300.c	2012-02-13 22:32:56.000000000 +0800
+@@ -175,3 +175,59 @@
+ 
+ 	return f300_xfer(fe, buf);
+ }
++
++/* bst control */
++int bst_set_voltage(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
++{
++	struct cx23885_tsport *port = fe->dvb->priv;
++	struct cx23885_dev *dev = port->dev;
++	
++	cx23885_gpio_enable(dev, GPIO_1, 1);
++	cx23885_gpio_enable(dev, GPIO_0, 1);
++
++	switch (voltage) {
++	case SEC_VOLTAGE_13:
++		cx23885_gpio_set(dev, GPIO_1);
++		cx23885_gpio_clear(dev, GPIO_0);
++		break;
++	case SEC_VOLTAGE_18:
++		cx23885_gpio_set(dev, GPIO_1);
++		cx23885_gpio_set(dev, GPIO_0);
++		break;
++	case SEC_VOLTAGE_OFF:
++		cx23885_gpio_clear(dev, GPIO_1);
++		cx23885_gpio_clear(dev, GPIO_0);
++		break;
++	}
++	
++
++	return 0;
++}
++
++int dvbsky_set_voltage_sec(struct dvb_frontend *fe, fe_sec_voltage_t voltage)
++{
++	struct cx23885_tsport *port = fe->dvb->priv;
++	struct cx23885_dev *dev = port->dev;
++	
++	cx23885_gpio_enable(dev, GPIO_12, 1);
++	cx23885_gpio_enable(dev, GPIO_13, 1);
++
++	switch (voltage) {
++	case SEC_VOLTAGE_13:
++		cx23885_gpio_set(dev, GPIO_13);
++		cx23885_gpio_clear(dev, GPIO_12);
++		break;
++	case SEC_VOLTAGE_18:
++		cx23885_gpio_set(dev, GPIO_13);
++		cx23885_gpio_set(dev, GPIO_12);
++		break;
++	case SEC_VOLTAGE_OFF:
++		cx23885_gpio_clear(dev, GPIO_13);
++		cx23885_gpio_clear(dev, GPIO_12);
++		break;
++	}
++	
++
++	return 0;
++}
++
+diff -uN a/drivers/media/video/cx23885/cx23885-f300.h b/drivers/media/video/cx23885/cx23885-f300.h
+--- a/drivers/media/video/cx23885/cx23885-f300.h	2010-07-04 05:22:08.000000000 +0800
++++ b/drivers/media/video/cx23885/cx23885-f300.h	2011-10-25 15:45:02.000000000 +0800
+@@ -1,2 +1,8 @@
++extern int dvbsky_set_voltage_sec(struct dvb_frontend *fe,
++				fe_sec_voltage_t voltage);
++				
++extern int bst_set_voltage(struct dvb_frontend *fe,
++				fe_sec_voltage_t voltage);
++				
+ extern int f300_set_voltage(struct dvb_frontend *fe,
+ 				fe_sec_voltage_t voltage);
+diff -uN a/drivers/media/video/cx23885/cx23885.h b/drivers/media/video/cx23885/cx23885.h
+--- a/drivers/media/video/cx23885/cx23885.h	2011-10-15 11:45:29.000000000 +0800
++++ b/drivers/media/video/cx23885/cx23885.h	2011-12-05 15:08:28.000000000 +0800
+@@ -87,6 +87,9 @@
+ #define CX23885_BOARD_NETUP_DUAL_DVB_T_C_CI_RF 30
+ #define CX23885_BOARD_LEADTEK_WINFAST_PXDVR3200_H_XC4000 31
+ #define CX23885_BOARD_MPX885                   32
++#define CX23885_BOARD_BST_PS8512               (CX23885_BOARD_MPX885+1)
++#define CX23885_BOARD_DVBSKY_S952              (CX23885_BOARD_BST_PS8512+1)
++#define CX23885_BOARD_DVBSKY_S950              (CX23885_BOARD_DVBSKY_S952+1)
+ 
+ #define GPIO_0 0x00000001
+ #define GPIO_1 0x00000002
+diff -uN a/drivers/media/video/cx23885/cx23885-input.c b/drivers/media/video/cx23885/cx23885-input.c
+--- a/drivers/media/video/cx23885/cx23885-input.c	2011-06-22 11:45:32.000000000 +0800
++++ b/drivers/media/video/cx23885/cx23885-input.c	2011-12-05 15:08:38.000000000 +0800
+@@ -87,6 +87,9 @@
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1290:
+ 	case CX23885_BOARD_TEVII_S470:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_DVBSKY_S952:
+ 		/*
+ 		 * The only boards we handle right now.  However other boards
+ 		 * using the CX2388x integrated IR controller should be similar
+@@ -138,6 +141,9 @@
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1850:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1290:
+ 	case CX23885_BOARD_HAUPPAUGE_HVR1250:
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_DVBSKY_S952:
+ 		/*
+ 		 * The IR controller on this board only returns pulse widths.
+ 		 * Any other mode setting will fail to set up the device.
+@@ -279,6 +285,15 @@
+ 		/* A guess at the remote */
+ 		rc_map = RC_MAP_TEVII_NEC;
+ 		break;
++	case CX23885_BOARD_BST_PS8512:
++	case CX23885_BOARD_DVBSKY_S950:
++	case CX23885_BOARD_DVBSKY_S952:
++		/* Integrated CX2388[58] IR controller */
++		driver_type = RC_DRIVER_IR_RAW;
++		allowed_protos = RC_TYPE_ALL;
++		/* A guess at the remote */
++		rc_map = RC_MAP_DVBSKY;
++		break;
+ 	default:
+ 		return -ENODEV;
+ 	}
+diff -uN a/drivers/media/video/cx23885/Kconfig b/drivers/media/video/cx23885/Kconfig
+--- a/drivers/media/video/cx23885/Kconfig	2011-09-24 11:45:14.000000000 +0800
++++ b/drivers/media/video/cx23885/Kconfig	2012-02-13 14:40:31.000000000 +0800
+@@ -20,6 +20,7 @@
+ 	select DVB_LNBP21 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV6110 if !DVB_FE_CUSTOMISE
+ 	select DVB_CX24116 if !DVB_FE_CUSTOMISE
++	select DVB_M88DS3103 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0900 if !DVB_FE_CUSTOMISE
+ 	select DVB_DS3000 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0367 if !DVB_FE_CUSTOMISE

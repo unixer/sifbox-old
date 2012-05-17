@@ -1,0 +1,7 @@
+--- linux/drivers/media/common/Makefile	2010-07-03 23:22:08.000000000 +0200
++++ experimental/v4l-dvb-saa716x/linux/drivers/media/common/Makefile	2011-05-03 02:36:39.000000000 +0200
+@@ -4,3 +4,4 @@ saa7146_vv-objs := saa7146_fops.o saa714
+ obj-y += tuners/
+ obj-$(CONFIG_VIDEO_SAA7146) += saa7146.o
+ obj-$(CONFIG_VIDEO_SAA7146_VV) += saa7146_vv.o
++obj-$(CONFIG_SAA716X_CORE) += saa716x/

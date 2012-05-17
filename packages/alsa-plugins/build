@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1-*
+
+do_configure \
+            --with-plugindir=/usr/lib/alsa \
+            --disable-jack \
+            --disable-samplerate \
+            --disable-avcodec \
+            --disable-samplerate \
+            --enable-pulseaudio \
+            --with-speex=lib \
+
+make
+make_install

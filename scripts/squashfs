@@ -1,0 +1,27 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/installdev squashfs
+
+SQUASH_DIR=$ROOT/$BUILD/squashfs
+SQUASH_IMG=$SQUASH_DIR/rootfs
+
+rm -rf $SQUASH_DIR
+mkdir -p $SQUASH_DIR
+INSTALL=$BUILD/iso
+cd $SQUASH_DIR
+mkdir -p tmp
+cp -PR $ROOTFS/* tmp
+rm -rf tmp/boot
+#mksquashfs tmp /root/openbricks/build/build.i386.eglibc/rootfs/rootfs  
+#mksquashfs /root/openbricks/build/build.i386.eglibc/rootfs/ tmp/rootfs -noappend
+
+$ROOT/$TOOLCHAIN/bin/mksquashfs tmp $SQUASH_IMG -noappend -comp $COMPRESSION_METHOD -b 1048576
+mkdir -p $ROOT/$INSTALL
+cp -P $SQUASH_IMG $ROOT/$INSTALL
+#cp -P /root/openbricks/build/build.i386.eglibc/squashfs/tmp/rootfs $ROOT/$INSTALL
+
+cd -
+
+exit 0

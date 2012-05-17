@@ -1,0 +1,10 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*/$1_*src
+
+LSOF_VSTR=$(kernel_version) LINUX_HASSELINUX=n LINUX_BASE=/proc \
+  ./Configure -n linux
+
+make CC="$CC" CFGL="$LDFLAGS -L./lib -llsof"

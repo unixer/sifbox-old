@@ -1,0 +1,11 @@
+[Unit]
+Description=udev automounter daemon
+Conflicts=installator.target
+After=udev-settle.service
+
+[Service]
+ExecStart=/usr/bin/automountd
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

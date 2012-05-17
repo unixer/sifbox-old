@@ -1,0 +1,568 @@
+diff -urN dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_adap.c dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_adap.c
+--- dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_adap.c	2011-10-02 09:36:02.000000000 +0200
++++ dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_adap.c	2012-03-08 11:04:46.395470271 +0100
+@@ -28,9 +28,7 @@
+ #define DBGLEV_ADAP2	(DBGLEV_2<<DBGLEV_ADAP)
+ #define DBGLEV_ADAP3	(DBGLEV_3<<DBGLEV_ADAP)
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
+ DVB_DEFINE_MOD_OPT_ADAPTER_NR(adapter_nr);
+-#endif
+ 
+ /* -- Functions offered to others  -- */
+ unsigned int dvblo_set_event (struct dvblo *dvblo, unsigned int event)
+@@ -94,7 +92,7 @@
+ 		rv = -ERESTARTSYS;
+ 
+ 	else {
+-		dprintk (DBGLEV_ADAP3, "[%s] dvblo=%p, buf=%p, len=%zu\n", dvblo->name, dvblo, buf, len);
++		dprintk (DBGLEV_ADAP3, "[%s] dvblo=%p, buf=%p, len=%u\n", dvblo->name, dvblo, buf, len);
+ 		if (dvblo->feeding > 0) {
+ 			dvb_dmx_swfilter_packets (&dvblo->dvb.demux, buf, len / DVBLO_TS_SZ);
+ 			dvblo->stats.ts_count += len / DVBLO_TS_SZ;
+@@ -251,6 +249,7 @@
+ 	return rv;
+ }
+ 
++
+ /** 
+  * @todo support automatic selection of DVB adapter number
+  * if adapnum param is negative.
+@@ -273,7 +272,7 @@
+ 			break;
+ 		}
+ 		memset (dvblo, 0, sizeof (*dvblo));
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
++		#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,37)
+ 		sema_init (&dvblo->sem, 1);
+ #else
+ 		init_MUTEX (&dvblo->sem);
+@@ -294,12 +293,11 @@
+ 		dprintk (2, "creating virtual DVB adapter %s...\n", dvblo->name);
+ 
+ 		/* returns the adapter number (>= 0) or an error (< 0) */
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,26)
+-		i = dvb_register_adapter (&dvblo->dvb.adap, (const char *) dvblo->name, THIS_MODULE, NULL, adapter_nr);
+-#elif LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
++#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,18)
+ 		/* since kernel version 2.6.18 dvb_register_adapter() has a fourth argument: device */
+ 		/**@todo do we need to supply a value for <device>? */
+-		i = dvb_register_adapter (&dvblo->dvb.adap, (const char *) dvblo->name, THIS_MODULE, NULL);
++		//i = dvb_register_adapter (&dvblo->dvb.adap, (const char *) dvblo->name, THIS_MODULE, NULL);
++		i = dvb_register_adapter (&dvblo->dvb.adap, (const char *) dvblo->name, THIS_MODULE, NULL, adapter_nr);
+ 
+ #else /*  */
+ 		/* NOTE: 
+diff -urN dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_adap_ca.c dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_adap_ca.c
+--- dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_adap_ca.c	2011-10-02 09:36:02.000000000 +0200
++++ dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_adap_ca.c	2012-03-08 11:04:46.395470271 +0100
+@@ -169,11 +169,9 @@
+ 		return -EINVAL;
+ 	DVB_RINGBUFFER_SKIP(cibuf, 2);
+ 
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,27)
++	//return dvb_ringbuffer_read(cibuf, buf, len, 1);
+ 	return dvb_ringbuffer_read_user(cibuf, buf, len);
+-#else
+-	return dvb_ringbuffer_read(cibuf, buf, len, 1);
+-#endif
++
+ }
+ 
+ static int dvb_ca_open(struct inode *inode, struct file *file)
+@@ -215,8 +213,8 @@
+ #if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35)
+ static int dvb_ca_ioctl(struct file *file, unsigned int cmd, void *parg)
+ #else
+-static int dvb_ca_ioctl(struct inode *inode, struct file *file,
+-		 unsigned int cmd, void *parg)
++ static int dvb_ca_ioctl(struct inode *inode, struct file *file,
++ 		 unsigned int cmd, void *parg)
+ #endif
+ {
+ 	struct dvb_device *dvbdev = file->private_data;
+@@ -283,7 +281,7 @@
+ 	struct dvb_device *dvbdev = file->private_data;
+ 	struct dvblo *dvblo = dvbdev->priv;
+ 
+-	dprintk(DBGLEV_ADAP_CA1, "dvblo:%p read %zd\n",dvblo, count);
++	dprintk(DBGLEV_ADAP_CA1, "dvblo:%p read %d\n",dvblo, count);
+ 	return ci_ll_read(&dvblo->ci_rbuffer, file, buf, count, ppos);
+ }
+ 
+@@ -291,7 +289,7 @@
+ 	.owner		= THIS_MODULE,
+ 	.read		= dvb_ca_read,
+ 	.write		= dvb_ca_write,
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35)
++	#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,35)
+ 	.unlocked_ioctl = dvb_generic_ioctl,
+ #else
+ 	.ioctl		= dvb_generic_ioctl,
+diff -urN dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_adap_fe.c dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_adap_fe.c
+--- dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_adap_fe.c	2011-10-02 09:36:02.000000000 +0200
++++ dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_adap_fe.c	2012-03-08 11:04:46.395470271 +0100
+@@ -26,11 +26,6 @@
+ #define DBGLEV_ADAP_FE2		(DBGLEV_2<<DBGLEV_ADAP_FE)
+ #define DBGLEV_ADAP_FE3		(DBGLEV_3<<DBGLEV_ADAP_FE)
+ 
+-#define NETCEIVER_FEC_3_5  13
+-#define NETCEIVER_FEC_9_10 14
+-#define NETCEIVER_QPSK_S2   9 
+-#define NETCEIVER_PSK8     10
+-
+ #if 0
+ struct dvb_frontend_parameters
+ {
+@@ -62,6 +57,7 @@
+ {
+ 	int rv = SUCCESS;
+ 	struct dvblo *dvblo = FE_PRIV (fe);
++
+ 	dprintk (DBGLEV_ADAP_FE3, "fe=%p\n", fe);
+ 	if (dvblo == NULL)
+ 		rv = -EINVAL;
+@@ -74,44 +70,61 @@
+ 
+ int dvblo_adap_fe_set_frontend (struct dvb_frontend *fe, struct dvb_frontend_parameters *params)
+ {
++	struct dtv_frontend_properties *c = &fe->dtv_property_cache;
+ 	int rv = SUCCESS;
+ 	struct dvblo *dvblo = FE_PRIV (fe);
++
+ 	dprintk (DBGLEV_ADAP_FE3, "fe=%p\n", fe);
+ 	if (dvblo == NULL)
+ 		rv = -EINVAL;
+ 
+ 	else {
+ 		dvblo->fe.params = *params;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,28)
+-		if (dvblo_netceiver) {
+-			struct dtv_frontend_properties *c =
+-				&fe->dtv_property_cache;
+-
+-			if (c->delivery_system == SYS_DVBS2) {
+-				switch ((int)c->fec_inner) {
+-				case FEC_3_5:
+-					dvblo->fe.params.u.qpsk.fec_inner =
+-						NETCEIVER_FEC_3_5;
++
++		/* Hack for netceiver: modulation type is encoded in upper bits of FEC. Adjust dvblo->fe.params.qpsk.fec_inner accordingly. */
++		/* Translate FEC and modulation as well. New DVBAPI uses other enum values for the same things. */
++		
++		switch(c->delivery_system) {
++		        case SYS_DVBS:
++			    dprintk(DBGLEV_ADAP_FE, "DVB-S delivery system selected\n");
++			    break;
++		        case SYS_DVBS2:
++			    switch(c->fec_inner) {
++				    case FEC_3_5:
++					    /* set lower 16bits (FEC) to 13 for FEC 3/5, clear upper 16 bits (modulation) */
++					    dvblo->fe.params.u.qpsk.fec_inner = 13;
++					    dprintk(DBGLEV_ADAP_FE, "DVB-S2 delivery system: FEC3/5\n");
+ 					break;
+-				case FEC_9_10:
+-					dvblo->fe.params.u.qpsk.fec_inner =
+-						NETCEIVER_FEC_9_10;
++				    case FEC_9_10:
++					    /* set lower 16bits (FEC) to 14 for FEC 9/10, clear upper 16 bits (modulation) */
++					    dvblo->fe.params.u.qpsk.fec_inner = 14;
++					    dprintk(DBGLEV_ADAP_FE, "DVB-S2 delivery system: FEC9/10\n");
+ 					break;
+-				}
+-				switch ((int)c->modulation) {
+-				case QPSK:
+-					dvblo->fe.params.u.qpsk.fec_inner |=
+-						NETCEIVER_QPSK_S2 << 16;
++				    default:
+ 					break;
+-				case PSK_8:
+-					dvblo->fe.params.u.qpsk.fec_inner |=
+-						NETCEIVER_PSK8 << 16;
++			    }
++			    switch(c->modulation) {
++				    case QPSK:
++					    /* set upper 16bits (modulation) to 9 for DVB-S2 QPSK */
++				    	    dvblo->fe.params.u.qpsk.fec_inner |= (9<<16);
++					    dprintk(DBGLEV_ADAP_FE, "DVB-S2 delivery system: QPSK (DVB-S2)\n");
+ 					break;
+-				}
+-			}
+-		}
+-#endif
++				    case PSK_8: 
++					    /* set upper 16bits (modulation) to 10 for DVB-S2 8PSK */
++				    	    dvblo->fe.params.u.qpsk.fec_inner |= (10<<16);
++					    dprintk(DBGLEV_ADAP_FE, "DVB-S2 delivery system: 8PSK\n");
++					break;
++				    default:
++					break;
++			    }
++			    
++			    break;
++			default:
++			    break;
++    		}    
++
+ 		dvblo_set_event (dvblo, EV_FRONTEND);
++
+ 	}
+ 	return rv;
+ }
+@@ -456,6 +469,9 @@
+ 
+ #endif /*  */
+ 	*info = ops->info;
++
++        dprintk(DBGLEV_ADAP_FE, "Netceiver (mcli) called GET_INFO! Please report!\n");
++
+ 	return rv;
+ }
+ 
+@@ -475,10 +491,17 @@
+ 
+ #endif /*  */
+ 	ops->info = *info;
+-#if LINUX_VERSION_CODE >= KERNEL_VERSION(2,6,29)
+-	if (dvblo_netceiver && strstr(info->name, "DVB-S2"))
+-		ops->info.caps |= FE_CAN_2G_MODULATION;
+-#endif
++
++	dprintk(DBGLEV_ADAP_FE, "frontend type(from netceiver): %d\n", info->type);
++	dprintk(DBGLEV_ADAP_FE, "frontend name(from netceiver): %s\n", info->name);
++	
++	/* Hack for netceiver: if the name contains "DVB-S2", */
++	/* set new capability flag FE_CAN_2ND_GEN_MODULATION in .caps */
++	/* This is called by mcli and _not_ by the user space app. */
++
++	if ( strstr(info->name, "DVB-S2") ) 
++	    ops->info.caps  |= FE_CAN_2G_MODULATION;
++	
+ 	return rv;
+ }
+ 
+@@ -486,7 +509,7 @@
+ int dvblo_fe_get_tunerinfo (struct dvblo *dvblo, struct dvb_tuner_info *tunerinfo)
+ {
+ 	struct dvb_frontend_ops *ops;
+-
++	
+ 	int rv = SUCCESS;
+ 	if (dvblo == NULL) {
+ 		rv = -EINVAL;
+@@ -500,7 +523,7 @@
+ int dvblo_fe_set_tunerinfo (struct dvblo *dvblo, struct dvb_tuner_info *tunerinfo)
+ {
+ 	struct dvb_frontend_ops *ops;
+-
++	
+ 	int rv = SUCCESS;
+ 	if (dvblo == NULL) {
+ 		rv = -EINVAL;
+diff -urN dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo.c dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo.c
+--- dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo.c	2011-10-02 09:36:02.000000000 +0200
++++ dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo.c	2012-03-08 11:04:46.395470271 +0100
+@@ -29,7 +29,6 @@
+ 
+ // dvblo_debug is a global symbol (should be available in all .c files)
+ unsigned int dvblo_debug = 0;
+-unsigned int dvblo_netceiver = 0;
+ unsigned int dvblo_autocreate = 0;
+ module_param_named (devcount, dvblo_devcount, uint, S_IRUGO);
+ MODULE_PARM_DESC (devcount, "The initial number of virtual DVB adapters");
+@@ -46,13 +45,10 @@
+ MODULE_PARM_DESC (macaddrs, "A (comma-separated) list of MAC addresses assigned to the virtual DVB adapters");
+ module_param_named (debug, dvblo_debug, uint, S_IRUGO | S_IWUSR);
+ MODULE_PARM_DESC (debug, "The debug level. Higher values will generate more debug info");
+-module_param_named (netceiver, dvblo_netceiver, uint, S_IRUGO | S_IWUSR);
+-MODULE_PARM_DESC (netceiver, "Set to 1 to enable Netceiver specific hacks");
+ EXPORT_SYMBOL_GPL (dvblo_devcount);
+ EXPORT_SYMBOL_GPL (dvblo_dvb_macaddrv);
+ EXPORT_SYMBOL_GPL (dvblo_dvb_macaddrc);
+ EXPORT_SYMBOL_GPL (dvblo_debug);
+-EXPORT_SYMBOL_GPL (dvblo_netceiver);
+ MODULE_LICENSE ("GPL v2");
+ MODULE_AUTHOR ("Christian Praehauser / Deti Fliegl");
+ MODULE_DESCRIPTION ("DVB loopback device");
+diff -urN dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo.h dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo.h
+--- dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo.h	2011-10-02 09:36:02.000000000 +0200
++++ dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo.h	2012-03-08 11:04:46.395470271 +0100
+@@ -15,7 +15,7 @@
+ #include <linux/stringify.h>
+ 
+ #define DVBLO_NAME	"dvblo"
+-#define DVBLO_VERSION   "0.9.4"
++#define DVBLO_VERSION   "0.9.4-s2api"
+ #define DVBLO_LONGMANE	"DVB Loopback Adapter Version "DVBLO_VERSION
+ 
+ #define DVBLO_DEVMAX 8
+@@ -30,9 +30,7 @@
+ #ifndef DVBLO_DEFINE_GLOBALS
+ /* defined in dvblo.c */
+ extern unsigned int dvblo_debug;
+-extern unsigned int dvblo_netceiver;
+ extern unsigned int dvblo_autocreate;
+-
+ #endif /*  */
+ 
+ #define DVBLO_DEBUG_LEVELS 3
+diff -urN dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_test.c dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_test.c
+--- dvbloop-dkms_0.9.4.org/mcast/dvbloop//dvblo_test.c	2007-11-28 02:06:56.000000000 +0100
++++ dvbloop-dkms_0.9.4/mcast/dvbloop//dvblo_test.c	1970-01-01 01:00:00.000000000 +0100
+@@ -1,236 +0,0 @@
+-/* dvblo_test - A DVB Loopback Device Demo
+- * Copyright (C) 2007 Deti Fliegl
+- -----------------------------------------
+- * File: dvblo_test.c
+- * Desc: Demo for virtual DVB adapters
+- * Date: March 2007
+- * Author: Deti Fliegl <deti@fliegl.de>
+- *
+- * This file is released under the GPLv2.
+- */
+-
+-/* avoid definition of __module_kernel_version in the resulting object file */
+-
+-#include <stdio.h>
+-#include <string.h>
+-#include <unistd.h>
+-#include <fcntl.h>
+-#include <poll.h>
+-#include <sys/ioctl.h>
+-#include <sys/types.h>
+-#include <linux/version.h>
+-#include <linux/dvb/frontend.h>
+-#include <linux/dvb/ca.h>
+-#include <errno.h>
+-
+-#include "dvblo_ioctl.h"
+-
+-void *read_ca(void *arg)
+-{
+-	char buf[80];
+-	int i=0;
+-	int fd = open ("/dev/dvb/adapter0/ca0", O_RDWR);
+-	if(fd<0) {
+-		return NULL;
+-	}
+-	ioctl(fd, CA_RESET, 7);
+-	while(1) {
+-		ssize_t p = read(fd, buf, sizeof(buf));
+-		if (p < 0 && errno == EINTR) {
+-	       		continue;
+-	       	}
+-		printf("DVB CA Read: %s\n",buf);
+-		sprintf(buf,"<TPDU Test %d",i++);
+-		write(fd, buf, strlen(buf)+1);
+-	}
+-}
+-
+-void *write_ca(void *arg)
+-{
+-	int i=0;
+-	int fd=(int)arg;
+-	dvblo_tpdu_t tpdu;
+-	while(1) {
+-		sprintf(tpdu.data, ">TPDU Test %d",i++);
+-		tpdu.len=strlen(tpdu.data)+1;
+-		ioctl(fd, DVBLO_SET_TPDU, &tpdu);
+-		sleep(1);
+-	}
+-}
+-
+-int main (int argc, char **argv)
+-{
+-	struct dvb_frontend_info info;
+-	struct pollfd fds[1];
+-	int timeout_msecs = -1;
+-	int ret;
+-	int i;
+-	char *dev = "/dev/dvblo0";
+-	dvblo_festatus_t fe_status;
+-
+-	if (argc > 1) {
+-		dev = argv[1];
+-	}
+-
+-	int fd = open (dev, O_RDWR);
+-
+-	fds[0].fd = fd;
+-
+-	ret = ioctl (fd, DVBLO_IOCADDDEV);
+-	printf ("created dvb adapter: %d\n", ret);
+-
+-	pthread_t p;
+-	pthread_create(&p, NULL, read_ca, NULL);
+-
+-	pthread_t r;
+-	pthread_create(&r, NULL, write_ca, fd);
+-	
+-	ioctl (fd, DVBLO_GET_FRONTEND_INFO, &info);
+-	printf ("original dvb frontend name: %s\n", info.name);
+-
+-	strcpy (info.name, "wuff");
+-	ioctl (fd, DVBLO_SET_FRONTEND_INFO, &info);
+-
+-	ioctl (fd, DVBLO_GET_FRONTEND_INFO, &info);
+-	printf ("new dvb frontend name: %s\n", info.name);
+-
+-	fe_status.st = FE_HAS_SIGNAL | FE_HAS_CARRIER | FE_HAS_VITERBI | FE_HAS_SYNC | FE_HAS_LOCK;
+-	fe_status.ber = 0;
+-	fe_status.strength = 100;
+-	fe_status.snr = 100;
+-	fe_status.ucblocks = 0;
+-
+-	ioctl (fd, DVBLO_SET_FRONTEND_STATUS, &fe_status);
+-
+-	dvblo_private_t test;
+-	memset (&test, 0, sizeof (test));
+-	test[0] = 1;
+-	ioctl (fd, DVBLO_SET_PRIVATE, &test);
+-	memset (&test, 0, sizeof (test));
+-	ioctl (fd, DVBLO_GET_PRIVATE, &test);
+-	if (test[0] != 1) {
+-		printf ("Private call failed\n");
+-	}
+-	dvblo_cacaps_t c;
+-	c.cap.slot_num=1;
+-	c.cap.slot_type=CA_CI_LINK;
+-	c.cap.descr_num=0;
+-	c.cap.descr_type =0;
+-	c.info[0].num=0;
+-	c.info[0].type=CA_CI_LINK;
+-	c.info[0].flags=0;
+-	
+-	ioctl(fd, DVBLO_SET_CA_CAPS, &c);
+-	
+-	dvblo_tpdu_t tpdu;
+-	tpdu.len=64;
+-	memset(tpdu.data, 0x55, tpdu.len);
+-	ioctl(fd, DVBLO_SET_TPDU, &tpdu);
+-
+-	while (1) {
+-		fds[0].events = POLLIN;
+-		ret = poll (fds, 1, timeout_msecs);
+-		if (ret > 0) {
+-			unsigned int event;
+-			ioctl (fd, DVBLO_GET_EVENT_MASK, &event);
+-			if (event & EV_MASK_FE) {
+-				struct dvb_frontend_parameters fe_parms;
+-
+-				printf ("Event Received: FE+Tuner/");
+-				if (event & EV_FRONTEND) {
+-					printf ("Frontend ");
+-				}
+-				if (event & EV_TUNER) {
+-					printf ("Tuner ");
+-				}
+-				if (event & EV_FREQUENCY) {
+-					printf ("Frequency ");
+-				}
+-				if (event & EV_BANDWIDTH) {
+-					printf ("Bandwidth ");
+-				}
+-				printf ("\n");
+-				ioctl (fd, DVBLO_GET_FRONTEND_PARAMETERS, &fe_parms);
+-				printf ("frequency: %d\n", fe_parms.frequency);
+-			}
+-			if (event & EV_MASK_PID) {
+-				dvblo_pids_t pids;
+-
+-				printf ("Event Received: Demux/");
+-				if (event & EV_PIDFILTER) {
+-					printf ("PID filter ");
+-				}
+-				printf ("\n");
+-				ioctl (fd, DVBLO_GET_PIDLIST, &pids);
+-				if (pids.num) {
+-					printf ("PIDs: ");
+-					for (i = 0; i < pids.num; i++) {
+-						printf ("%d ", pids.pid[i]);
+-					}
+-					printf ("\n");
+-				}
+-			}
+-			if (event & EV_MASK_SEC) {
+-				dvblo_sec_t sec;
+-
+-				printf ("Event Received: SEC/");
+-				if (event & EV_TONE) {
+-					printf ("Tone ");
+-				}
+-				if (event & EV_VOLTAGE) {
+-					printf ("Voltage ");
+-				}
+-				if (event & EV_DISEC_MSG) {
+-					printf ("DISEC-Message ");
+-				}
+-				if (event & EV_DISEC_BURST) {
+-					printf ("DISEC-Burst ");
+-				}
+-				printf ("\n");
+-				ioctl (fd, DVBLO_GET_SEC_PARAMETERS, &sec);
+-				printf ("voltage: %d\n", sec.voltage);
+-			}
+-			if (event & EV_MASK_PRIV) {
+-				printf ("Event Received: PRIV/");
+-				if (event & EV_PRIV_READ) {
+-					printf ("READ ");
+-				}
+-				if (event & EV_PRIV_WRITE) {
+-					printf ("WRITE ");
+-				}
+-				printf ("\n");
+-			}
+-			if (event & EV_MASK_CA) {
+-				printf ("Event Received: CA/");
+-				if (event & EV_CA_WRITE) {
+-					printf ("WRITE ");
+-					while(1) {
+-						ioctl(fd, DVBLO_GET_TPDU, &tpdu);
+-						if(tpdu.len) {
+-							printf("len:%d data:%s",tpdu.len, tpdu.data);
+-						} else {
+-							break;
+-						}
+-					} 
+-				}
+-				if (event & EV_CA_RESET) {
+-					printf ("RESET ");
+-				}
+-				if (event & EV_CA_PID) {
+-					printf ("PID ");
+-				}
+-				if (event & EV_CA_DESCR) {
+-					printf ("DESCR ");
+-				}
+-				printf ("\n");
+-			}
+-
+-		}
+-	}
+-
+-	ret = ioctl (fd, DVBLO_IOCDELDEV);
+-	printf ("delete dvb adapter: %d\n", ret);
+-
+-	close (fd);
+-	return 0;
+-}
+diff -urN dvbloop-dkms_0.9.4.org/mcast/dvbloop//Makefile dvbloop-dkms_0.9.4/mcast/dvbloop//Makefile
+--- dvbloop-dkms_0.9.4.org/mcast/dvbloop//Makefile	2009-01-28 11:58:37.000000000 +0100
++++ dvbloop-dkms_0.9.4/mcast/dvbloop//Makefile	2012-03-08 11:04:46.395470271 +0100
+@@ -44,12 +44,12 @@
+ 
+ ifneq ($(SRCDIR),)
+ EXTRA_CFLAGS = \
+-        -I$(SRCDIR)/drivers/media/dvb \
+-        -Idrivers/media/dvb -I$(@D)/../linux
++        -I$(SRCDIR)/drivers/media/dvb \
++        -I$(SRCDIR)/drivers/media/dvb -I$(@D)/../linux
+ else
+ EXTRA_CFLAGS = \
+-	-I/usr/src/linux/drivers/media/dvb \
+-	-Idrivers/media/dvb -I$(@D)/../linux
++	-I$(SRCDIR)/drivers/media/dvb \
++	-I$(SRCDIR)/drivers/media/dvb -I$(@D)/../linux
+ endif
+ 
+ default: build

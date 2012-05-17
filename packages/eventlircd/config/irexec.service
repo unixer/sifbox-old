@@ -1,0 +1,8 @@
+[Unit]
+Description=Eventlircd daemon
+
+[Service]
+ExecStart=/usr/bin/irexec /etc/lirc/lircrc
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install usr/sbin/openvpn
+mkdir -p $INSTALL/etc/openvpn/keys/
+cp $ROOT/$PACKAGES/$1/config/* $INSTALL/etc/openvpn/ 

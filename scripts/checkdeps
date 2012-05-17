@@ -1,0 +1,198 @@
+#!/bin/sh
+
+. config/options
+
+deps=
+deps_pkg=
+files=
+files_pkg=
+cmds=
+cmds_pkg=
+
+case $1 in
+  get)
+    deps="wget"
+    deps_pkg="wget"
+    ;;
+  kconfiginit)
+    deps="wget tar bzip2 gzip cp sed patch touch gcc g++"
+    deps_pkg="wget tar bzip2 gzip coreutils sed patch coreutils gcc g++"
+    files="/usr/include/stdio.h"
+    files_pkg="libc6-dev"
+    ;;
+  menuconfig)
+    files="/usr/include/ncurses.h"
+    files_pkg="libncurses5-dev"
+    ;;
+  gconfig)
+    files="/usr/include/gtk-2.0/gtk/gtk.h /usr/include/glib-2.0/glib.h /usr/include/libglade-2.0/glade/glade.h"
+    files_pkg="libgtk2.0-dev libglib2.0-dev libglade2-dev"
+    ;;
+  xconfig)
+    files="/usr/include/qt4/QtCore/qconfig.h"
+    files_pkg="qt4-dev-tools"
+    ;;
+  silentoldconfig|oldconfig|config)
+    ;;
+  build)
+    deps="gcc g++ sed patch touch tar bzip2 gzip perl flex bison cp gawk cpio makeinfo msgfmt cmp yacc lzma git"
+    deps_pkg="gcc g++ sed patch coreutils tar bzip2 gzip perl flex bison coreutils gawk cpio texinfo gettext diff lzma libtool git"
+    files="/usr/include/stdio.h /usr/include/readline/readline.h /usr/include/ncurses.h"
+    files_pkg="libc6-dev libreadline6-dev libncurses5-dev"
+    ;;
+  docs)
+    deps="asciidoc a2x dblatex xmlto db2html source-highlight"
+    deps_pkg="asciidoc asciidoc dblatex xmlto docbook-utils source-highlight"
+    ;;
+  vmx)
+    if [ "$2" != "review" ] && [ ! `which vmplayer` ]; then
+      echo "Your system doesn't seem to have VMplayer installed"
+      echo "It is mandatory to play a VMware virtual machine."
+      exit 1
+    fi
+    ;;
+  qemu)
+    if [ "$2" != "review" ] && [ ! `which qemu` ]; then
+      echo "Your system doesn't seem to have QEMU installed"
+      exit 1
+    fi
+    ;;
+  vbox)
+    if [ "$2" != "review" ] && [ ! `which virtualbox` ] && [ ! `which uuid` ]; then
+      echo "Your system doesn't seem to have VirtualBox installed"
+      exit 1
+    fi
+    ;;
+  review)
+    for target in get kconfiginit menuconfig gconfig xconfig build docs vmx qemu vbox rootfs; do
+      $SCRIPTS/checkdeps $target review
+    done
+    ;;
+  *)
+    echo "usage: $0 [get|kconfiginit|menuconfig|gconfig|xconfig|oldconfig|build|docs|vmx|qemu|rootfs|review]" >&2
+    exit 1
+  ;;
+esac
+
+getarg() {
+  eval echo \${$(($1+2))}
+}
+
+if [ "$2" = "review" ]; then
+  echo "## target: $1"
+  i=0
+  while dep=`getarg $i $deps` && [ -n "$dep" ]; do
+    need_pkg=$( getarg $i $deps_pkg )
+    echo -e "dep: $dep; \tdep_pkg: $need_pkg"
+    i=$(($i+1))
+  done
+
+  i=0
+  while file=`getarg $i $files` && [ -n "$file" ]; do
+    need_pkg=$( getarg $i $files_pkg )
+    echo -e "file: $file; \tfile_pkg: $need_pkg"
+    i=$(($i+1))
+  done
+
+  i=0
+  while cmd=`getarg $i $cmds` && [ -n "$cmd" ]; do
+    need_pkg=$( getarg $i $cmds_pkg )
+    echo -e "cmd: $cmd; \tcmd_pkg: $need_pkg"
+    i=$(($i+1))
+  done
+
+  exit 0
+fi
+
+
+i=0
+while dep=`getarg $i $deps` && [ -n "$dep" ]; do
+  [ -z "`which $dep 2>/dev/null`" ] && need="$need $dep" && need_pkg="$need_pkg `getarg $i $deps_pkg`"
+  i=$(($i+1))
+done
+
+i=0
+while file=`getarg $i $files` && [ -n "$file" ]; do
+  [ ! -f $file ] && need="$need $file" && need_pkg="$need_pkg `getarg $i $files_pkg`"
+  i=$(($i+1))
+done
+
+i=0
+while cmd=`getarg $i $cmds` && [ -n "$cmd" ]; do
+  ! $cmd && need="$need $cmd" && need_pkg="$need_pkg `getarg $i $cmds_pkg`"
+  i=$(($i+1))
+done
+
+if [ -n "$need" ]; then
+  echo "**** Your system lacks the following tools needed to $1 OpenBricks ****"
+  echo $need | sed 's:check_::'
+
+  [ -f /etc/lsb-release ] && . /etc/lsb-release
+
+  if [ -n "`which apt-get 2>/dev/null`" ]; then
+    DISTRO="a Debian" 
+    [ "$DISTRIB_ID" = "Ubuntu" ] && DISTRO="an Ubuntu"
+    echo "**** You seem to use $DISTRO system ****"
+    read -p "would you like to sudo apt-get install the needed tools ? (y/n) " ans
+    [ "$ans" = "y" ] && sudo apt-get install $need_pkg
+  elif [ -f /etc/mandrake-release -a -n "`which urpmi 2>/dev/null`" ]; then
+    echo "**** You seem to use a mandrake system ****"
+    if [ "$UID" -ne 0 ]; then
+      echo "**** I could install those packages but you need to be root for this ****"
+      exit 1
+    else
+      read -p "would you like to urpmi the needed tools ? (y/n) " ans
+      [ "$ans" = "y" ] && urpmi $need_pkg
+    fi
+  elif [ -f /etc/gentoo-release -a -n "`which emerge 2>/dev/null`" ]; then
+    echo "**** You seem to use a gentoo system ****"
+    if [ "$UID" -ne 0 ]; then
+      echo "**** I could install those packages but you need to be root for this ****"
+      exit 1
+    else
+      read -p "would you like to emerge the needed tools ? (y/n) " ans
+      [ "$ans" = "y" ] && emerge -D $need_pkg
+    fi
+  elif [ -f /etc/fedora-release -a -n "`which yum 2>/dev/null`" ]; then
+    echo "**** You seem to use a fedora system ****"
+    if [ "$UID" -ne 0 ]; then
+      echo "**** I could install those packages but you need to be root for this ****"
+      exit 1
+    else
+      read -p "would you like to yum install the needed tools ? (y/n) " ans
+      [ "$ans" = "y" ] && yum install $need_pkg
+    fi
+  else
+    echo "********"
+    exit 1
+  fi
+fi
+
+
+need=""
+need_pkg=""
+
+i=0
+while dep=`getarg $i $deps` && [ -n "$dep" ]; do
+  [ -z "`which $dep 2>/dev/null`" ] && need="$need $dep" && need_pkg="$need_pkg `getarg $i $deps_pkg`"
+  i=$(($i+1))
+done
+
+i=0
+while file=`getarg $i $files` && [ -n "$file" ]; do
+  [ ! -f $file ] && need="$need $file" && need_pkg="$need_pkg `getarg $i $files_pkg`"
+  i=$(($i+1))
+done
+
+i=0
+while cmd=`getarg $i $cmds` && [ -n "$cmd" ]; do
+  ! $cmd && need="$need $cmd" && need_pkg="$need_pkg `getarg $i $cmds_pkg`"
+  i=$(($i+1))
+done
+
+if [ -n "$need" ]; then
+  echo "**** The following packages were not installed correctly ****"
+  echo $need_pkg
+  echo "********"
+  exit 1
+fi

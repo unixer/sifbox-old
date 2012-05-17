@@ -1,0 +1,16 @@
+PKG_NAME=vdr
+#PKG_VERSION=1.7.20
+PKG_VERSION=1.7.27
+PKG_URL="ftp://ftp.tvdr.de/vdr/Developer/vdr-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+
+PKG_DEPENDS="jpeg freetype fontconfig gettext libcap"
+PKG_BUILD_DEPENDS="toolchain"
+#PKG_BUILD_DEPENDS="toolchain media-experimental"
+PKG_RUN_DEPENDS="$TARGET_LIBC nvram-wakeup"
+PKG_USE="uclibc cxx"
+PKG_DEPENDS_uclibc="libiconv"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="Video Disk Recorder for DVB cards"
+PKG_LONGDESC="Video Disk Recorder (VDR) is a digital sat-receiver program using Linux and DVB technologies. It allows one to record MPEG2 streams, as well as output the stream to TV. It is also possible to watch DVDs (hardware accelerated) with some comfort and use an IR remote control."

@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+setup_toolchain host
+
+cd $BUILD/$1*/squashfs-tools
+
+make \
+  XZ_SUPPORT=1 \
+  INCLUDEDIR="-I. -I$ROOT/$TOOLCHAIN/include"

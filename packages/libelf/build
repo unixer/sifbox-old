@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. config/options
+
+setup_toolchain host
+
+cd $BUILD/$1*
+mkdir -p objdir
+cd objdir
+../configure --host=$HOST_NAME \
+             --build=$HOST_NAME \
+             --target=$TARGET_NAME \
+             --prefix=/usr \
+             --disable-shared \
+             --enable-static \
+
+make
+install_dir="`ls -d $ROOT/$BUILD/$1*`/.install"
+rm -rf $install_dir
+make install instroot="$install_dir"
+fix_libs $install_dir toolchain

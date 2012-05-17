@@ -1,0 +1,27 @@
+--- linux/drivers/media/dvb/frontends/Kconfig	2011-09-24 05:45:14.000000000 +0200
++++ xxx/Kconfig	2011-10-23 20:10:37.000000000 +0200
+@@ -70,6 +70,24 @@ config DVB_TDA18271C2DD
+ 
+ 	  Say Y when you want to support this tuner.
+ 
++config DVB_STV0367DD
++	tristate "STV 0367 (DD)"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  STV 0367 DVB-C/T demodulator (Digital Devices driver).
++
++	  Say Y when you want to support this frontend.
++
++config DVB_TDA18212DD
++	tristate "NXP TDA18212 silicon tuner (DD)"
++	depends on DVB_CORE && I2C
++	default m if DVB_FE_CUSTOMISE
++	help
++	  NXP TDA18212 silicon tuner (Digital Devices driver).
++
++	  Say Y when you want to support this tuner.
++
+ comment "DVB-S (satellite) frontends"
+ 	depends on DVB_CORE
+ 

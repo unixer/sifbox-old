@@ -1,0 +1,12 @@
+--- linux/drivers/media/video/cx88/Makefile	2012-04-23 00:31:32.000000000 +0200
++++ linux/drivers/media/video/cx88/Makefile.tbs	2012-05-14 15:47:36.136793246 +0200
+@@ -7,7 +7,8 @@
+ obj-$(CONFIG_VIDEO_CX88_MPEG) += cx8802.o
+ obj-$(CONFIG_VIDEO_CX88_ALSA) += cx88-alsa.o
+ obj-$(CONFIG_VIDEO_CX88_BLACKBIRD) += cx88-blackbird.o
+-obj-$(CONFIG_VIDEO_CX88_DVB) += cx88-dvb.o
++obj-$(CONFIG_VIDEO_CX88_DVB) += cx88-dvb-core.o
++cx88-dvb-core-objs += cx88-dvb.o tbs8921ctrl.o tbs8922ctrl.o
+ obj-$(CONFIG_VIDEO_CX88_VP3054) += cx88-vp3054-i2c.o
+ 
+ ccflags-y += -Idrivers/media/video

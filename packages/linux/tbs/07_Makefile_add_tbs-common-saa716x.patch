@@ -1,0 +1,11 @@
+--- linux/drivers/media/common/saa716x/Makefile	2012-05-14 17:59:56.286797314 +0200
++++ linux/drivers/media/common/saa716x/Makefile.tbs	2012-05-14 18:29:42.846798228 +0200
+@@ -19,6 +19,8 @@
+ 			   saa716x_ff_ir.o
+ 
+ obj-$(CONFIG_SAA716X_CORE)	  += saa716x_core.o
++obj-$(CONFIG_DVB_SAA716X_TBS)     += saa716x_tbs-dvb.o
++saa716x_tbs-dvb-objs += saa716x_tbs.o saa716x_input.o tbsctrl.o tbsci-i2c.o tbsci.o tbsmac.o
+ obj-$(CONFIG_DVB_SAA716X_BUDGET)  += saa716x_budget.o
+ obj-$(CONFIG_DVB_SAA716X_HYBRID)  += saa716x_hybrid.o
+ obj-$(CONFIG_DVB_SAA716X_FF)	  += saa716x_ff.o

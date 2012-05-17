@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+[ "$TARGET_ARCH" = x86_64 ] && ln -s .install/usr/lib .install/usr/lib64
+
+do_install lib
+do_install etc/rpc
+
+do_install usr/bin/ldd
+do_install usr/bin/locale
+
+do_install usr/share
+do_install usr/lib
+
+mkdir -p $INSTALL/etc
+cp $ROOT/$PACKAGES/$1/config/nsswitch.conf $INSTALL/etc
+
+exit 0

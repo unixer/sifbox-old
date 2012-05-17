@@ -1,0 +1,11 @@
+--- packages/xf86-video-openchrome/meta	Tue Apr 10 17:51:50 2012 +0200
++++ packages/xf86-video-openchrome/meta	Tue Apr 10 10:41:42 2012 +0300
+@@ -3,7 +3,7 @@
+ PKG_URL="http://xorg.freedesktop.org/archive/individual/driver/xf86-video-openchrome-${PKG_VERSION}.tar.bz2"
+ PKG_REV=1
+ PKG_ARCH="i386 x86_64"
+-PKG_BUILD_DEPENDS="toolchain xorg-server"
++PKG_BUILD_DEPENDS="toolchain xorg-server mesa"
+ PKG_RUN_DEPENDS="$TARGET_LIBC xorg-server"
+ PKG_PRIORITY=optional
+ PKG_SECTION=x11

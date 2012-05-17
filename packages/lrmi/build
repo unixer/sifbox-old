@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+make liblrmi.a CFLAGS="$CFLAGS"
+
+mkdir -p .install/usr/lib .install/usr/include/lrmi
+cp lrmi.h .install/usr/include/lrmi
+cp vbe.h .install/usr/include/lrmi
+cp liblrmi.a .install/usr/lib

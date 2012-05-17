@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_configure \
+	--host=$TARGET_NAME \
+	--build=$HOST_NAME \
+	--prefix=/usr \
+make
+make_install
+#mkdir build && cd build
+#cmake ..
+#make

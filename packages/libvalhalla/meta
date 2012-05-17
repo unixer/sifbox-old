@@ -1,0 +1,13 @@
+PKG_NAME=libvalhalla
+PKG_URL_REV=1094
+PKG_VERSION=r${PKG_URL_REV}
+PKG_URL_PROTO=hg
+PKG_URL="http://hg.openbricks.org/libvalhalla"
+PKG_REV=1
+PKG_BUILD_DEPENDS="toolchain curl sqlite libxml2 libnfo ffmpeg libexif"
+PKG_RUN_DEPENDS="$TARGET_LIBC libexif sqlite libxml2 libnfo ffmpeg curl"
+PKG_USE="devtools"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="a tiny media scanner library"
+PKG_LONGDESC="libvalhalla is a scanner and parser library for audio/video files based on SQLite and FFmpeg/libavformat. Media files are retrieved in paths defined by the user and metadata are saved in a database. It provides a very simple API and it can use several parsers concurrently to speed up on a multi-core/cpu system."

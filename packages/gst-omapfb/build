@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/unpack linux
+
+cd $BUILD/$1*
+make CC=$TARGET_CC KERNEL=$(kernel_path)

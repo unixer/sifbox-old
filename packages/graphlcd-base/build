@@ -1,0 +1,23 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+mkdir -p .install
+installdir="`pwd`/.install/usr"
+
+cat > Make.config <<EOF
+DESTDIR = $installdir
+BINDIR = $installdir/bin
+LIBDIR = $installdir/lib
+INCDIR = $installdir/include
+MANDIR = $installdir/man
+INCLUDES += -I`ls -d ../freetype-*/include`
+DEFINES += -D_GNU_SOURCE
+HAVE_FREETYPE2=1
+EOF
+[ "$TARGET_LIBC" = "uclibc" ] && echo 'LIBS += -liconv' >>Make.config
+make
+make install
+fix_libs $installdir

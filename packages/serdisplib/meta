@@ -1,0 +1,14 @@
+PKG_NAME=serdisplib
+PKG_VERSION=1.97.8
+#PKG_VERSION=1.97.9
+#PKG_VERSION=1.98.x
+#PKG_URL_PROTO=svn
+#PKG_URL="http://e-tobi.net/vdr-experimental/pool-squeeze/source/base/serdisplib_${PKG_VERSION}.orig.tar.gz"
+PKG_URL="http://95.225.138.70/sifbox/serdisplib-${PKG_VERSION}.tar.gz"
+PKG_REV=1
+PKG_DEPENDS="$TARGET_LIBC libusb SDL"
+PKG_BUILD_DEPENDS="toolchain libusb SDL"
+PKG_PRIORITY=optional
+PKG_SECTION=misc
+PKG_SHORTDESC="serdisplib Package for Linux4Media"
+PKG_LONGDESC=""

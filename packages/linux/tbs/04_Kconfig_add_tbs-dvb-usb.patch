@@ -1,0 +1,69 @@
+--- linux/drivers/media/dvb/dvb-usb/Kconfig	2012-05-14 13:03:50.266788214 +0200
++++ linux/drivers/media/dvb/dvb-usb/Kconfig.tbs	2012-05-14 15:40:39.876793034 +0200
+@@ -29,6 +29,66 @@
+ 	help
+ 	  Say Y here to support the AVerMedia AverTV DVB-T USB 2.0 (A800) receiver.
+ 
++config DVB_USB_TBSQBOX
++       tristate "TurboSight QBOX DVB-S2 USB2.0 support"
++       depends on DVB_USB
++       select DVB_PLL if !DVB_FE_CUSTOMISE
++       select DVB_STV0299 if !DVB_FE_CUSTOMISE
++       select DVB_STV0288 if !DVB_FE_CUSTOMISE
++       select DVB_STB6000 if !DVB_FE_CUSTOMISE
++       help
++         Say Y here to support the TurboSight QBOX DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOX2
++       tristate "TurboSight QBOX2 DVB-S2 USB2.0 support"
++       depends on DVB_USB
++       select DVB_STV090x if !DVB_FE_CUSTOMISE
++       select DVB_STB6100 if !DVB_FE_CUSTOMISE
++       select DVB_PLL if !DVB_FE_CUSTOMISE
++       help
++         Say Y here to support the TurboSight QBOX2 DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOX2CI
++       tristate "TurboSight QBOX2 CI DVB-S2 USB2.0 support"
++       depends on DVB_USB
++       select DVB_STV090x if !DVB_FE_CUSTOMISE
++       select DVB_STB6100 if !DVB_FE_CUSTOMISE
++       select DVB_PLL if !DVB_FE_CUSTOMISE
++       help
++         Say Y here to support the TurboSight QBOX2 CI DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOXS2
++       tristate "TurboSight QBOX2 DVB-S2 USB2.0 support"
++       depends on DVB_USB
++       select DVB_CX24116 if !DVB_FE_CUSTOMISE
++       select DVB_PLL if !DVB_FE_CUSTOMISE
++       help
++         Say Y here to support the TurboSight QBOX2 DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOXS3
++       tristate "TurboSight QBOX3 DVB-S2 USB2.0 support"
++       depends on DVB_USB
++       select DVB_TBS5921FE if !DVB_FE_CUSTOMISE
++       select DVB_PLL if !DVB_FE_CUSTOMISE
++       help
++         Say Y here to support the TurboSight QBOX3 DVB-S USB2.0 receivers
++
++config DVB_USB_TBSQBOX22
++       tristate "TurboSight QBOX22 DVB-S2 USB2.0 support"
++       depends on DVB_USB
++       select DVB_TBS5922FE if !DVB_FE_CUSTOMISE
++       select DVB_PLL if !DVB_FE_CUSTOMISE
++       help
++         Say Y here to support the TurboSight QBOX22 DVB-S USB2.0 receivers
++
++config DVB_USB_TBS5880
++       tristate "TurboSight TBS5880 DVB-S2 USB2.0 support"
++       depends on DVB_USB
++       select DVB_TBS5880FE if !DVB_FE_CUSTOMISE
++       select DVB_PLL if !DVB_FE_CUSTOMISE
++       help
++         Say Y here to support the TurboSight TBS5880 DVB-S USB2.0 receivers
++
+ config DVB_USB_DIBUSB_MB
+ 	tristate "DiBcom USB DVB-T devices (based on the DiB3000M-B) (see help for device list)"
+ 	depends on DVB_USB

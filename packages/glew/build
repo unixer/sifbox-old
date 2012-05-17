@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. config/options
+
+export M_ARCH=dummy
+
+cd $BUILD/$1*
+
+make \
+  CC="$TARGET_CC" \
+  LD="$TARGET_CC" \
+  LDFLAGS.EXTRA="-lstdc++" \
+  GLEW_DEST="$LIB_PREFIX" \
+  CFLAGS="$TARGET_CFLAGS -Iinclude"
+
+export GLEW_DEST=.install/usr
+make_install

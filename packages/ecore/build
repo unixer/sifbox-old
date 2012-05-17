@@ -1,0 +1,106 @@
+#!/bin/sh
+
+. config/options
+
+if pkg_uses $1 xorg; then
+  WITH_X="--with-x \
+          --enable-ecore-evas-software-x11 \
+          --enable-ecore-evas-software-16-x11 \
+          --enable-ecore-evas-xrender-x11"
+
+  pkg_uses $1 opengl && \
+    CFG_GL="--enable-ecore-evas-opengl-x11"
+else
+  WITH_X="--disable-ecore-x --disable-ecore-evas-opengl-x11"
+fi
+
+if pkg_uses $1 touchscreen; then
+  CFG_TS="--enable-tslib"
+else
+  CFG_TS="--disable-tslib"
+fi
+
+if pkg_uses $1 directfb; then
+  CFG_DFB="--enable-ecore-directfb --enable-ecore-evas-directfb"
+else
+  CFG_DFB="--disable-ecore-directfb --disable-ecore-evas-directfb"
+fi
+
+if pkg_uses $1 sdl; then
+  CFG_SDL="--with-sdl-config=$SDL_CONFIG --enable-ecore-sdl --enable-ecore-evas-software-sdl --disable-ecore-evas-opengl-sdl"
+else
+  CFG_SDL="--disable-ecore-sdl --disable-ecore-evas-software-sdl --disable-ecore-evas-opengl-sdl"
+fi
+
+cd $BUILD/$1*
+
+mkdir -p objdir-host
+cd objdir-host
+export ac_cv_header_X11_X_h=no
+do_configure host \
+            --disable-doc \
+            --disable-tests \
+            --disable-curl \
+            --disable-openssl \
+            --disable-gnutls \
+            --disable-ecore-fb \
+            --disable-ecore-evas-fb \
+            --disable-ecore-x-xcb \
+            --disable-ecore-evas-software-x11 \
+            --disable-ecore-evas-software-16-x11 \
+            --disable-ecore-evas-xrender-x11 \
+            --disable-ecore-evas-xrender-xcb \
+            --disable-ecore-evas-software-gdi \
+            --disable-ecore-evas-software-ddraw \
+            --disable-ecore-evas-direct3d \
+            --disable-ecore-evas-opengl-glew \
+            --disable-ecore-evas-software-16-ddraw \
+            --disable-ecore-evas-software-16-wince \
+            --disable-ecore-x \
+            --disable-tslib \
+            --disable-ecore-directfb \
+            --disable-ecore-evas-directfb \
+            --disable-ecore-sdl \
+            --disable-ecore-evas-software-sdl \
+            --disable-ecore-evas-opengl-sdl \
+            --enable-ecore-evas \
+            --enable-ecore-evas-software-buffer \
+            --disable-glib \
+            --without-x \
+
+make
+make_install toolchain
+cd ..
+
+mkdir -p objdir-target
+cd objdir-target
+unset ac_cv_header_X11_X_h
+do_configure target \
+            --disable-doc \
+            --disable-tests \
+            --enable-curl \
+            --disable-openssl \
+            --enable-gnutls \
+            --enable-poll \
+            --enable-inotify \
+            --enable-ecore-fb \
+            --enable-ecore-evas-fb \
+            --disable-ecore-x-xcb \
+            --disable-ecore-evas-xrender-xcb \
+            --disable-ecore-evas-software-gdi \
+            --disable-ecore-evas-software-ddraw \
+            --disable-ecore-evas-direct3d \
+            --disable-ecore-evas-opengl-glew \
+            --disable-ecore-evas-software-16-ddraw \
+            --disable-ecore-evas-software-16-wince \
+            --enable-ecore-evas \
+            --enable-ecore-evas-software-buffer \
+            --enable-glib \
+            $CFG_DFB \
+            $CFG_SDL \
+            $CFG_GL \
+            $CFG_TS \
+            $WITH_X \
+
+make
+make_install

@@ -1,0 +1,24 @@
+--- media-experimental-media_build_experimental/linux/drivers/media/dvb/frontends/ds3000.c.org	2012-04-28 19:58:34.363057036 +0200
++++ media-experimental-media_build_experimental/linux/drivers/media/dvb/frontends/ds3000.c	2012-04-28 19:59:39.903057068 +0200
+@@ -1114,7 +1114,10 @@
+ 			ds3000_writereg(state,
+ 				ds3000_dvbs2_init_tab[i],
+ 				ds3000_dvbs2_init_tab[i + 1]);
+-		ds3000_writereg(state, 0xfe, 0x98);
++		if (c->symbol_rate >= 30000000)
++			ds3000_writereg(state, 0xfe, 0x54);
++		else
++			ds3000_writereg(state, 0xfe, 0x98);
+ 		break;
+ 	default:
+ 		return 1;
+--- media-experimental-media_build_experimental/linux/drivers/media/dvb/dvb-core/dvb_frontend.c.orig	2012-04-20 05:45:55.000000000 +0200
++++ media-experimental-media_build_experimental/linux/drivers/media/dvb/dvb-core/dvb_frontend.c	2012-04-28 20:15:26.043057553 +0200
+@@ -652,6 +652,7 @@
+ 			switch (algo) {
+ 			case DVBFE_ALGO_HW:
+ 				dprintk("%s: Frontend ALGO = DVBFE_ALGO_HW\n", __func__);
++				re_tune = false;
+ 
+ 				if (fepriv->state & FESTATE_RETUNE) {
+ 					dprintk("%s: Retune requested, FESTATE_RETUNE\n", __func__);

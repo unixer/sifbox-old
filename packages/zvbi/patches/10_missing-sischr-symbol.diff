@@ -1,0 +1,10 @@
+--- zvbi-0.2.33.orig/config.h.in	2010-09-28 16:34:44.000000000 +0200
++++ zvbi-0.2.33/config.h.in	2010-09-28 16:35:22.000000000 +0200
+@@ -164,3 +164,7 @@
+ #ifndef _GNU_SOURCE
+ # undef _GNU_SOURCE
+ #endif
++
++#ifndef S_ISCHR
++#define S_ISCHR(m)      (((m) & S_IFMT) == S_IFCHR)
++#endif

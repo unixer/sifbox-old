@@ -1,0 +1,10 @@
+[Unit]
+Description=Lircd daemon
+
+[Service]
+EnvironmentFile=/etc/lirc/lirc.conf
+Type=forking
+ExecStart=/usr/sbin/lircd $LI_OPTS
+
+[Install]
+WantedBy=multi-user.target

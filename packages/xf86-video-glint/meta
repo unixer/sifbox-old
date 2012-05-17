@@ -1,0 +1,11 @@
+PKG_NAME=xf86-video-glint
+PKG_VERSION=1.2.6
+PKG_URL="http://xorg.freedesktop.org/archive/individual/driver/xf86-video-glint-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_ARCH="i386 x86_64"
+PKG_BUILD_DEPENDS="toolchain xorg-server"
+PKG_RUN_DEPENDS="$TARGET_LIBC xorg-server"
+PKG_PRIORITY=optional
+PKG_SECTION=x11
+PKG_SHORTDESC="X.Org X server -- Glint display driver"
+PKG_LONGDESC="This package provides the driver for the Texas Instruments/3DLabs Glint and Permedia series of video cards."

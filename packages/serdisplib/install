@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+mkdir -p .install/usr/bin
+mkdir -p .install/usr/lib
+cp lib/libserdisp.a .install/usr/lib
+cp lib/libserdisp.so.1.97.8 .install/usr/lib
+cd .install/usr/lib
+ln -s libserdisp.so.1 libserdisp.so
+ln -s libserdisp.so.1.97.8 libserdisp.so.1
+ln -s libserdisp.so.1.97.8 libserdisp.so.1.97
+cd ../../..
+cp src/testserdisp .install/usr/bin
+#cp tools/l4m132c_tool .install/usr/bin
+mkdir -p .install/usr/include/glcddrivers/
+cp include/serdisplib/serdisp.h .install/usr/include/glcddrivers/
+ 
+do_install usr/bin
+do_install usr/lib
+do_install usr/include/glcddrivers

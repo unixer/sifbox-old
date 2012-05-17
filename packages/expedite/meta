@@ -1,0 +1,15 @@
+PKG_NAME=expedite
+PKG_VERSION=0.7.2
+PKG_URL="http://download.enlightenment.org/snapshots/2010-12-03/expedite-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_DEPENDS="eet eina evas"
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_USE="xorg sdl directfb opengl cxx"
+PKG_DEPENDS_xorg="libX11 mesa"
+PKG_DEPENDS_sdl="SDL"
+PKG_DEPENDS_directfb="DirectFB"
+PKG_PRIORITY=optional
+PKG_SECTION=utils
+PKG_SHORTDESC="Benchmarking suite for Evas"
+PKG_LONGDESC="This is meant to be a detailed and comprehensive benchmark suite for Evas"

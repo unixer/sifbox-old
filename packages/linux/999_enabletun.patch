@@ -1,0 +1,11 @@
+--- linux-3.2.12/.config.org	2012-03-22 17:26:19.635182503 +0100
++++ linux-3.2.12/.config	2012-03-22 17:26:59.535182523 +0100
+@@ -1030,7 +1030,7 @@
+ # CONFIG_NETCONSOLE is not set
+ # CONFIG_NETPOLL is not set
+ # CONFIG_NET_POLL_CONTROLLER is not set
+-# CONFIG_TUN is not set
++CONFIG_TUN=y
+ # CONFIG_VETH is not set
+ # CONFIG_ARCNET is not set
+ 

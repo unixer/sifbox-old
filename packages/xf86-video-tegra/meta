@@ -1,0 +1,9 @@
+PKG_PARENT=tegra-drivers
+PKG_NAME=xf86-video-tegra
+PKG_RUN_DEPENDS="$TARGET_LIBC tegra-libs"
+PKG_ARCH=arm
+PKG_LICENSE=non-free
+PKG_PRIORITY=optional
+PKG_SECTION=x11
+PKG_SHORTDESC="Xorg binary driver for NVIDIA Tegra SoC"
+PKG_LONGDESC="This is the binary driver provided by NVIDIA for its Tegra SoC."

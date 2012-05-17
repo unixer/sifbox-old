@@ -1,0 +1,11 @@
+PKG_NAME=noad
+PKG_VERSION=0.7.2
+PKG_URL="$DISTRO_SRCS/noad-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_RUN_DEPENDS="$TARGET_LIBC ffmpeg libmpeg2"
+PKG_BUILD_DEPENDS="toolchain ffmpeg libmpeg2"
+PKG_USE="cxx"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="a program for detecting commercials in VDR recordings"
+PKG_LONGDESC="NoAd is a program for detecting commercials in vdr recordings. It uses several characteristics of the film, like station logos and AC3 sound, for the detection and sets the cut marks accordingly."

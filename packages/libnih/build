@@ -1,0 +1,31 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+# build for host for nih-dbus-tool
+mkdir -p objdir-host
+cd objdir-host
+setup_toolchain host
+../configure --enable-static --disable-shared
+make
+cd ..
+
+# build for target
+mkdir -p objdir-target
+cd objdir-target
+setup_toolchain target
+export NIH_DBUS_TOOL="$ROOT/$BUILD/$1*/objdir-host/nih-dbus-tool/nih-dbus-tool"
+../configure --host=$TARGET_NAME \
+             --build=$HOST_NAME \
+             --prefix=/usr \
+             --disable-static \
+             --enable-shared \
+             --disable-nls \
+             --enable-threading
+make
+make_install
+
+rm -rf ../.install
+mv .install ..

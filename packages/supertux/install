@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+cd $BUILD/$1*
+
+do_install usr/bin/supertux
+do_install usr/share/applications
+do_install usr/share/supertux

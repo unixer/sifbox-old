@@ -1,0 +1,6 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/fixconfigtools $BUILD/$1*/source3
+mkdir "`ls -d $BUILD/$1*/source3`/bin"

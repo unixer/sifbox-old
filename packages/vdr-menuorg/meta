@@ -1,0 +1,15 @@
+PKG_NAME=vdr-menuorg
+PKG_VERSION=0.4.5
+#PKG_VERSION=0.4.4-29 
+#PKG_URL="http://ppa.launchpad.net/yavdr/testing-vdr/ubuntu/pool/main/v/vdr-plugin-menuorg/vdr-plugin-menuorg_${PKG_VERSION}yavdr13~natty.tar.gz"
+#PKG_URL="$DISTRO_SRCS/vdr-menuorg-${PKG_VERSION}.tar.bz2"
+#PKG_URL="http://www.e-tobi.net/blog/files/vdr-menuorg-${PKG_VERSION}.tar.gz"
+PKG_URL="http://projects.vdr-developer.org/attachments/download/879/vdr-menuorg-0.4.5.tar.gz"
+PKG_REV=1
+PKG_DEPENDS="libxml++"
+PKG_BUILD_DEPENDS="toolchain glibmm libxml++"
+PKG_RUN_DEPENDS="$TARGET_LIBC vdr libxml++ glibmm"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="VDR -- menuorg plugin"
+PKG_LONGDESC="vdr-menuorg is a plugin for VDR, the Video Disk Recorder."

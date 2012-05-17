@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+if pkg_uses $1 devtools; then
+  DEVTOOLS_CONFIG="--enable-alsamixer --with-curses=ncurses"
+else
+  DEVTOOLS_CONFIG="--disable-alsamixer --without-curses"
+fi
+
+do_configure \
+  --disable-dependency-tracking \
+  --disable-xmlto \
+  $DEVTOOLS_CONFIG \
+
+make
+make_install
+

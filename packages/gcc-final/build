@@ -1,0 +1,61 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/unpack gcc-$TOOLCHAIN_TYPE
+
+setup_toolchain host
+
+TLS_CONFIG="--enable-tls"
+[ $TARGET_LIBC = "uclibc" ] && TLS_CONFIG="--disable-tls"
+
+if [ "$TOOLCHAIN_GOLD_LINKER" = yes ]; then
+  GOLD_CONFIG="--enable-gold"
+else
+  GOLD_CONFIG="--disable-gold"
+fi
+
+cd $BUILD/gcc-${TOOLCHAIN_TYPE}-4*
+mkdir -p objdir-$1
+cd objdir-$1
+../configure --host=$HOST_NAME \
+             --build=$HOST_NAME \
+             --target=$TARGET_NAME \
+             --prefix=/usr \
+             --with-sysroot=$SYSROOT_PREFIX \
+             --with-local-prefix=${LIB_PREFIX#$SYSROOT_PREFIX} \
+             --with-gmp=$ROOT/$TOOLCHAIN \
+             --with-mpfr=$ROOT/$TOOLCHAIN \
+             --with-ppl=$ROOT/$TOOLCHAIN \
+             --with-cloog=$ROOT/$TOOLCHAIN \
+             --with-libelf=$ROOT/$TOOLCHAIN \
+             --with-mpc=$ROOT/$TOOLCHAIN \
+             --with-as=$TARGET_AS \
+             --with-ld=$TARGET_LD \
+             --enable-languages=${TOOLCHAIN_LANGUAGES} \
+             --disable-__cxa_atexit \
+             --disable-libmudflap \
+             --disable-libssp \
+             --disable-multilib \
+             $GOLD_CONFIG \
+             --enable-ld \
+             --enable-plugin \
+             --enable-lto \
+             --enable-shared \
+             --enable-c99 \
+             --enable-long-long \
+             --enable-threads=posix \
+             $TLS_CONFIG \
+             --disable-nls
+make
+make_install toolchain
+for i in `find .install/usr/$TARGET_NAME -name "*.la"`; do
+  sed -i "s:\(['= ]\)/usr:\\1$ROOT/$TOOLCHAIN:g" $i
+done
+mkdir -p .install/usr/lib
+[ "$TARGET_ARCH" = x86_64 -o "$TARGET_ARCH" = powerpc64 ] && SUFFIX=64 || SUFFIX=""
+cp -PR .install/usr/$TARGET_NAME/lib$SUFFIX/*.so* .install/usr/lib
+chmod a+x .install/usr/lib/lib*.so*
+strip_libs .install .install-debuginfo/usr/lib/debug
+rm -rf ../.install
+mv .install ..

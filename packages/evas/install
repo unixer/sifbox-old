@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*/objdir-target
+
+do_install usr/lib/libevas*.so*
+do_install usr/lib/evas
+find $INSTALL/usr/lib/evas -name \*.la | xargs rm -f -

@@ -1,0 +1,140 @@
+--- linux/drivers/media/dvb/frontends/Kconfig	2012-05-14 13:04:01.076788220 +0200
++++ linux/drivers/media/dvb/frontends/Kconfig.tbs	2012-05-14 15:34:16.646792838 +0200
+@@ -26,6 +26,125 @@
+ 	  A DVB-S/S2/DSS Multistandard demodulator. Say Y when you want
+ 	  to support this demodulator based frontends
+ 
++config DVB_TBSFE
++       tristate "TBS FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A TurboSight TBS FE module. Say Y when you want to support this.
++
++config DVB_TBS6980FE
++       tristate "TurboSight TBS6980FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6981FE
++       tristate "TurboSight TBS6981FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6921FE
++       tristate "TurboSight TBS6921FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS8921FE
++       tristate "TurboSight TBS8921FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6925CTRL
++       tristate "TurboSight TBS6925 controls"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A TurboSight TBS6925 controls. Say Y when you want to support this.
++
++config DVB_TBS6992
++       tristate "TBS6992 based tuners"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         TurboSighti TBS6992 Silicon Tuner
++
++config DVB_TBS5921FE
++       tristate "TurboSight TBS5921FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS62X0FE
++       tristate "TurboSight TBS60x0FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-T/T2/C tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6984FE
++       tristate "TurboSight TBS6984FE based"
++        depends on DVB_CORE && I2C
++        default m if DVB_FE_CUSTOMISE
++        help
++          A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6922FE
++       tristate "TurboSight TBS6922FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6928FE
++       tristate "TurboSight TBS6928FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS8922FE
++       tristate "TurboSight TBS8922FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS5922FE
++       tristate "TurboSight TBS5922FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS5880FE
++       tristate "TurboSight TBS5880FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-T/T2/C tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6982FE
++       tristate "TurboSight TBS6982FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
++config DVB_TBS6991FE
++       tristate "TurboSight TBS6991FE based"
++       depends on DVB_CORE && I2C
++       default m if DVB_FE_CUSTOMISE
++       help
++         A DVB-S/S2 tuner module. Say Y when you want to support this frontend.
++
+ config DVB_STB6100
+ 	tristate "STB6100 based tuners"
+ 	depends on DVB_CORE && I2C
+--- linux/drivers/media/video/cx23885/Kconfig	2012-05-14 19:28:39.666800040 +0200
++++ linux/drivers/media/video/cx23885/Kconfig.tbs	2012-05-14 19:28:28.996800036 +0200
+@@ -24,6 +24,9 @@
+ 	select DVB_STV0900 if !DVB_FE_CUSTOMISE
+ 	select DVB_DS3000 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0367 if !DVB_FE_CUSTOMISE
++        select DVB_TBS6980FE if !DVB_FE_CUSTOMISE
++        select DVB_TBS6981FE if !DVB_FE_CUSTOMISE
++        select DVB_TBS6921FE if !DVB_FE_CUSTOMISE
+ 	select MEDIA_TUNER_MT2131 if !MEDIA_TUNER_CUSTOMISE
+ 	select MEDIA_TUNER_XC2028 if !MEDIA_TUNER_CUSTOMISE
+ 	select MEDIA_TUNER_TDA8290 if !MEDIA_TUNER_CUSTOMISE

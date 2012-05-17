@@ -1,0 +1,471 @@
+OpenBricks Package Structure
+============================
+
+Introduction
+------------
+
+OpenBricks packages live under the packages/ directory in the source tree. Every
+package is composed of several elements:
+
+* 'meta': package metadata information file
+* 'url': where the package sources can be downloaded from (mostly obsoleted by
+  PKG_URL field in meta)
+* 'need_unpack': a shell script run before unpack stage, usually to check for
+  missing depends
+* 'unpack': a shell script run after unpack stage, usually to postprocess the
+  source or manually unpack packages which require special handling
+* 'build': a shell script which takes care of building the package from source
+* 'install': a shell script run to construct the runtime opkg package
+* 'installdev': a shell script run to construct the devel opkg package
+* 'config/': a directory for misc configuration files used by the package
+* 'unit/': a directory for systemd units
+* 'package/': a directory for custom opkg control files (e.g. prerm scripts)
+* 'patches/': a directory containing patches (in +diff -Naur+ format) to be
+  applied after unpack and before build
+* 'scripts/': a directory for misc shell scripts used by the package
+* 'sources/': a directory for package sources, which will be copied verbatim
+  to the package build directory at unpack stage
+* 'tmpfiles.d/': a directory for systemd-tmpfiles configuration files
+* 'modules-load.d/': a directory for configuration files to list the kernel
+  modules to load at boot
+* 'modprobe.d/': a directory for kernel module options configuration files
+
+Most packages only use a small subset of these elements -- runtime programs
+usually have just 'meta', 'build' and 'install', while libraries tend to also
+use 'installdev' for includes and such.
+
+Meta File Format
+----------------
+
+The 'meta' file is used to provide the package metadata information (hence
+the name). It is a POSIX shell script which is sourced by the build system; it
+can contain variable assignments and conditional instructions.
+
+A devel-only package (e.g. gmp, gcc-core) has three mandatory fields:
+
+* PKG_NAME
+ ** the name of the package
+ ** must coincide with the package directory name
+ ** can be different from the upstream tarball name
+ ** will be used to create the package build directory
+* PKG_VERSION
+ ** the upstream package current version
+ ** will be used to create the package build directory
+* PKG_REV
+ ** the OpenBricks package revision
+ ** incremented on every major change in the package
+ ** reset to 1 every time PKG_VERSION changes
+
+A devel-only package has several optional fields:
+
+* PKG_URL
+ ** a space-separated list of URLs the package should be downloaded from
+ ** can start with variable '$DISTRO_SRCS' if the files are hosted on the
+    OpenBricks server, or with '$SFNET_SRCS' if they are on SourceForge
+ ** in addition, URLs can be listed in the url file in the package
+    directory; all resources listed will be fetched
+ ** PKG_URL can point to the location of a source code repository such 
+    as git, Subversion (svn) or Mercurial (hg) when used together with 
+    PKG_URL_PROTO; details are given in the section "Repository Download" below
+* PKG_SHA256
+ ** a space-separated list of SHA-256 checksums of the package files
+ ** the checksums will be checked against the downloaded files
+* PKG_MD5
+ ** a space-separated list of MD5 checksums of the package files
+ ** the checksums will be checked against the downloaded files
+* PKG_BUILD_DEPENDS
+ ** the build time package dependencies, i.e. the packages required to be able
+    to build the package
+ ** will be packaged and installed to sysroot before the package is built
+ ** defaults to "" (no build depends)
+* PKG_DEV_DEPENDS
+ ** the packages required to use the dev package (e.g. gcc-core needs binutils
+    to work, but requires gmp only to build)
+ ** will be installed to sysroot before the dev package is installed
+ ** defaults to "$PKG_BUILD_DEPENDS"
+
+A runtime package has the same mandatory fields of a devel-only package, plus:
+
+* PKG_RUN_DEPENDS
+ ** the runtime package dependencies, i.e. the packages required to be able
+    to run the package
+ ** will be packaged and installed to the target system before the package is
+    installed
+ ** defaults to "" (no runtime depends)
+* PKG_USE
+ ** a list of "use flags" the package can handle
+ ** see section "USE FLAGS" for more details
+ ** defaults to "" (no use flags)
+* PKG_REQUIRES_USE
+ ** a list of "use flags" the package requires to be enabled
+ ** you can also specify per-package useflags with the "package:flag" syntax
+ ** see section "USE FLAGS" for more details
+ ** defaults to "" (no required use flags)
+* PKG_PRIORITY
+ ** the package priority, i.e. how much the package is important
+ ** can be
+  *** _required_: the system will not boot without this package (e.g. linux)
+  *** _standard_: this package is part of the OpenBricks base system
+  *** _optional_: normal priority for packages not part of OpenBricks base
+      system
+  *** _extra_: this is a minor non-essential package
+* PKG_SECTION
+ ** the package category, used to group packages by function
+ ** can be:
+  *** _admin_: tools and program useful for system administration
+  *** _drivers_: kernel or userspace drivers for hardware
+  *** _filesystem_: filesystem support drivers and programs
+  *** _games_: leisure programs
+  *** _libs_: shared libraries used by other programs
+  *** _multimedia_: programs dealing with audio, video or image contents
+  *** _net_: network clients, servers, and generic network-related programs
+  *** _perl_: Perl modules
+  *** _python_: Python modules
+  *** _sound_: programs dealing with audio support
+  *** _system_: essential system programs and libraries
+  *** _utils_: miscellaeous utility programs
+  *** _x11_: programs and libraries related to the Xorg windowing system
+* PKG_SHORTDESC
+ ** used as the short description for the package
+ ** should be one-line summary
+ ** should not start with the package name
+* PKG_LONGDESC
+ ** used as the long description for the package
+
+A regular package has the same optional fields of a devel-only package, plus:
+
+* PKG_DEPENDS
+ ** the package dependencies required both at build and at runtime
+ ** shorthand for adding a package to both PKG_RUN_DEPENDS and
+    PKG_BUILD_DEPENDS
+ ** defaults to "" (no depends)
+* PKG_ARCH
+ ** the target architectures supported by the package
+ ** can be:
+  *** _any_: the package is supported on all the available architectures
+  *** _all_: this is an architecture-independent package (e.g. enna-theme)
+  *** a spaced list of architecture names
+  *** defaults to "any"
+* PKG_LICENSE
+ ** the upstream package license
+ ** can be:
+  *** _free_: the package is distributed under a DFSG-compliant license (i.e
+      GPL, LGPL, MIT, etc.)
+  *** _non-free_: the package license does not meet the DFSG
+  *** a non-free package may restrict the distribution of the entire distro
+      if it is built in, and may have unreasonable/difficult to meet
+      restrictions
+  *** defaults to "free"
+
+Use Flags
+~~~~~~~~~
+
+In the context of a OpenBricks package, a use flag represents a conditional
+feature, which can be selected by the user at compile time and which could
+bring alongside additional depends. Use flags are strictly per-package: flags
+enabled for package X do not affect flags for package Y. Some flags (e.g. xorg)
+may be enabled or disabled distro-wide with a config option, but their value
+can still be customized for each package.
+
+A package declares its available flags with PKG_USE in meta. For each flag, a
+package can declare several information (all optional), using the following
+per-flag variables:
+
+* PKG_USE_NAME_$flag
+ ** the displayed name of the use flag
+ ** defaults to "$flag"
+* PKG_USE_DESC_$flag
+ ** the short description of the flag
+ ** defaults to "Enable $PKG_USE_NAME_$flag support"
+* PKG_USE_HELP_$flag
+ ** the long description of the flag, which is used as its help text in the
+    configuration menu
+ ** defaults to "$PKG_USE_DESC_$flag."
+* PKG_USE_DEFAULT_$flag
+ ** the default status of the flag, i.e. if it's to be enabled or disabled
+ ** note that a flag will automatically default to enabled status if the option
+    USE_$flag is enabled (this is used to globally toggle a flag status)
+ ** can be "yes" or "no", defaults to "no"
+
+In addition, a flag can declare additional depends, which will be carried by
+the package if the flag is enabled:
+
+* PKG_DEPENDS_$flag
+* PKG_BUILD_DEPENDS_$flag
+* PKG_RUN_DEPENDS_$flag
+
+A package can also force specific flags to be enabled by declaring them in
+PKG_REQUIRES_USE. If the package requires a specific use flag to be enabled
+only for a given package, use the syntax "$package:$flag" in PKG_REQUIRES_USE.
+In this case, the package must also be listed in the PKG_DEPENDS. For example,
+PKG_REQUIRES_USE="qt:mysql xorg" forces the "xorg" flag to be globally enabled,
+and the "mysql" flag to be enabled for the "qt" package.
+
+Repository Download
+~~~~~~~~~~~~~~~~~~~
+
+PKG_URL can point to the location of a source code repository. In this case,
+PKG_URL_PROTO specifies the repository type:
+
+* git for a git repository
+* hg for a Mercurial repository
+* svn for a Subversion repository
+
+Note that PKG_URL can contain any URL permissible by the respective source
+code management tool (such as git://, svn:// or http://).
+
+PKG_URL_REV can optionally specify the revision/branch/tag of the source code
+to download. If omitted, the default source code version is obtained.
+It is recommended to specify a particular revision and to include PKG_URL_REV
+in PKG_VERSION, such as shown in the example below. Note that PKG_VERSION
+should start with a number or the letter 'r' so that build directories can 
+be automatically deleted.
+
+When using PKG_URL_PROTO, only a single URL must be given.
+
+.Example
+[source,sh]
+----
+PKG_URL_PROTO=git
+PKG_URL="git://kernel.ubuntu.com/ubuntu/ubuntu-natty.git"
+PKG_URL_REV=cefe94dc5d171940edd23081d9d481dc1ed5824b
+PKG_VERSION=2.6.38-natty-${PKG_URL_REV}
+----
+
+Subpackages
+~~~~~~~~~~~
+
+A subpackage is a special kind of runtime package, which packages an optional
+component of another package and is created from its install tree. A subpackage
+has an additional mandatory field in meta:
+
+* PKG_PARENT
+ ** the name of the parent package, i.e. the package this subpackage should be
+    built from
+ ** defaults to "" (empty)
+
+A subpackage has two additional optional fields in meta:
+
+* PKG_PARENT_USE
+ ** a list of use flags of the parent package
+ ** the subpackage will be selectable in Kconfig only if all the use flags
+    specified are active
+ ** defaults to "" (no use flags)
+* PKG_NO_PARENT_DEPENDS
+ ** whether the package should automatically build-depend on its parent or not
+ ** boolean field, defaults to _yes_
+
+For clarity, it is recommended (but not required) to name a subpackage as
+"$PKG_PARENT-subpackagename".
+
+Meta Examples
+~~~~~~~~~~~~~
+
+.A devel-only package
+[sh]
+source~~~~
+include::../packages/gmp/meta[]
+source~~~~
+
+.A standard runtime package
+[sh]
+source~~~~
+include::../packages/lsof/meta[]
+source~~~~
+Note the use of $TARGET_LIBC in PKG_DEPENDS to refer to the runtime system libc
+(which could be uClibc, glibc or eglibc)
+
+.A non-free package available only on selected archs
+[sh]
+source~~~~
+include::../packages/xf86-video-nvidia/meta[]
+source~~~~
+
+.A complex package which shows the usage of conditionals to define the depends
+[sh]
+source~~~~
+include::../packages/MPlayer/meta[]
+source~~~~
+
+Package scripts
+---------------
+
+All the scripts in the package directory follow some conventions:
+
+* the script should be written for the Bourne shell (+#!/bin/sh+); bashisms
+  should be avoided, checking the scripts with a modern _sh_ implementation
+  such as _dash_ is recommended
+* the script should source 'config/options' as their first action; because of
+  this, the script will have access to all the variables and functions defined
+  in 'config/options', 'config/toolchain', 'config/path' and 'config/functions'
+* scripts are expected to be called with the package name as the first argument
+  -- this means +$1+ inside the script will refer to the package name
+* the script can use +get_meta $1+ to read the package meta if necessary;
+  directly sourcing the meta file is not recommended
+
+'need_unpack' script
+~~~~~~~~~~~~~~~~~~~~
+
+The 'need_unpack' script is executed just before the package unpack stage. It
+can be used to ensure the prerequisites for the package are always satisfied.
+It is normally used only for packages that require a kernel tree to build (such
+as out-of-tree kernel drivers), to make sure they are properly rebuilt if the
+kernel tree changes (e.g. because of a kernel upgrade). This is obtained by
+removing the unpack stamp for the package if the conditions are not satisfied,
+which forces a full rebuild.
+
+'unpack' script
+~~~~~~~~~~~~~~~
+
+The 'unpack' script is executed just after the package unpack stage. It can be
+used to postprocess the package sources (e.g. fixing a broken upstream makefile
+with +sed+) or to manually unpack the package sources (e.g. for binary packages
+like xf86-video-nvidia). If necessary, the helper function +apply_patch
+<package> <patch>+ can be used to apply arbitrary patches to the package. The
+ package unpack directory can be referenced reading '$PKG_BUILD_DIR' after a
+'get_meta' call; for most packages where the standard unpack works it is also
+possible to use '$BUILD/$1*', though it could lead to conflicts in case of
+multiple packages with similar names.
+
+'build' script
+~~~~~~~~~~~~~~
+
+The 'build' script is responsible for the package build, which for most packages
+entails a compilation from source. The script can be handwritten, but there are
+several helper functions (+do_configure+, +make_install+, etc.) which can help
+to automate the most boring parts. The compilation results should be installed
+in '$PKG_BUILD_DIR/.install', to ease the following stages implementation.
+
+.Example
+[source,sh]
+----
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_configure
+
+make
+make_install
+----
+
+'install' script
+~~~~~~~~~~~~~~~
+
+The 'install' script gathers the files which should be copied to the target
+rootfs, which is set as '$INSTALL'. If the 'build' script has created a
+'.install' directory it can be easily written using the +do_install+ function.
+
+.Example
+[source,sh]
+----
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install usr/bin
+do_install usr/lib/lib*.so*
+----
+
+
+'installdev' script
+~~~~~~~~~~~~~~~~~~
+
+The 'installdev' script gathers the files which should be copied to the
+toolchain directory, which is set as '$INSTALL'. If the 'build' script
+has created a '.install' directory it can be easily written using the
++do_installdev+ function.
+
+.Example
+[source,sh]
+----
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_installdev usr/include
+do_installdev usr/lib
+----
+
+Helper functions
+~~~~~~~~~~~~~~~~
+
+.setup_toolchain <target | host>
+sets several environment variables (such as $CFLAGS) to prepare for a host build
+(using $HOST_CC) or for a target build (using $TARGET_CC).
++setup_toolchain target+ is automatically called before a package build, so it's
+not necessary to explicitly use for normal package builds.
+
+.get_meta <package>
+retrieves a package meta file and sources it into the environment, doing several
+safety checks, some postprocessing and setting additional variables.
+
+.pkg_uses <package> <use_flag>
+returns true if the specified use flag is currently enabled for the package, and
+false otherwise
+
+.kernel_path
+returns the path to the kernel build tree, which can be useful to build
+out-of-tree kernel modules
+
+.kernel_version
+returns the kernel version
+
+.require_glibc <package>
+aborts build if TARGET_LIBC is not a glibc variant
+
+.require_cxx <package>
+aborts build if C++ support is not enabled
+
+.do_qmake
+invokes qmake with the correct setup for a cross build
+
+.do_strip [bin | shlib | staticlib] <path>
+strips the argument, after checking that it is actually an ELF object file; the
+first optional argument, which defaults to 'bin', sets the correct strip options
+for the target
+
+.extract_debug_info <debug_path> <unstripped_files...>
+uses objdump to create detached debug symbols in 'debug_path' for the specified
+files
+
+.strip_libs <path> [debug_path]
+calls +do_strip shlib+; if debug_path is set, also calls +extract_debug_info+
+
+.strip_bins <path> [debug_path]
+calls +do_strip bin+; if debug_path is set, also calls +extract_debug_info+
+
+.xorg_drv_configure_prepend
+fixes the include files for Xorg drivers
+
+.fix_libs <path> [toolchain | sysroot | libprefix]
+rewrites the prefix path in pkgconfig and library files for the specified
+target, which defaults to +libprefix+
+
+.make_install [toolchain | sysroot | libprefix] [unstripped]
+is an automagic function to ease the installation of packages using autotools:
+runs +make install+ using '$PKG_BUILD_DIR/.install' as install prefix, calls
++fix_libs+ to set the correct prefix paths for libraries, calls +strip_libs+
+and +strip_bins+ to strip ELF files and place detached debug symbols in
+'$PKG_BUILD_DIR/.install-debuginfo'
+
+.do_configure [host | target] [configure_options...]
+is an automagic function to ease the configuration of packages using autotools;
+it sets up the enviroment for a host or target build and calls './configure'
+with the correct arguments
+
+.do_install <file>
+is used in the package 'install' script to copy to '$INSTALL' the specified
+file (which can include globbing) from '$PKG_BUILD_DIR/.install'
+
+.do_installdev <file> [toolchain | sysroot | libprefix]
+is used in the package 'installdev' script to copy to the requested target the
+specified file (which can include globbing) from '$PKG_BUILD_DIR/.install'
+
+// vim: set syntax=asciidoc:

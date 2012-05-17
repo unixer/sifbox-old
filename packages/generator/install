@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+mkdir -p $INSTALL
+
+cp $BUILD/$1*/generator.exe $INSTALL
+cp $BUILD/$1*/linux-i386-generator $INSTALL
+cp $BUILD/$1*/macosx-generator $INSTALL

@@ -1,0 +1,423 @@
+# This file defines some defaults for use flags referenced by multiple packages
+
+############
+# sections #
+############
+PKG_USE_SECTION_DESC_audio="Audio"
+PKG_USE_SECTION_DESC_display="Graphics Display"
+PKG_USE_SECTION_DESC_gfxdrivers="Graphics Drivers"
+PKG_USE_SECTION_DESC_hwaccel="Hardware Accelerators"
+PKG_USE_SECTION_KCONFIG_hwaccel="
+choice EGL_PROVIDER
+  prompt \"EGL\"
+  depends on USE_egl
+  default EGL_PROVIDER_MESA
+
+config EGL_PROVIDER_MESA
+  bool \"Mesa\"
+  select PKG_mesa
+
+config EGL_PROVIDER_SGX
+  bool \"Imagination SGX 5xx\"
+  depends on ( TAINT && ( TARGET_PLATFORM_arm_omap3 || TARGET_PLATFORM_arm_omap4 ) )
+  select PKG_sgx530-OpenGLES if TARGET_PLATFORM_arm_omap3
+  select PKG_sgx540-OpenGLES if TARGET_PLATFORM_arm_omap4
+
+config EGL_PROVIDER_TEGRA
+  bool \"Tegra\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_tegra2 )
+  select PKG_tegra-gl
+
+config EGL_PROVIDER_IMX5
+  bool \"Freescale i.MX5 (AMD/ATI z160)\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_imx5x )
+  select PKG_imx5-graphics
+
+config EGL_PROVIDER_IMX6
+  bool \"Freescale i.MX6 (Vivante GC400)\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_imx6 )
+  select PKG_imx6-graphics
+
+config EGL_PROVIDER_MALI
+  bool \"Mali 400\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_ux500 )
+  select PKG_mali400
+
+endchoice
+
+choice GLES_PROVIDER
+  prompt \"OpenGL|ES\"
+  depends on USE_opengles
+  default GLES_PROVIDER_MESA
+
+config GLES_PROVIDER_MESA
+  bool \"Mesa\"
+  select PKG_mesa
+  select EGL_PROVIDER_MESA
+
+config GLES_PROVIDER_SGX
+  bool \"Imagination SGX 5xx\"
+  depends on ( TAINT && ( TARGET_PLATFORM_arm_omap3 || TARGET_PLATFORM_arm_omap4 ) )
+  select PKG_sgx530-OpenGLES if TARGET_PLATFORM_arm_omap3
+  select PKG_sgx540-OpenGLES if TARGET_PLATFORM_arm_omap4
+
+config GLES_PROVIDER_TEGRA
+  bool \"Tegra\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_tegra2 )
+  select PKG_tegra-gl
+
+config GLES_PROVIDER_IMX5
+  bool \"Freescale i.MX5 (AMD/ATI z160)\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_imx5x )
+  select PKG_imx5-graphics
+
+config GLES_PROVIDER_IMX6
+  bool \"Freescale i.MX6 (Vivante GC400)\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_imx6 )
+  select PKG_imx6-graphics
+
+config GLES_PROVIDER_MALI
+  bool \"Mali 400\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_ux500 )
+  select PKG_mali400
+
+endchoice
+
+choice OVG_PROVIDER
+  prompt \"OpenVG provider\"
+  depends on USE_openvg
+  default VG_PROVIDER_MESA
+
+config OVG_PROVIDER_MESA
+  bool \"Mesa\"
+  select PKG_mesa
+  select EGL_PROVIDER_MESA
+
+config OVG_PROVIDER_SGX
+  bool \"Imagination SGX 5xx\"
+  depends on ( TAINT && ( TARGET_PLATFORM_arm_omap3 || TARGET_PLATFORM_arm_omap4 ) )
+  select PKG_sgx530-OpenGLES if TARGET_PLATFORM_arm_omap3
+  select PKG_sgx540-OpenGLES if TARGET_PLATFORM_arm_omap4
+
+config OVG_PROVIDER_IMX5
+  bool \"Freescale i.MX5 (AMD/ATI z160)\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_imx5x )
+  select PKG_imx5-graphics
+
+config OVG_PROVIDER_IMX6
+  bool \"Freescale i.MX6 (Vivante GC400)\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_imx6 )
+  select PKG_imx6-graphics
+
+config OVG_PROVIDER_MALI
+  bool \"Mali 400\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_ux500 )
+  select PKG_mali400
+
+endchoice
+
+choice OMAX_PROVIDER
+  prompt \"OpenMAX provider\"
+  depends on USE_openmax
+  default OMAX_PROVIDER_BELLAGIO
+
+config OMAX_PROVIDER_BELLAGIO
+  bool \"Bellagio OpenMAX IL\"
+  select PKG_libomxil-bellagio
+
+config OMAX_PROVIDER_TI
+  bool \"TI OpenMAX IL\"
+  depends on ( TAINT && ( ( TARGET_PLATFORM_arm_omap3 && ! USE_tidsp ) || ( TARGET_PLATFORM_arm_omap4 && ! USE_ducati ) ) )
+  select PKG_ti-omap3-oxmil if TARGET_PLATFORM_arm_omap3
+  select PKG_ti-omap4-domx if TARGET_PLATFORM_arm_omap4
+
+config OMAX_PROVIDER_TEGRA
+  bool \"Tegra\"
+  depends on ( TAINT && TARGET_PLATFORM_arm_tegra2 )
+  select PKG_tegra-openmax
+
+endchoice
+"
+PKG_USE_SECTION_DESC_input="Input"
+PKG_USE_SECTION_DESC_mediaplayers="Media Players"
+PKG_USE_SECTION_DESC_multimedia="Multimedia"
+PKG_USE_SECTION_DESC_toolkits="Applicative Toolkits"
+
+#############
+# use flags #
+#############
+
+# aacs
+PKG_USE_NAME_aacs="Blu-Ray descrambling (AACS)"
+PKG_USE_SECTION_aacs="multimedia"
+PKG_USE_DEPENDS_aacs="libaacs"
+
+# afpclient
+PKG_USE_NAME_afpclient="Apple Filing Protocol (AFP)"
+PKG_USE_DEPENDS_afpclient="afpfs-ng"
+
+# airtunes
+PKG_USE_NAME_airtunes="Apple AirPort Express Emulation Streaming"
+PKG_USE_DEPENDS_airtunes="libshairport"
+
+# alsa
+PKG_USE_NAME_alsa="ALSA"
+PKG_USE_SECTION_alsa="audio"
+PKG_USE_DEPENDS_alsa="alsa"
+
+# bluetooh
+PKG_USE_NAME_bluetooth="Bluetooth"
+PKG_USE_DEPENDS_bluetooth="bluez"
+
+# bluray
+PKG_USE_NAME_bluray="Blu-Ray"
+PKG_USE_SECTION_bluray="multimedia"
+
+# crystalhd
+PKG_USE_NAME_crystalhd="CrystalHD"
+PKG_USE_SECTION_crystalhd="hwaccel"
+PKG_USE_DEPENDS_crystalhd="crystalhd"
+
+# devtools
+PKG_USE_NAME_devtools="devel tools"
+
+# directfb
+PKG_USE_NAME_directfb="DirectFB"
+PKG_USE_SECTION_directfb="display"
+PKG_USE_DEPENDS_directfb="DirectFB"
+
+# disko
+PKG_USE_NAME_disko="disko"
+PKG_USE_SECTION_disko="toolkits"
+PKG_USE_DEPENDS_disko="disko"
+
+# ducati
+PKG_USE_NAME_ducati="Ducati IVA-HD"
+PKG_USE_HELP_ducati="The Ducati Image Video Accelerator - High Definition (IVA-HD) Sub System is composed of hardware accelerators which enable video encoding and decoding up to 1080 p/i resolution at 30 frames per second (or 60 fields per second). It is available on TI OMAP4 SoCs."
+PKG_USE_SECTION_ducati="hwaccel"
+PKG_USE_DEPENDS_ducati="syslink"
+PKG_USE_ARCH_ducati="arm"
+PKG_USE_PLATFORM_ducati="omap4"
+
+# dvb
+PKG_USE_NAME_dvb="DVB"
+PKG_USE_SECTION_dvb="multimedia"
+
+# dvd
+PKG_USE_NAME_dvd="DVD"
+PKG_USE_SECTION_dvd="multimedia"
+
+# dvdcss
+PKG_USE_NAME_dvdcss="DVD descrambling (CSS)"
+PKG_USE_SECTION_dvdcss="multimedia"
+
+# efl
+PKG_USE_NAME_efl="EFL"
+PKG_USE_SECTION_efl="toolkits"
+PKG_USE_DEPENDS_efl="EFL"
+
+# egl
+PKG_USE_NAME_egl="EGL"
+PKG_USE_SECTION_egl="hwaccel"
+
+# External FFmpeg
+PKG_USE_NAME_externalffmpeg="external FFmpeg"
+
+# fb
+PKG_USE_NAME_fb="Framebuffer"
+PKG_USE_SECTION_fb="display"
+
+# Gallium3D
+PKG_USE_NAME_gallium3d="Gallium3D"
+
+# gtk
+PKG_USE_NAME_gtk="GTK+"
+PKG_USE_SECTION_gtk="toolkits"
+PKG_USE_DEPENDS_gtk="gtk"
+
+# gstreamer
+PKG_USE_NAME_gstreamer="GStreamer"
+PKG_USE_SECTION_gstreamer="mediaplayers"
+PKG_USE_DEPENDS_gstreamer="GStreamer"
+
+# intel
+PKG_USE_NAME_intel="Intel Graphics"
+PKG_USE_SECTION_intel="gfxdrivers"
+PKG_USE_ARCH_intel="i386 x86_64"
+PKG_USE_DEPENDS_intel="xf86-video-intel"
+
+# libcec
+PKG_USE_NAME_libcec="HDMI-CEC"
+PKG_USE_DEPENDS_libcec="libcec"
+
+# libcec
+PKG_USE_NAME_libnfs="NFS"
+PKG_USE_DEPENDS_libnfs="libnfs"
+
+# lirc
+PKG_USE_NAME_lirc="LIRC"
+PKG_USE_SECTION_lirc="input"
+PKG_USE_DEPENDS_lirc="lirc"
+
+# live
+PKG_USE_NAME_live="LIVE555"
+
+# mach64
+PKG_USE_NAME_mach64="ATI Mach64"
+PKG_USE_SECTION_mach64="gfxdrivers"
+PKG_USE_ARCH_mach64="i386 x86_64"
+PKG_USE_DEPENDS_mach64="xf86-video-mach64"
+
+# mga
+PKG_USE_NAME_mga="Matrox"
+PKG_USE_SECTION_mga="gfxdrivers"
+PKG_USE_ARCH_mga="i386 x86_64"
+PKG_USE_DEPENDS_mga="xf86-video-mga"
+
+# mplayer
+PKG_USE_NAME_mplayer="MPlayer"
+PKG_USE_SECTION_mplayer="mediaplayers"
+PKG_USE_DEPENDS_mplayer="MPlayer"
+
+# nouveau
+PKG_USE_NAME_nouveau="Nouveau"
+PKG_USE_SECTION_nouveau="gfxdrivers"
+PKG_USE_ARCH_nouveau="i386 x86_64"
+PKG_USE_DEPENDS_nouveau="xf86-video-nouveau"
+
+# opengl
+PKG_USE_NAME_opengl="OpenGL"
+PKG_USE_SECTION_opengl="hwaccel"
+
+# opengles
+PKG_USE_NAME_opengles="OpenGL|ES"
+PKG_USE_SECTION_opengles="hwaccel"
+
+# openmax
+PKG_USE_NAME_openmax="OpenMAX"
+PKG_USE_SECTION_openmax="hwaccel"
+
+# openssl
+PKG_USE_NAME_openssl="OpenSSL"
+
+# openvg
+PKG_USE_NAME_openvg="OpenVG"
+PKG_USE_SECTION_openvg="hwaccel"
+
+# poulsbo
+PKG_USE_NAME_poulsbo="Intel GMA500 (Poulsbo)"
+PKG_USE_SECTION_poulsbo="gfxdrivers"
+PKG_USE_ARCH_poulsbo="i386 x86_64"
+PKG_USE_DEPENDS_poulsbo="xf86-video-fbdev"
+
+# pulseaudio
+PKG_USE_NAME_pulseaudio="PulseAudio"
+PKG_USE_SECTION_pulseaudio="audio"
+PKG_USE_DEPENDS_pulseaudio="pulseaudio"
+
+# qt
+PKG_USE_NAME_qt="QT"
+PKG_USE_SECTION_qt="toolkits"
+PKG_USE_DEPENDS_qt="qt"
+
+# r128
+PKG_USE_NAME_r128="ATI R128"
+PKG_USE_SECTION_r128="gfxdrivers"
+PKG_USE_ARCH_r128="i386 x86_64"
+PKG_USE_DEPENDS_r128="xf86-video-r128"
+
+# radeon
+PKG_USE_NAME_radeon="ATI Radeon"
+PKG_USE_SECTION_radeon="gfxdrivers"
+PKG_USE_ARCH_radeon="i386 x86_64"
+PKG_USE_DEPENDS_radeon="xf86-video-ati"
+
+# savage
+PKG_USE_NAME_savage="S3 Savage"
+PKG_USE_SECTION_savage="gfxdrivers"
+PKG_USE_ARCH_savage="i386 x86_64"
+PKG_USE_DEPENDS_savage="xf86-video-savage"
+
+# sdl
+PKG_USE_NAME_sdl="SDL"
+PKG_USE_SECTION_sdl="toolkits"
+PKG_USE_DEPENDS_sdl="SDL"
+
+# sis
+PKG_USE_NAME_sis="SiS / XGI"
+PKG_USE_SECTION_sis="gfxdrivers"
+PKG_USE_ARCH_sis="i386 x86_64"
+PKG_USE_DEPENDS_sis="xf86-video-sis"
+
+# tdfx
+PKG_USE_NAME_tdfx="3Dfx"
+PKG_USE_SECTION_tdfx="gfxdrivers"
+PKG_USE_ARCH_tdfx="i386 x86_64"
+PKG_USE_DEPENDS_tdfx="xf86-video-tdfx"
+
+# tidsp
+PKG_USE_NAME_tidsp="TI C64x DSP"
+PKG_USE_SECTION_tidsp="hwaccel"
+PKG_USE_DEPENDS_tidsp="ti-dsp"
+PKG_USE_ARCH_tidsp="arm"
+PKG_USE_PLATFORM_tidsp="omap3"
+
+# touchscreen
+PKG_USE_NAME_touchscreen="Touch Screen"
+PKG_USE_SECTION_touchscreen="input"
+
+# tvheadend
+PKG_USE_NAME_tvheadend="DVB/DVR/LiveTV"
+PKG_USE_DEPENDS_tvheadend="tvheadend"
+
+# unichrome
+PKG_USE_NAME_unichrome="VIA UniChrome"
+PKG_USE_SECTION_unichrome="gfxdrivers"
+PKG_USE_ARCH_unichrome="i386 x86_64"
+PKG_USE_DEPENDS_unichrome="xf86-video-openchrome"
+
+# v4l
+PKG_USE_NAME_v4l="Video4Linux"
+PKG_USE_SECTION_v4l="multimedia"
+
+# vaapi
+PKG_USE_NAME_vaapi="VA API"
+PKG_USE_SECTION_vaapi="hwaccel"
+
+# vdpau
+PKG_USE_NAME_vdpau="VDPAU"
+PKG_USE_SECTION_vdpau="hwaccel"
+PKG_USE_ARCH_vdpau="i386 x86_64"
+
+# vlc
+PKG_USE_NAME_vlc="VLC"
+PKG_USE_SECTION_vlc="mediaplayers"
+PKG_USE_DEPENDS_vlc="vlc"
+
+# xine
+PKG_USE_NAME_xine="xine"
+PKG_USE_SECTION_xine="mediaplayers"
+PKG_USE_DEPENDS_xine="xine-lib"
+
+# xorg
+PKG_USE_NAME_xorg="Xorg"
+PKG_USE_SECTION_xorg="display"
+PKG_USE_DEPENDS_xorg="Xorg"
+
+# xvba
+PKG_USE_NAME_xvba="ATI/AMD XvBA"
+PKG_USE_SECTION_xvba="hwaccel"
+PKG_USE_ARCH_xvba="i386 x86_64"
+
+# wifi
+PKG_USE_NAME_wifi="Wi-Fi"
+
+# vmwgfx
+PKG_USE_NAME_vmwgfx="VMware accelerated graphics"
+PKG_USE_SECTION_vmwgfx="gfxdrivers"
+PKG_USE_ARCH_vmwgfx="i386 x86_64"
+PKG_USE_DEPENDS_vmwgfx="xf86-video-vmware"
+
+# zeroconf
+PKG_USE_NAME_zeroconf="ZeroConf"
+PKG_USE_DEPENDS_zeroconf="avahi"

@@ -1,0 +1,116 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+VDR_DIR=`basename $BUILD/vdr-1*`
+
+cd $BUILD/$VDR_DIR
+do_install usr/bin/vdr
+#do_install usr/bin/svdrpsend
+mkdir -p $INSTALL/usr/sbin
+mkdir -p $INSTALL/usr/share/fonts/truetype
+cp $ROOT/$PACKAGES/$1/fonts/*.ttf $INSTALL/usr/share/fonts/truetype
+cp $ROOT/$PACKAGES/$1/scripts/runvdr $INSTALL/usr/sbin
+cp $ROOT/$PACKAGES/$1/scripts/vdrshutdown $INSTALL/usr/bin
+cp svdrpsend $INSTALL/usr/bin/svdrpsend
+
+mkdir -p $INSTALL/usr/lib/vdr
+mkdir -p $INSTALL/usr/bin
+#mkdir -p $INSTALL/var/lib/vdr/plugins
+mkdir -p $INSTALL/usr/lib/vdr/plugins
+#cp PLUGINS/lib/libvdr-dvbsddevice.so.* $INSTALL/usr/lib/vdr/plugins
+mkdir -p $INSTALL/media/video
+#mkdir -p $INSTALL/etc/vdr-sxfe
+mkdir -p $INSTALL/usr/share/libxine1-xvdr
+mkdir -p $INSTALL/firmware
+
+cp $ROOT/$PACKAGES/$1/config/nosignal.mpg $INSTALL/usr/share/libxine1-xvdr
+#cp $ROOT/$PACKAGES/$1/scripts/vdrfrontend.sh $INSTALL/usr/bin
+cp $ROOT/$PACKAGES/$1/firmware/* $INSTALL/firmware
+#cp $ROOT/$PACKAGES/$1/scripts/config-loader.sh $INSTALL/usr/lib/vdr/
+#cp $ROOT/$PACKAGES/$1/config/config_xineliboutput $INSTALL/etc/vdr-sxfe
+#cp $ROOT/$PACKAGES/$1/scripts/commands-loader.sh $INSTALL/usr/lib/vdr/
+#cp $ROOT/$PACKAGES/$1/scripts/plugin-loader.sh $INSTALL/usr/lib/vdr/
+cp $ROOT/$PACKAGES/$1/scripts/svdrpsend.pl $INSTALL/usr/lib/vdr/
+cp svdrpsend $INSTALL/usr/bin
+#cp $ROOT/$PACKAGES/$1/scripts/vdr-groups.sh $INSTALL/usr/lib/vdr/
+#cp $ROOT/$PACKAGES/$1/scripts/vdr-recordingaction $INSTALL/usr/lib/vdr/
+#cp $ROOT/$PACKAGES/$1/scripts/vdr-shutdown $INSTALL/usr/lib/vdr/
+#cp $ROOT/$PACKAGES/$1/scripts/vdr-shutdown-message $INSTALL/usr/lib/vdr/
+
+do_install usr/share/locale
+
+#rm .install/etc/vdr/channels.conf
+#cp $ROOT/$PACKAGES/$1/config/channels.conf $INSTALL/etc/vdr/channels.conf
+#touch .install/etc/vdr/channels.conf
+do_install etc/vdr
+
+[ "$SERVICES" = yes ] && echo '0.0.0.0/0' >> $INSTALL/etc/vdr/svdrphosts.conf
+mkdir -p $INSTALL/etc/vdr/plugins
+mkdir -p $INSTALL/etc/vdr/plugins.d
+
+cp $ROOT/$PACKAGES/$1/config/wakeup $INSTALL/etc
+cp $ROOT/$PACKAGES/$1/config/channels.conf $INSTALL/etc/vdr/channels.conf
+cp $ROOT/$PACKAGES/$1/config/setup.conf $INSTALL/etc/vdr
+#cp $ROOT/$PACKAGES/$1/config/channels.conf $INSTALL/var/lib/vdr
+cp $ROOT/$PACKAGES/$1/config/remote.conf $INSTALL/etc/vdr
+cp $ROOT/$PACKAGES/$1/config/keymacros.conf $INSTALL/etc/vdr
+cp $ROOT/$PACKAGES/$1/config/scr.conf $INSTALL/etc/vdr
+cp $ROOT/$PACKAGES/$1/config/diseqc.conf $INSTALL/etc/vdr
+#cp $ROOT/$PACKAGES/$1/config/order.conf $INSTALL/etc/vdr/plugins
+mkdir -p $INSTALL/etc/default
+#mkdir -p $INSTALL/usr/share/vdr/command-hooks
+#mkdir -p $INSTALL/usr/share/vdr/groups.d
+#mkdir -p $INSTALL/usr/share/vdr/recording-hooks
+#mkdir -p $INSTALL/usr/share/vdr/shutdown-hooks
+#mkdir -p $INSTALL/etc/vdr/recording-hooks
+#mkdir -p $INSTALL/etc/vdr/shutdown-hooks
+#mkdir -p $INSTALL/etc/vdr/command-hooks
+
+#cp $ROOT/$PACKAGES/$1/config/S90.custom $INSTALL/etc/vdr/shutdown-hooks/ 
+#cp $ROOT/$PACKAGES/$1/config/R90.custom $INSTALL/etc/vdr/recording-hooks
+cp $ROOT/$PACKAGES/$1/config/vdr $INSTALL/etc/default
+#cp $ROOT/$PACKAGES/$1/config/vdr.groups $INSTALL/etc/vdr
+#cp $ROOT/$PACKAGES/$1/config/commands.ctvdr.conf $INSTALL/usr/share/vdr/command-hooks
+#cp $ROOT/$PACKAGES/$1/config/commands.shutdownvdr.conf $INSTALL/usr/share/vdr/command-hooks
+#cp $ROOT/$PACKAGES/$1/config/commands.update-recordings.conf $INSTALL/usr/share/vdr/command-hooks
+#cp $ROOT/$PACKAGES/$1/config/commands.custom.conf $INSTALL/etc/vdr/command-hooks
+#cp $ROOT/$PACKAGES/$1/config/order.commands.conf $INSTALL/etc/vdr/command-hooks
+#cp $ROOT/$PACKAGES/$1/config/order.reccmds.conf $INSTALL/etc/vdr/command-hooks
+#cp $ROOT/$PACKAGES/$1/config/reccmds.custom.conf $INSTALL/etc/vdr/command-hooks
+cd $INSTALL/etc/vdr
+ln -s ../default/vdr vdr.default
+#ln -s /var/lib/vdr/remote.conf remote.conf
+#ln -s /var/lib/vdr/unicable.conf unicable.conf
+#cd $INSTALL/usr/share/vdr/command-hooks
+#ln -s /etc/vdr/command-hooks/commands.custom.conf commands.custom.conf
+#ln -s /etc/vdr/command-hooks/reccmds.custom.conf reccmds.custom.conf
+#cd $INSTALL/usr/share/vdr/groups.d
+#ln -s /etc/vdr/vdr.groups vdr.groups
+#cd $INSTALL/usr/share/vdr/recording-hooks
+#ln -s /etc/vdr/recording-hooks/R90.custom R90.custom
+#cd $INSTALL/usr/share/vdr/shutdown-hooks
+#ln -s /etc/vdr/shutdown-hooks/S90.custom S90.custom
+#cd $INSTALL/var/lib/vdr
+#ln -s /etc/vdr/channels.conf channels.conf
+#ln -s /etc/vdr/sources.conf sources.conf
+#ln -s $INSTALL/var/lib/vdr/channels.conf $INSTALL/etc/vdr
+
+#sed -i 's|After=basic.target rescue.service rescue.target|After=basic.target rescue.service rescue.target vdr.target|' /root/openbricks/build/build.i386.eglibc/rootfs/lib/systemd/system/multi-user.target
+mkdir -p $INSTALL/etc/systemd/system/multi-user-target-wants
+cd $INSTALL/etc/systemd/system/multi-user-target-wants
+ln -s /lib/systemd/system/vdr.service vdr.service
+#ln -s /lib/systemd/system/vdr-sxfe.service vdr-sxfe.service
+mkdir -p $INSTALL/lib/systemd/system/VDR.target.wants
+cd $INSTALL/lib/systemd/system/VDR.target.wants
+ln -s /lib/systemd/system/vdr.service vdr.service
+#ln -s /lib/systemd/system/vdr-sxfe.service vdr-sxfe.service
+#cd $BUILD/$1*
+
+#NAME=dvbsddevice
+#mkdir -p $INSTALL/etc/vdr/plugins.d
+#echo "PLUGIN=${NAME}" > $INSTALL/etc/vdr/plugins.d/50_$NAME
+#echo "ENABLED=yes" >> $INSTALL/etc/vdr/plugins.d/50_$NAME
+

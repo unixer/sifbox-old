@@ -1,0 +1,5 @@
+FLAVOUR_NAME="test"
+FLAVOUR_DEPENDS="all"
+FLAVOUR_USE="all"
+FLAVOUR_SHORTDESC="test - regression testing flavour"
+FLAVOUR_LONGDESC="This flavour enables all packages with all features. It is meant for use in automated regression testing."

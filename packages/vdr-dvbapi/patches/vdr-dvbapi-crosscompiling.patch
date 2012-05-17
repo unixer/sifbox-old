@@ -1,0 +1,11 @@
+--- vdr-dvbapi-0.1/Makefile	2012-03-13 17:29:59.666387991 +0100
++++ vdr-dvbapi-0.1.patch/Makefile	2012-03-13 17:31:25.754953053 +0100
+@@ -77,7 +77,7 @@
+ 	@cp --remove-destination $@ $(LIBDIR)/$@.$(APIVERSION)
+ 
+ $(FFDECSA): $(FFDECSADIR)/*.c $(FFDECSADIR)/*.h
+-	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT)" PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) all
++	@$(MAKE) COMPILER="$(CXX)" FLAGS="$(CSAFLAGS) -march=$(CPUOPT)" PARALLEL_MODE=$(PARALLEL) -C $(FFDECSADIR) FFdecsa.o
+ 
+ dist: clean
+ 	@-rm -rf $(TMPDIR)/$(ARCHIVE)

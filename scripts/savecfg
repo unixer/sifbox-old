@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/kconfiginit
+
+DEFCONFIG_PATH="$CONFIG/defconfigs"
+DOT_CONFIG="`ls -d $ROOT/$BUILD_NOARCH/kconfig-frontends-*`/.config"
+
+CFG_FILENAME="$FLAVOUR"
+
+[ "$FLAVOUR" = geexbox ] && \
+  CFG_FILENAME="${CFG_FILENAME}-${MEDIA_CENTER_FRONTEND}"
+
+if [ "$TARGET_ARCH" = arm ]; then
+  CFG_FILENAME="${CFG_FILENAME}-${TARGET_PLATFORM}"
+else
+  CFG_FILENAME="${CFG_FILENAME}-${TARGET_ARCH}"
+fi
+
+[ -n "$TARGET_MACHINE" ] && \
+  CFG_FILENAME="${CFG_FILENAME}-${TARGET_MACHINE}"
+
+CFG_FILENAME="${CFG_FILENAME}.conf"
+
+echo ""
+echo "########################################################################"
+echo "##"
+echo "## Saving current configuration to:"
+echo "##   ./${DEFCONFIG_PATH}/${CFG_FILENAME}"
+echo "##"
+echo "########################################################################"
+echo ""
+
+cp -P $DOT_CONFIG ./${DEFCONFIG_PATH}/${CFG_FILENAME}
+
+exit 0

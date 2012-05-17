@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install /usr/share/X11/xkb
+
+# mandatory for xkbcomp to put files into
+mkdir -p $INSTALL/$XORG_PATH_XKB_OUTPUT
+mkdir -p $INSTALL/$XORG_PATH_XKB_CACHE

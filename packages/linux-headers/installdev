@@ -1,0 +1,7 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/linux-*/headers
+
+do_installdev usr/usr/include sysroot

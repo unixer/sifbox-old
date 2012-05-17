@@ -1,0 +1,42 @@
+--- linux/drivers/media/dvb/frontends/Makefile	2012-05-14 13:04:01.076788220 +0200
++++ linux/drivers/media/dvb/frontends/Makefile.tbs	2012-05-14 15:31:41.916792758 +0200
+@@ -74,6 +74,39 @@
+ obj-$(CONFIG_DVB_DUMMY_FE) += dvb_dummy_fe.o
+ obj-$(CONFIG_DVB_AF9013) += af9013.o
+ obj-$(CONFIG_DVB_CX24116) += cx24116.o
++obj-$(CONFIG_DVB_TBSFE) += tbsfe.o
++obj-$(CONFIG_DVB_TBS6980FE) += tbs6980fe.o
++tbs6980fe-objs += kmem_wrap.o tbs6980fe_driver.o
++obj-$(CONFIG_DVB_TBS6981FE) += tbs6981fe.o
++tbs6981fe-objs += kmem_wrap.o tbs6981fe_driver.o
++obj-$(CONFIG_DVB_TBS6921FE) += tbs6921fe.o
++tbs6921fe-objs += kmem_wrap.o tbs6921fe_driver.o
++obj-$(CONFIG_DVB_TBS8921FE) += tbs8921fe.o
++tbs8921fe-objs += kmem_wrap.o tbs8921fe_driver.o
++obj-$(CONFIG_DVB_TBS6925CTRL) += tbs6925ctrl.o
++tbs6925ctrl-objs += kmem_wrap.o tbs6925ctrl_driver.o
++obj-$(CONFIG_DVB_TBS6992) += tbs6992.o
++tbs6992-objs += kmem_wrap.o tbs6992_driver.o
++obj-$(CONFIG_DVB_TBS5921FE) += tbs5921fe.o
++tbs5921fe-objs += kmem_wrap.o tbs5921fe_driver.o
++obj-$(CONFIG_DVB_TBS62X0FE) += tbs62x0fe.o
++tbs62x0fe-objs += kmem_wrap.o tbs62x0fe_driver.o
++obj-$(CONFIG_DVB_TBS6984FE) += tbs6984fe.o
++tbs6984fe-objs += kmem_wrap.o tbs6984fe_driver.o
++obj-$(CONFIG_DVB_TBS6922FE) += tbs6922fe.o
++tbs6922fe-objs += kmem_wrap.o tbs6922fe_driver.o
++obj-$(CONFIG_DVB_TBS6928FE) += tbs6928fe.o
++tbs6928fe-objs += kmem_wrap.o tbs6928fe_driver.o
++obj-$(CONFIG_DVB_TBS8922FE) += tbs8922fe.o
++tbs8922fe-objs += kmem_wrap.o tbs8922fe_driver.o
++obj-$(CONFIG_DVB_TBS5922FE) += tbs5922fe.o
++tbs5922fe-objs += kmem_wrap.o tbs5922fe_driver.o
++obj-$(CONFIG_DVB_TBS5880FE) += tbs5880fe.o
++tbs5880fe-objs += kmem_wrap.o tbs5880fe_driver.o
++obj-$(CONFIG_DVB_TBS6982FE) += tbs6982fe.o
++tbs6982fe-objs += kmem_wrap.o tbs6982fe_driver.o
++obj-$(CONFIG_DVB_TBS6991FE) += tbs6991fe.o
++tbs6991fe-objs += kmem_wrap.o tbs6991fe_driver.o
+ obj-$(CONFIG_DVB_SI21XX) += si21xx.o
+ obj-$(CONFIG_DVB_STV0288) += stv0288.o
+ obj-$(CONFIG_DVB_STB6000) += stb6000.o

@@ -1,0 +1,31 @@
+#!/bin/sh
+
+. config/options
+
+export ac_cv_libz=set
+
+CFG_CXX="--disable-cxx"
+[ "$TOOLCHAIN_CXX" = yes ] && CFG_CXX="--enable-cxx"
+
+cd $BUILD/$1*
+do_configure \
+            --disable-gtk-doc-html \
+            --disable-nls \
+            $CFG_CXX \
+            --enable-cryptodev \
+            --enable-openssl-compatibility \
+            --disable-guile \
+            --with-included-opencdk \
+            --with-included-libtasn1 \
+            --with-included-lzo \
+            --with-included-libcfg \
+            --without-libreadline-prefix \
+            --with-libgcrypt-prefix=$LIB_PREFIX \
+            --disable-gtk-doc \
+            --disable-gtk-doc-html \
+            --disable-gtk-doc-pdf \
+
+sed -i "s%.*HAVE_LIBZ.*%#define HAVE_ZLIB 1%" lib/config.h
+
+make
+make_install

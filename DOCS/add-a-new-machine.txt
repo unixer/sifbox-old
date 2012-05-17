@@ -1,0 +1,25 @@
+Adding a new machine
+====================
+
+Machines are defined per-platform in config/plaform/$arch/$platform/machines. 
+To add support for a new machine, you should copy an existing machine definition
+(such as the 'generic' machine for your arch):
+  cp -PR config/plaform/myarch/myplatform/machines/generic config/plaform/myarch/myplatform/machines
+and edit meta to change the machine settings.
+
+At this point you have to decide if you want to use the OpenBricks kernel or
+a vendor-supplied kernel. In the first case, you can add arch-specific patches
+to packages/linux/patches or, if they break other archs/platforms, to
+config/plaform/myarch/myplatform/packages/linux/patches. You should also add a
+tuned kernel config for your platform as linux.conf in the platform directory.
+
+If you want to use a vendor kernel, you need to override the 'linux' and 
+'linux-headers' packages. Create config/plaform/myarch/myplatform/packages/linux/meta
+with PKG_VERSION and PKG_URL pointing to your kernel, and
+config/plaform/myarch/myplatform/packages/linux-headers/meta with a matching
+PKG_VERSION.
+
+If your machine uses u-boot, you can add machine-specific bootargs to
+config/plaform/myarch/myplatform/machines/mymachine/boot.cfg.
+
+// vim: set syntax=asciidoc:

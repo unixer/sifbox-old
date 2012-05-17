@@ -1,0 +1,13 @@
+PKG_NAME=media-experimental
+PKG_URL_REV=153932
+PKG_VERSION=media_build_experimental
+PKG_URL_PROTO=hg
+PKG_URL="http://linuxtv.org/hg/~endriss/${PKG_VERSION}"
+PKG_DEPENDS="$TARGET_LIBC"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_RUN_DEPENDS="$TARGET_LIBC module-init-tools"
+PKG_REV=1
+PKG_PRIORITY=optional
+PKG_SECTION=drivers
+PKG_SHORTDESC="DVB-S(S2) V4L Experimental drivers for Linux - Igor M. Liplianin repo"
+PKG_LONGDESC="These are the Linux Media drivers maintained by Igor M. Liplianin - compared to mainline, these drivers add (experimental) support for a few more devices."

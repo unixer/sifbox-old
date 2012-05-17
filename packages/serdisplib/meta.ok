@@ -1,0 +1,10 @@
+PKG_NAME=serdisplib
+PKG_VERSION=1.97.8
+PKG_URL="http://95.225.138.70/serdisplib-${PKG_VERSION}.tar.gz"
+PKG_REV=1
+PKG_DEPENDS="$TARGET_LIBC libusb"
+PKG_BUILD_DEPENDS="toolchain libusb"
+PKG_PRIORITY=optional
+PKG_SECTION=misc
+PKG_SHORTDESC="serdisplib Package for Linux4Media"
+PKG_LONGDESC=""

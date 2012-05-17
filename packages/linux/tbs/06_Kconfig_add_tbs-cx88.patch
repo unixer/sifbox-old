@@ -1,0 +1,11 @@
+--- linux/drivers/media/video/cx88/Kconfig	2012-05-14 13:03:50.276788214 +0200
++++ linux/drivers/media/video/cx88/Kconfig.tbs	2012-05-14 15:45:28.676793182 +0200
+@@ -63,6 +63,8 @@
+ 	select DVB_STB6000 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0900 if !DVB_FE_CUSTOMISE
+ 	select DVB_STB6100 if !DVB_FE_CUSTOMISE
++        select DVB_TBS8921FE if !DVB_FE_CUSTOMISE
++        select DVB_TBS8922FE if !DVB_FE_CUSTOMISE
+ 	select MEDIA_TUNER_SIMPLE if !MEDIA_TUNER_CUSTOMISE
+ 	---help---
+ 	  This adds support for DVB/ATSC cards based on the

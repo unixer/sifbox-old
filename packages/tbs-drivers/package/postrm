@@ -1,0 +1,10 @@
+#!/bin/sh
+echo "Post remove:"
+echo "  running depmod"
+/sbin/depmod -a
+echo "Done, reboot required"
+echo "Press Return to reboot "
+read enterKey
+sleep 3
+reboot
+

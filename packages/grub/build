@@ -1,0 +1,36 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+# Strip out -fPIC for host (grub 1.99 wont compile with fPIC)
+export HOST_CFLAGS="`echo $HOST_CFLAGS | sed -e "s%-fPIC%%"`"
+export HOST_CXXFLAGS="`echo $HOST_CXXFLAGS | sed -e "s%-fPIC%%"`"
+export CFLAGS="$HOST_CXXFLAGS"
+export HOST_LDFLAGS="`echo $HOST_LDFLAGS | sed -e "s%-lm%%"`"
+
+mkdir -p objdir-host
+cd objdir-host
+do_configure host \
+	--disable-werror \
+	--enable-grub-mkfont \
+	--with-platform=efi \
+	--target=${TARGET_ARCH} \
+	--program-prefix=""
+make
+make_install toolchain
+cd ..
+
+export TARGET_CFLAGS="" # Disable else take the bad CFLAGS to compile
+mkdir -p objdir-target
+cd objdir-target
+do_configure target \
+	--disable-grub-mkfont \
+	--disable-werror \
+	--with-platform=efi \
+	--target=${TARGET_ARCH} \
+	--program-prefix=""
+make
+make_install
+cd ..

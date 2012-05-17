@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+
+cd $BUILD/$1*
+[ "$TARGET_CPU" = "generic" ] && MARCH="i686" 
+#[ "$TARGET_CPU" <> "generic" ] && MARCH=$TARGET_CPU 
+
+#do_configure \
+#	CFLAGS="-march=i686" \
+do_configure
+
+
+make
+make_install
+mkdir -p .install/etc
+cp rsyslog.conf .install/etc

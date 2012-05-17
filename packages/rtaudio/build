@@ -1,0 +1,33 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+cd $BUILD/$1*
+
+if pkg_uses $1 alsa; then
+	ALSA=--with-alsa
+else
+	ALSA=--without-alsa
+fi
+
+if pkg_uses $1 pulseaudio; then
+	PULSE=--with-pulse
+else
+	PULSE=--without-pulse
+fi
+
+do_autoconf
+do_configure \
+	$ALSA \
+	$PULSE \
+
+make
+
+rm -rf .install
+mkdir -p .install/usr/bin .install/usr/lib .install/usr/include
+cp -P rtaudio-config .install/usr/bin
+cp -P librtaudio.* .install/usr/lib
+cp -P *.h .install/usr/include
+

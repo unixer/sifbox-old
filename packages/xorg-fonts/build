@@ -1,0 +1,10 @@
+#!/bin/sh
+
+. config/options
+
+mkdir -p $BUILD/$1/.install/$XORG_PATH_FONTS/misc
+cd $BUILD/$1/.install/$XORG_PATH_FONTS/misc
+
+cp $LIB_PREFIX/share/X11/fonts/6x13-ISO8859-1.pcf.gz .
+cp $LIB_PREFIX/share/X11/fonts/cursor.pcf.gz .
+mkfontdir

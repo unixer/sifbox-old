@@ -1,0 +1,25 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+if [ "$DEBUG" = yes ]; then
+  DEBUG_CONFIG="--enable-debug"
+else
+  DEBUG_CONFIG="--disable-debug"
+fi
+
+cd $BUILD/$1*
+./configure --host=openbricks-$TARGET_ARCH \
+            --prefix=/usr \
+            --backend=sdl \
+            --enable-all-engines \
+            --enable-plugins \
+            --default-dynamic \
+            --enable-mt32emu \
+            --with-sdl-prefix=$LIB_PREFIX/bin \
+            $DEBUG_CONFIG \
+
+make
+make_install

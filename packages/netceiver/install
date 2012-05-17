@@ -1,0 +1,10 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install lib
+do_install usr
+cp $ROOT/$PACKAGES/$1/scripts/dvbloop $INSTALL/usr/sbin
+

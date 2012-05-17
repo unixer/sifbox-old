@@ -1,0 +1,6 @@
+#
+# Xorg settings
+#
+
+# Enable Xorg non-free binary drivers if they are installed
+BINARY_DRIVERS=yes

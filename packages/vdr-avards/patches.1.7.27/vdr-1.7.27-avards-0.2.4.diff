@@ -1,0 +1,14 @@
+--- vdr-avards-0.2.4/i18n.h.org	2008-03-21 09:07:19.000000000 +0100
++++ vdr-avards-0.2.4/i18n.h	2012-03-25 18:13:27.290913612 +0200
+@@ -9,8 +9,11 @@
+ #ifndef _I18N__H
+ #define _I18N__H
+ 
++#include <vdr/config.h>
+ #include <vdr/i18n.h>
+ 
++#if VDRVERSNUM < 10507
+ extern const tI18nPhrase Phrases[];
++#endif
+ 
+ #endif //_I18N__H

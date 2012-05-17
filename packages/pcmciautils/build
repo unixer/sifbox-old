@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+export MAKEFLAGS=-j1
+
+cd $BUILD/$1*
+make
+make_install

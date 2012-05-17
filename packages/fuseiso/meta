@@ -1,0 +1,11 @@
+PKG_NAME=fuseiso
+PKG_VERSION=20070708
+PKG_URL="$SFNET_SRCS/fuseiso/fuseiso-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_DEPENDS="fuse GLib zlib gettext"
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_PRIORITY=optional
+PKG_SECTION=filesystem
+PKG_SHORTDESC="FUSE module to mount ISO filesystem images"
+PKG_LONGDESC="This package provides a module to mount ISO filesystem images using FUSE. It can also mount single-tracks .BIN, .MDF, .IMG and .NRG."

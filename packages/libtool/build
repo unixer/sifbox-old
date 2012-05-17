@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*/libltdl
+do_configure \
+            --enable-ltdl-install \
+
+make
+make_install
+rm -rf ../.install
+mv .install ..

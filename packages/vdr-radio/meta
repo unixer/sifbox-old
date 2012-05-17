@@ -1,0 +1,12 @@
+PKG_NAME=vdr-radio
+#PKG_VERSION=0.2.5
+#PKG_URL="$DISTRO_SRCS/vdr-radio-${PKG_VERSION}.tar.bz2"
+PKG_VERSION=0.9.0pre
+PKG_URLS="http://www.egal-vdr.de/plugins/in_progress/vdr-radio-${PKG_VERSION}.tgz"
+PKG_REV=1
+PKG_BUILD_DEPENDS="toolchain"
+PKG_RUN_DEPENDS="$TARGET_LIBC vdr"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="VDR -- radio plugin"
+PKG_LONGDESC="vdr-radio is a plugin for VDR, the Video Disk Recorder."

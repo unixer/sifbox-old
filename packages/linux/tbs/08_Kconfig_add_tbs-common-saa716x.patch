@@ -1,0 +1,18 @@
+--- linux/drivers/media/common/saa716x/Kconfig	2012-05-14 17:59:56.286797314 +0200
++++ linux/drivers/media/common/saa716x/Kconfig.tbs	2012-05-14 18:28:11.036798182 +0200
+@@ -14,6 +14,15 @@
+ 
+ 	  Say Y if you own such a device and want to use it.
+ 
++config DVB_SAA716X_TBS
++        tristate "SAA7160 based TBS PCIe cards (DVB only)"
++        depends on SAA716X_CORE && DVB_CORE
++
++        help
++          Support for the SAA7160 based TBS PCIe DVB cards
++
++          Say Y if you own such a device and want to use it.
++
+ config DVB_SAA716X_BUDGET
+ 	tristate "SAA7160/1/2 based Budget PCIe cards (DVB only)"
+ 	depends on SAA716X_CORE && DVB_CORE

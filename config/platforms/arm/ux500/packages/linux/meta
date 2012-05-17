@@ -1,0 +1,8 @@
+#
+# Snowball Igloo kernel
+#
+
+PKG_URL_REV="fa9ec9210d"
+PKG_VERSION=3.0.0-3-ux500-${PKG_URL_REV}
+PKG_URL_PROTO=git
+PKG_URL="git://igloocommunity.org/git/kernel/igloo-kernel.git"

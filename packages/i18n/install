@@ -1,0 +1,7 @@
+#!/bin/sh
+
+. config/options
+
+mkdir -p $INSTALL/etc
+cp $PACKAGES/$1/scripts/lang.funcs $INSTALL/etc
+cp $PACKAGES/$1/config/lang.conf $INSTALL/etc

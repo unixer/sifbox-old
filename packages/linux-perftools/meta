@@ -1,0 +1,7 @@
+PKG_PARENT=linux
+PKG_NAME=${PKG_PARENT}-perftools
+PKG_PRIORITY=optional
+PKG_DEPENDS="$TARGET_LIBC elfutils"
+PKG_SECTION=utils
+PKG_SHORTDESC="Linux Kernel Performance Counter Tools"
+PKG_LONGDESC="Linux Kernel Performance Counter Tools"

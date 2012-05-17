@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. config/options
+
+NODIST="extra-firmwares-nonfree extra-fonts-nonfree"
+DISTRO_DIR=$FLAVOUR-$DISTRO_VERSION
+
+mkdir $DISTRO_DIR
+ln -s ../AUTHORS $DISTRO_DIR/AUTHORS
+ln -s ../README $DISTRO_DIR/README
+ln -s ../COPYING $DISTRO_DIR/COPYING
+ln -s ../VERSION $DISTRO_DIR/VERSION
+ln -s ../ChangeLog $DISTRO_DIR/ChangeLog
+ln -s ../Makefile $DISTRO_DIR/Makefile
+ln -s ../DOCS $DISTRO_DIR/DOCS
+ln -s ../$CONFIG $DISTRO_DIR/$CONFIG
+ln -s ../$SCRIPTS $DISTRO_DIR/$SCRIPTS
+ln -s ../$PACKAGES $DISTRO_DIR/$PACKAGES
+
+tar chjf $DISTRO_DIR.tar.bz2 --exclude .hg --exclude .hgignore $DISTRO_DIR
+
+rm -rf $DISTRO_DIR

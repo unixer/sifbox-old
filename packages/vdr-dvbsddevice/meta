@@ -1,0 +1,11 @@
+PKG_NAME=vdr-dvbsddevice
+PKG_VERSION=1.7.13
+#PKG_URL="$DISTRO_SRCS/vdr-dvbsddevice-${PKG_VERSION}.tar.bz2"
+PKG_URL="http://95.225.138.70/sifbox/vdr-dvbsddevice-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_BUILD_DEPENDS="toolchain"
+PKG_RUN_DEPENDS="$TARGET_LIBC vdr"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="VDR -- dvbsddevice plugin"
+PKG_LONGDESC="vdr-dvbsddevice is a plugin for VDR, the Video Disk Recorder."

@@ -1,0 +1,16 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+mkdir -p .install/etc/vdr/plugins/picon
+cp -r Name/* .install/etc/vdr/plugins/picon/ 
+do_install etc/vdr/plugins/picon
+mkdir -p .install/etc/vdr/plugins/text2skin/PearlHD
+cd .install/etc/vdr/plugins/text2skin
+ln -s ../picon liquid-logos4anthra_HD
+#cd PearlHD
+#ln -s ../../picon hqlogos
+pwd
+cd ../../../../../
+do_install etc/vdr/plugins/text2skin

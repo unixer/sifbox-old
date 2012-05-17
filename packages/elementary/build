@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+[ "$TARGET_LIBC" = "uclibc" ] && export LDFLAGS="$LDFLAGS -liconv"
+
+cd $BUILD/$1*
+do_configure \
+            --disable-doc \
+            --disable-edbus \
+            --enable-efreet \
+            --disable-eweather \
+            --enable-ethumb \
+            --with-edje-cc=$ROOT/$TOOLCHAIN/bin/edje_cc \
+            --with-eet-eet=$ROOT/$TOOLCHAIN/bin/eet \
+
+make
+make_install

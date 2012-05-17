@@ -1,0 +1,38 @@
+#!/bin/sh
+
+. /etc/funcs
+
+CONFIG_I18N_PATH="/etc/configurator"
+CONFIG_PLUGINS_PATH="/usr/share/configurator"
+CONFIG_FILE=/var/configurator
+if [ "$DEBUG" = "yes" ]; then
+  LOGFILE="/tmp/config.log"
+else
+  LOGFILE="/dev/null"
+fi
+
+set_config () {
+  echo "\"set_config $1 $2\" for $CONFIG_FILE" >> $LOGFILE
+  if grep -q "$1=" $CONFIG_FILE; then
+    echo "entry $1 already exists in: $CONFIG_FILE" >> $LOGFILE
+    grep "$1=" $CONFIG_FILE >> $LOGFILE
+
+    # entry already exists: overwrite
+    sed_in_place $CONFIG_FILE "s%$1=.*%$1=\"$2\"%"
+
+    echo "new entry $1 in $CONFIG_FILE is:" >> $LOGFILE
+    grep "$1=" $CONFIG_FILE >> $LOGFILE
+  else
+    echo "entry $1 didn't exist in: $CONFIG_FILE" >> $LOGFILE
+    echo "$1=\"$2\"" >> $CONFIG_FILE
+    echo "new entry $1 in $CONFIG_FILE is:" >> $LOGFILE
+    grep "$1=" $CONFIG_FILE >> $LOGFILE
+  fi
+}
+
+get_i18n () {
+  lang=`cmdline_default lang en`
+
+  . $CONFIG_I18N_PATH/en.config # default language file, always present
+  [ -f $CONFIG_I18N_PATH/${lang}.config ] && . $CONFIG_I18N_PATH/${lang}.config
+}

@@ -1,0 +1,12 @@
+[Unit]
+Description=OpenVPN
+After=network.target
+
+[Service]
+ExecStartPre=/sbin/modprobe tun
+ExecStart=/usr/sbin/openvpn --daemon --config /etc/openvpn/client.conf
+Type=forking
+Restart=always
+
+[Install]
+WantedBy=multi-user.target

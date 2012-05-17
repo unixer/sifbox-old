@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+mkdir -p .install/firmware
+cp -r $ROOT/$PACKAGES/$1/firmware/* .install/firmware
+do_install firmware
+#mkdir -p $INSTALL/firmware
+#cp -r $ROOT/$PACKAGES/$1/firmware/* $INSTALL/firmware
+

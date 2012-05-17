@@ -1,0 +1,11 @@
+PKG_NAME=bash
+#PKG_VERSION=4.1
+PKG_VERSION=4.2
+PKG_URL="http://ftp.gnu.org/gnu/bash/bash-$PKG_VERSION.tar.gz"
+PKG_REV=1
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_PRIORITY=optional
+PKG_SECTION=system
+PKG_SHORTDESC="The GNU Bourne Again SHell"
+PKG_LONGDESC="Bash is an sh-compatible command language interpreter that executes commands read from the standard input or from a file.  Bash also incorporates useful features from the Korn and C shells (ksh and csh)."

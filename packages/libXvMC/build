@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/build toolchain
+
+cd $BUILD/$1*
+do_configure \
+            --enable-malloc0returnsnull
+make
+make_install

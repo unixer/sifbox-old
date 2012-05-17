@@ -1,0 +1,94 @@
+#!/bin/sh
+
+. config/options
+
+if pkg_uses $1 xorg; then
+  WITH_X="--with-x --enable-software-xlib --enable-software-xcb --enable-software-16-x11 --enable-xrender-x11 --enable-xrender-xcb"
+
+  EXTRA_LIBS="-lstdc++"
+
+  pkg_uses $1 opengl && \
+    CFG_GL="--enable-gl-x11"
+fi
+
+if pkg_uses $1 sdl; then
+  CFG_SDL="--enable-sdl-primitive --enable-software-sdl --disable-gl-sdl"
+else
+  CFG_SDL="--disable-sdl-primitive --disable-software-sdl --disable-gl-sdl"
+fi
+
+if pkg_uses $1 directfb; then
+  CFG_DFB="--enable-directfb"
+else
+  CFG_DFB="--disable-directfb"
+fi
+
+[ "$NEON" = yes ] && \
+  CFG_NEON="--enable-cpu-neon" || CFG_NEON="--disable-cpu-neon"
+
+pkg_uses $1 opengles && \
+  OPENGL_ES="--enable-gl-flavor-gles --enable-gles-variety-sgx"
+
+pkg_uses $1 uclibc && EXTRA_LIBS="-liconv $EXTRA_LIBS"
+
+cd $BUILD/$1*
+
+mkdir -p objdir-host
+cd objdir-host
+export ac_cv_header_X11_X_h=no
+export LIBS="-lfontconfig -lxml2 -lz -lm"
+do_configure host \
+            --enable-shared \
+            --disable-static \
+            --disable-doc \
+            --enable-image-loader-eet \
+            --disable-image-loader-gif \
+            --enable-image-loader-jpeg \
+            --enable-image-loader-png \
+            --disable-image-loader-tiff \
+            --disable-image-loader-pmaps \
+            --disable-image-loader-xpm \
+            --disable-image-loader-bmp \
+            --disable-image-loader-tga \
+            --enable-font-loader-eet \
+            --disable-fribidi \
+            --without-x \
+            --enable-buffer \
+
+make
+make_install toolchain
+cd ..
+
+mkdir -p objdir-target
+cd objdir-target
+export LIBS="$EXTRA_LIBS"
+unset ac_cv_header_X11_X_h
+do_configure target \
+            --enable-pthreads \
+            --enable-pipe-render \
+            --enable-async-preload \
+            --enable-async-events \
+            --enable-async-render \
+            --enable-word-cache \
+            --disable-metric-cache \
+            --disable-doc \
+            --enable-image-loader-eet \
+            --enable-image-loader-gif \
+            --enable-image-loader-jpeg \
+            --enable-image-loader-png \
+            --enable-image-loader-tiff \
+            --enable-image-loader-pmaps \
+            --enable-image-loader-xpm \
+            --enable-image-loader-bmp \
+            --enable-image-loader-tga \
+            --enable-font-loader-eet \
+            --enable-fb \
+            $CFG_NEON \
+            $CFG_DFB \
+            $CFG_SDL \
+            $CFG_GL \
+            $OPENGL_ES \
+            $WITH_X \
+
+make
+make_install

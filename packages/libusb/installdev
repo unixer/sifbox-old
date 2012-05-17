@@ -1,0 +1,11 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_installdev usr/include
+cd .install-debuginfo/usr/lib/debug/usr/lib
+ln -s libusb-1.0.so.0.0.0 libusb-1.0.a
+cd ../../../../../..
+do_installdev usr/lib

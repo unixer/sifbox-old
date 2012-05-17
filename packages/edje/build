@@ -1,0 +1,37 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+mkdir -p objdir-host
+cd objdir-host
+do_configure host \
+            --disable-amalgamation \
+            --disable-doc \
+            --enable-edje-cc \
+            --disable-edje-decc \
+            --disable-edje-recc \
+            --disable-edje-player \
+
+make
+make_install toolchain
+cd ..
+
+mkdir -p objdir-target
+cd objdir-target
+
+CFG_ALU="--disable-fixed-point"
+[ "$TARGET_ARCH" = arm ] && CFG_ALU="--enable-fixed-point"
+
+do_configure target \
+            --disable-amalgamation \
+            --disable-doc \
+            --disable-edje-cc \
+            --disable-edje-decc \
+            --disable-edje-recc \
+            --disable-edje-player \
+            $CFG_ALU \
+
+make
+make_install

@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+make -C $BUILD/$1*/utils \
+     PREFIX=/usr \
+     CC=$CC \
+     AR=$AR \
+     RANLIB=$RANLIB \
+     CFLAGS="$CFLAGS -I." \
+     BUILD_STATIC="yes" \
+     jstest jscal evtest
+

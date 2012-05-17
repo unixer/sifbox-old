@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+            --disable-debug \
+            --enable-http \
+            --enable-ftp \
+            --enable-file \
+            --disable-ldap \
+            --enable-proxy \
+            --disable-ipv6 \
+            --enable-thread \
+            --with-random=/dev/urandom \
+            --with-gnutls=$LIB_PREFIX \
+            --without-ssl \
+
+make
+make_install
+sed -i "s:\(['= ]\)/usr:\\1$LIB_PREFIX:g" .install/usr/bin/curl-config

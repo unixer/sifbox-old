@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/build vdr
+
+cd $BUILD/$1*
+make ECPPC=$ROOT/$TOOLCHAIN/bin/ecppc

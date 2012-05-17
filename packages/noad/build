@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+cd $BUILD/$1*
+
+do_configure \
+            --with-ffmpeg \
+
+make
+make_install

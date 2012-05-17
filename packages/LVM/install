@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install usr/sbin/lvm
+pkg_use $1 devtools && do_install usr/sbin/dmsetup
+
+do_install usr/lib/libdevmapper.so*
+do_install usr/lib/liblvm2app.so*
+do_install usr/lib/liblvm2cmd.so*

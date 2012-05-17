@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. config/options
+
+require_cxx $1
+
+export ac_cv_prog_cxx_present=yes
+
+if [ "$DEBUG" = yes ]; then
+  DEBUG_CONFIG="--enable-debug --enable-logging --enable-profile"
+else
+  DEBUG_CONFIG="--disable-debug --disable-logging --disable-profile"
+fi
+
+cd $BUILD/$1*
+do_configure \
+            --disable-dependency-tracking \
+            $DEBUG_CONFIG \
+
+make
+make_install

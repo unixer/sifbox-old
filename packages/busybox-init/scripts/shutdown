@@ -1,0 +1,76 @@
+#!/bin/sh
+
+# Adapted from dracut shutdown module
+
+do_umount() {
+  local ret=1
+  while read a mp a; do
+    if [ "`echo $mp | cut -f2 -d/`" = "oldroot" ]; then
+      if umount "$mp"; then
+        ret=0
+        echo "Unmounted $mp."
+      fi
+    fi
+  done < /proc/mounts
+
+  return $ret
+}
+
+export PATH=/sbin:/bin
+
+# install busybox symlinks
+busybox --install -s
+
+count=0
+while [ $count -le 40 ]; do
+  do_umount 2>/dev/null || break
+  count=$(($count+1))
+done
+[ $count -ge 40 ] && do_umount
+
+sync
+# "Clean" umount of /oldroot
+echo "plink"
+mount -o remount,clean_plink /oldroot
+echo "end plink"
+mount -o remount,ro,del=/oldroot/.squashfs /oldroot
+umount /dev/loop0
+mkdir /fake_br
+mkdir /disk
+mount --move /oldroot/.root /disk                    # move it else we can't detach data
+mount -o remount,rw,prepend=/fake_br /oldroot
+mount -o remount,mod=/oldroot/.data=ro /oldroot      # Now we can't write in branche
+mount -o remount,ro,noxino /oldroot /oldroot
+mount -o remount,ro /oldroot/.data                   # Now we can't write in /oldroot/.data
+mkdir /data
+mount --move /oldroot/.data /data
+mount -o remount,del:/data /oldroot
+umount /data                                         # Umount cleanly /data
+umount /oldroot
+mount -o remount,ro /
+mount -o remount,ro /sys
+mount -o remount,ro /dev
+mount -o remount,ro /run
+if ! umount -n /disk ; then
+  echo "Doing lazy umount of /disk ..."
+  device=`cat /proc/mounts | grep "/disk " | cut -d" " -f1`
+  umount -l /disk
+  echo " Trying to remount it ..."
+  if mount $device /disk ; then
+    echo "Success... Now un-mounting it"
+    umount /disk
+  else
+    echo "An error occurs, please check you disk"
+  fi
+fi
+
+cat /proc/mounts                                     # Just to see ...
+
+case "$1" in
+  reboot) reboot -f; break;;
+  halt) halt -f; break;;
+  poweroff) poweroff -f; break;;
+esac
+
+# this should never happen
+sh

@@ -1,0 +1,14 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+make prefix=/usr \
+     CC=$CC \
+     AR=$AR \
+     RANLIB=$RANLIB \
+
+install_dir="$PWD/.install"
+mkdir -p "$install_dir"
+make install DESTDIR="$install_dir" prefix=/usr
+fix_libs "$install_dir" $1

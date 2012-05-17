@@ -1,0 +1,16 @@
+#
+# See http://git.videolan.org/?p=libbluray.git;a=summary for more releases
+#
+
+PKG_NAME=libbluray
+PKG_VERSION=20120101-git28d96f7
+PKG_URL="$DISTRO_SRCS/libbluray-${PKG_VERSION}.tar.gz"
+PKG_REV=1
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_USE="aacs"
+PKG_RUN_DEPENDS_aacs="libaacs"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="Blu-ray playback library"
+PKG_LONGDESC="libbluray is an open-source library designed for Blu-Ray Discs playback for media players, like VLC  or MPlayer."

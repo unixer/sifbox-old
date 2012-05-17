@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+require_glibc $1
+
+setup_toolchain host
+
+cd $BUILD/$1*
+
+make
+
+install_dir="$PWD/.install"
+mkdir -p $install_dir/usr
+make install \
+  TOPDIR="$install_dir/usr" \
+  ETCDIR="$install_dir/usr/bin" \
+  TZDIR="$install_dir/usr/share/zoneinfo" \

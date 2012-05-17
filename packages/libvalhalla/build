@@ -1,0 +1,24 @@
+#!/bin/sh
+
+. config/options
+
+if [ "$DEBUG" = yes ]; then
+  DEBUG_CONFIG="--enable-debug=3"
+else
+  DEBUG_CONFIG="--disable-debug"
+fi
+
+cd $BUILD/$1*
+LDFLAGS="$LDFLAGS -lz -ldl" \
+./configure --prefix=/usr \
+            --disable-static \
+            --enable-shared \
+            --cross-compile \
+            --disable-optimize \
+            --disable-doc \
+            --disable-logcolor \
+            --enable-grabbers \
+            $DEBUG_CONFIG \
+
+make
+make_install

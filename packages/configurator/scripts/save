@@ -1,0 +1,213 @@
+#!/bin/sh
+
+BOOTDISK_MNT=/mnt/BootDisk
+
+get_device () {
+  local dev=`mount | grep "$1" | sed 's/\(.*\) on.*/\1/' | head -n 1`
+  # Debugging
+  echo "\"get_device $@\" returned: $dev" >> $LOGFILE
+  echo $dev
+}
+
+remount () {
+#  doesn't work for ntfs-3g
+#  mount -o remount,$1 "$2" "$3"
+  [ "$1" = "rw" ] && rw "$3"
+  [ "$1" = "ro" ] && ro "$3"
+}
+
+copy_cfg_file () {
+  local src="$1"
+  local mount_point="$2"
+  if [ -d "${mount_point}/GEEXBOX" ]; then
+    local dest="${mount_point}/GEEXBOX/$3"
+  else
+    # TODO: should be possible to also save to a different location
+    local dest="${mount_point}/geexbox-data/$4"
+    mkdir -p "$dest"
+  fi
+  echo "\"copy_cfg_file $@\" called" >> $LOGFILE
+ 
+  if [ -f "$src" ]; then
+    echo "Copying $src to $dest" 2>&1 >> $LOGFILE
+    # Actual command
+    cp "$src" "$dest"
+  fi
+}
+
+update_boot () {
+  local mount_point_grub="$1"
+  local item="$2"
+  local value="$3"
+  local file
+
+  echo "\"update_boot $@\" called" >> $LOGFILE
+  # in case no geexbox installation was found, update boot configuration is impossible
+  test -z "$mount_point_grub" && return;
+
+  # don't try to set an item with a non-existing value
+  test -z "$value" && return;
+
+  grubcfg="$mount_point_grub/boot/grub/grub.cfg"
+  if [ -f "$grubcfg" ]; then
+
+    echo "Editing \"$grubcfg\" with $2=$3" >> $LOGFILE
+    echo "Before edit:" >> $LOGFILE
+    cat "$grubcfg" >> $LOGFILE
+
+    # Actual command
+    sed -i "s/$2=[^ ]*/$2=$3/g" "$grubcfg"
+
+    echo "After edit:" >> $LOGFILE
+    cat "$grubcfg" >> $LOGFILE
+  fi
+}
+
+save_configs () {
+  # data share
+  [ -n "$data_uuid" ] && update_boot "$geex_partition" "data" "UUID=${data_uuid}"
+  # lang settings
+  update_boot "$geex_partition" keymap "$CFG_KEYMAP"
+  update_boot "$geex_partition" lang "$CFG_LANG"
+  copy_cfg_file /etc/locale "$data_partition" /etc /config
+
+  # time settings
+  copy_cfg_file /etc/adjtime "$data_partition" /etc /config
+
+  # video settings
+  update_boot "$geex_partition" vga "$CFG_VESA_MODE"
+  copy_cfg_file /etc/X11/X.cfg "$data_partition" /etc/X11 /config
+  copy_cfg_file /etc/X11/xorg.conf "$data_partition" /etc/X11 /config
+
+  # network settings
+  copy_cfg_file /etc/network "$data_partition" /etc /config
+
+  # tv settings
+  copy_cfg_file /etc/mplayer/mplayer.conf "$data_partition" /etc/mplayer /config
+  copy_cfg_file /etc/vdr/channels.conf "$data_partition" /etc/vdr /vdr
+
+  # remote settings
+  update_boot "$geex_partition" remote "$CFG_REMOTE"
+  update_boot "$geex_partition" receiver "$CFG_RECEIVER"
+
+  # custom boot params
+  update_boot "$geex_partition" custom_cmdline_params "\"$CFG_BOOTARGS\""
+}
+
+# include configurator common file
+. /usr/share/configurator/common
+
+# parse command line arguments
+for arg in $(cat /proc/cmdline); do
+  case $arg in
+    boot=*)
+      BOOT="${arg#boot=}"
+      case "$BOOT" in
+        UUID=*)
+          BOOT=hdd
+          ;;
+        LABEL=*)
+          BOOT=hdd
+          ;;
+        *)
+          BOOT_DEV=$BOOT
+          BOOT=hdd
+          ;;
+      esac
+      ;;
+  esac
+done
+
+# in case we've booted from hdd, mount fs again
+if [ "$BOOT_DEV" != "cdrom" -a "$BOOT" = hdd ] && [ ! -d $BOOTDISK_MNT ]; then
+  BOOT_DEV=`mount | grep " on / " | sed "s/^\([^ ]*\).*/\1/"`
+  mkdir -p $BOOTDISK_MNT && mount "$BOOT_DEV" $BOOTDISK_MNT
+fi
+
+# get i18n strings
+get_i18n
+
+# read potential configurator file
+test -f $CONFIG_FILE && . $CONFIG_FILE
+
+# find/select geexbox installation (for updating grub, etc)
+partitions=""
+geex_partition=""
+for i in /mnt/*; do
+  # ensure that this mount point is a disk
+  echo "$i" | grep -q "Disk\|/DM " || continue;
+
+  if [ -d "$i/GEEXBOX" ]; then
+    if [ "$i" = "$BOOTDISK_MNT" ]; then 
+      partitions="$partitions \"$i\" \"Current GeeXboX installation\"";
+    else
+      partitions="$partitions \"$i\" \"GeeXboX installation\"";
+    fi
+  fi
+done
+
+if [ -z "$partitions" ]; then
+  dialog --aspect 15 --backtitle "$MSG_CFG_TITLE" \
+    --title "$MSG_ERROR" --msgbox "$MSG_SAVE_NO_GEEX_DISK" 0 0
+else
+  echo dialog --aspect 15 --stdout --backtitle \"$MSG_CFG_TITLE\" \
+    --title \"$MSG_MENU_SAVE\" --menu \"$MSG_SAVE_GEEX_PARTITIONS\" 0 0 0 $partitions >/tmp/partselect
+  geex_partition=`sh /tmp/partselect`
+fi
+
+# find/select data partition (for persistent configuration storage)
+partitions=""
+data_partition=""
+extra_partition_found=0
+for i in /mnt/*; do
+  # ensure that this mount point is a disk
+  echo "$i" | grep -q "Disk\|/DM " || continue;
+
+  partitions="$partitions \"$i\""
+  if [ -d "$i/GEEXBOX" ]; then
+    
+    if [ "$i" = "$BOOTDISK_MNT" ]; then
+      partitions="$partitions \"Current GeeXboX installation\""
+    else
+      partitions="$partitions \"GeeXboX installation\""
+    fi
+  else
+    if [ -d "$i/geexbox-data" ]; then
+      partitions="$partitions \"GeeXboX data partition\""
+    else
+      partitions="$partitions \"Other partition\""
+    fi
+    extra_partition_found=1
+  fi
+done
+
+test -z "$partitions" && dialog --aspect 15 --backtitle "$MSG_CFG_TITLE" \
+  --title "$MSG_ERROR" --msgbox "$MSG_SAVE_NO_DISK" 0 0 && exit 1
+
+if [ $extra_partition_found -gt 0 ]; then 
+  echo dialog --aspect 15 --stdout --backtitle \"$MSG_CFG_TITLE\" \
+    --title \"$MSG_MENU_SAVE\" --menu \"$MSG_SAVE_PARTITIONS\" 0 0 0 $partitions >/tmp/partselect
+  data_partition=`sh /tmp/partselect`
+  [ -z "$data_partition" ] && exit 1
+else
+  # there's only the installation partition to save on, no need to ask
+  data_partition="$geex_partition"
+fi
+
+geex_device=""
+data_device=""
+data_uuid=""
+[ -n "$geex_partition" ] && geex_device=`get_device "$geex_partition"`
+[ -n "$data_partition" ] && data_device=`get_device "$data_partition"`
+
+[ -n "$geex_device" ] && remount rw "$geex_device" "$geex_partition"
+if [ "$geex_device" != "$data_device" ]; then
+  data_uuid=`blkid -o value -s UUID $data_device`
+  remount rw "$data_device" "$data_partition"
+fi
+save_configs
+remount ro "$geex_device" "$geex_partition"
+[ "$geex_device" != "$data_device" ] && remount ro "$data_device" "$data_partition"
+
+dialog --aspect 15 --backtitle "$MSG_CFG_TITLE" --title "$MSG_SUCCESS" \
+  --msgbox "$MSG_SAVE_OK" 0 0

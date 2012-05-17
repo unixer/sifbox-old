@@ -1,0 +1,55 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/unpack gcc-$TOOLCHAIN_TYPE
+
+setup_toolchain host
+
+if [ "$TOOLCHAIN_GOLD_LINKER" = yes ]; then
+  GOLD_CONFIG="--enable-gold"
+else
+  GOLD_CONFIG="--disable-gold"
+fi
+
+cd $BUILD/gcc-${TOOLCHAIN_TYPE}-4*
+mkdir -p objdir-$1
+cd objdir-$1
+../configure --host=$HOST_NAME \
+             --build=$HOST_NAME \
+             --target=$TARGET_NAME \
+             --prefix=/usr \
+             --with-sysroot=$SYSROOT_PREFIX \
+             --with-local-prefix=${LIB_PREFIX#$SYSROOT_PREFIX} \
+             --with-gmp=$ROOT/$TOOLCHAIN \
+             --with-mpfr=$ROOT/$TOOLCHAIN \
+             --with-ppl=$ROOT/$TOOLCHAIN \
+             --with-cloog=$ROOT/$TOOLCHAIN \
+             --with-libelf=$ROOT/$TOOLCHAIN \
+             --with-mpc=$ROOT/$TOOLCHAIN \
+             --with-as=$TARGET_AS \
+             --with-ld=$TARGET_LD \
+             --enable-languages=c \
+             --disable-libmudflap \
+             $GOLD_CONFIG \
+             --enable-ld \
+             --enable-plugin \
+             --enable-lto \
+             --disable-libssp \
+             --disable-libgomp \
+             --disable-shared \
+             --disable-multilib \
+             --disable-threads \
+             --without-headers \
+             --with-newlib \
+             --disable-decimal-float \
+             --disable-nls
+make all-gcc all-target-libgcc
+
+mkdir -p "$ROOT/$BUILD/$1/.install"
+make install-gcc install-target-libgcc DESTDIR="$ROOT/$BUILD/$1/.install"
+# uClibc insists on linking against libgcc_eh which isn't compiled because of --disable-shared
+# Simply link libgcc_eh.a to libgcc.a
+get_meta gcc-$TOOLCHAIN_TYPE
+ln -sf libgcc.a "$ROOT/$BUILD/$1/.install/usr/lib/gcc/$TARGET_NAME/$GCC_VERSION/libgcc_eh.a"
+fix_libs "$ROOT/$BUILD/$1/.install" toolchain

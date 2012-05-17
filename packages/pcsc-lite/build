@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+	    --host=$TARGET_NAME \
+            --build=$HOST_NAME \
+            --prefix=/usr \
+            --sysconfdir=/etc \
+            --enable-shared \
+            --disable-static \
+            --disable-libudev \
+            --enable-libusb \
+            --enable-usbdropdir=$PCSCD_ADDON_DIR/drivers
+
+make
+make_install

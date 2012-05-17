@@ -1,0 +1,15 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+do_configure \
+  --disable-oggtest \
+  --disable-vorbistest \
+  --disable-sdltest \
+  --disable-float \
+  --disable-examples \
+  --disable-spec \
+
+make
+make_install

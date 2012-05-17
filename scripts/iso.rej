@@ -1,0 +1,10 @@
+--- scripts/iso	Thu Apr 12 07:25:46 2012 +0000
++++ scripts/iso	Sat Apr 14 00:10:15 2012 +0200
+@@ -21,7 +21,6 @@
+                   -isohybrid-mbr $ROOT/$TOOLCHAIN/share/syslinux/isohdpfx.bin \
+                   -partition_offset 16 \
+                   -eltorito-alt-boot \
+-                  --efi-boot isolinux/efiboot.img \
+                   -no-emul-boot"
+     ;;
+   powerpc|powerpc64)

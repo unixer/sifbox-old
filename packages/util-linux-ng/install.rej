@@ -1,0 +1,7 @@
+--- packages/util-linux-ng/install	Thu May 10 18:38:28 2012 +0200
++++ packages/util-linux-ng/install	Thu May 10 18:44:58 2012 +0200
+@@ -16,3 +16,4 @@
+ do_install sbin/agetty
+ do_install sbin/sfdisk
+ do_install sbin/fstrim
++do_install bin/mount

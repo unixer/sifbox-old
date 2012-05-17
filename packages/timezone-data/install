@@ -1,0 +1,22 @@
+#!/bin/sh
+
+. config/options
+
+require_glibc $1
+
+cd $BUILD/$1*
+
+if [ "$INCLUDED_TIMEZONES" = all ]; then
+  do_install usr/share/zoneinfo
+elif [ -n "$INCLUDED_TIMEZONES" ]; then
+  for tz in $INCLUDED_TIMEZONES; do
+    do_install usr/share/zoneinfo/$tz
+  done
+fi
+
+if [ -f $INSTALL/usr/share/zoneinfo/$TIMEZONE ]; then
+  mkdir -p $INSTALL/etc
+  ln -s /usr/share/zoneinfo/$TIMEZONE $INSTALL/etc/localtime
+fi
+
+exit 0

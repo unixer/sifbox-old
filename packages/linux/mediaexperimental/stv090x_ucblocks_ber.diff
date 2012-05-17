@@ -1,0 +1,83 @@
+stv090x: Implement read_ber and read_ucblocks
+
+From: Oliver Endriss <o.endriss@gmx.de>
+
+Signed-off-by: Oliver Endriss <o.endriss@gmx.de>
+
+--- linux/drivers/media/dvb/frontends/stv090x.c	2011-09-26 04:44:56.000000000 +0200
++++ new/drivers/media/dvb/frontends/stv090x.c	2011-12-17 14:52:05.000000000 +0100
+@@ -3512,6 +3512,7 @@ static int stv090x_read_status(struct dv
+ 	return 0;
+ }
+ 
++#if 0
+ static int stv090x_read_per(struct dvb_frontend *fe, u32 *per)
+ {
+ 	struct stv090x_state *state = fe->demodulator_priv;
+@@ -3562,6 +3563,27 @@ err:
+ 	dprintk(FE_ERROR, 1, "I/O error");
+ 	return -1;
+ }
++#endif
++
++static int stv090x_read_ber(struct dvb_frontend *fe, u32 *ber)
++{
++	struct stv090x_state *state = fe->demodulator_priv;
++	u32 reg, h, m, l;
++
++	/* Counter 1: S1: 0x75 BER, S2: 0x67 PER */
++	reg = STV090x_READ_DEMOD(state, ERRCNT12);
++	h = STV090x_GETFIELD_Px(reg, ERR_CNT12_FIELD);
++
++	reg = STV090x_READ_DEMOD(state, ERRCNT11);
++	m = STV090x_GETFIELD_Px(reg, ERR_CNT11_FIELD);
++
++	reg = STV090x_READ_DEMOD(state, ERRCNT10);
++	l = STV090x_GETFIELD_Px(reg, ERR_CNT10_FIELD);
++
++	*ber = ((h << 16) | (m << 8) | l);
++
++	return 0;
++}
+ 
+ static int stv090x_table_lookup(const struct stv090x_tab *tab, int max, int val)
+ {
+@@ -3682,6 +3704,26 @@ static int stv090x_read_cnr(struct dvb_f
+ 	return 0;
+ }
+ 
++static int stv090x_read_ucblocks(struct dvb_frontend *fe, u32 *ucblocks)
++{
++	struct stv090x_state *state = fe->demodulator_priv;
++	u32 reg, h, m, l;
++
++	/* Counter 2: 0xc1 TS error count */
++	reg = STV090x_READ_DEMOD(state, ERRCNT22);
++	h = STV090x_GETFIELD_Px(reg, ERR_CNT2_FIELD);
++
++	reg = STV090x_READ_DEMOD(state, ERRCNT21);
++	m = STV090x_GETFIELD_Px(reg, ERR_CNT21_FIELD);
++
++	reg = STV090x_READ_DEMOD(state, ERRCNT20);
++	l = STV090x_GETFIELD_Px(reg, ERR_CNT20_FIELD);
++
++	*ucblocks = ((h << 16) | (m << 8) | l);
++
++	return 0;
++}
++
+ static int stv090x_set_tone(struct dvb_frontend *fe, fe_sec_tone_mode_t tone)
+ {
+ 	struct stv090x_state *state = fe->demodulator_priv;
+@@ -4741,9 +4783,10 @@ static struct dvb_frontend_ops stv090x_o
+ 
+ 	.search				= stv090x_search,
+ 	.read_status			= stv090x_read_status,
+-	.read_ber			= stv090x_read_per,
++	.read_ber			= stv090x_read_ber,
+ 	.read_signal_strength		= stv090x_read_signal_strength,
+	.read_snr			= stv090x_read_cnr,
++	.read_ucblocks			= stv090x_read_ucblocks,
+ };
+ 
+ 

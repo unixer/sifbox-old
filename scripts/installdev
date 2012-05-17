@@ -1,0 +1,98 @@
+#!/bin/sh
+
+. config/options
+
+if [ "$1" = "--force" ]; then
+  FORCE=true
+  shift
+fi
+
+get_meta $1
+
+mkdir -p $ROOT/$TOOLCHAIN/var/lib/opkg/info/
+STAMP=$ROOT/$TOOLCHAIN/var/lib/opkg/info/$1.control
+PACKAGE=$DEVPKGROOT/$PKG_OPK_DEV
+
+# check for platform-specific package overlay
+INSTALLDEV_RULE=$PACKAGES/$1/installdev
+PLATFORM_INSTALLDEV="$PLATFORM_PACKAGES/$1/installdev"
+[ -r "$PLATFORM_INSTALLDEV" ] && INSTALLDEV_RULE="$PLATFORM_INSTALLDEV"
+MACHINE_INSTALLDEV="$MACHINE_PACKAGES/$1/installdev"
+[ -r "$MACHINE_INSTALLDEV" ] && INSTALLDEV_RULE="$MACHINE_INSTALLDEV"
+
+# check for flavour-specific package overlay
+FLAVOUR_INSTALLDEV="$FLAVOUR_PACKAGES/$1/installdev"
+[ -r "$FLAVOUR_INSTALLDEV" ] && INSTALLDEV_RULE="$FLAVOUR_INSTALLDEV"
+
+if [ ! -f $INSTALLDEV_RULE ]; then
+  echo "$1 is not a dev package, skipping..." >&$VERBOSE_OUT
+  exit 0
+fi
+
+if [ -f $STAMP ]; then
+  if [ $PACKAGES/$1/unpack -nt $STAMP -o $PACKAGES/$1/patches -nt $STAMP ] || [ $PACKAGES/$1/build -nt $STAMP ]; then
+    $SCRIPTS/clean $1
+  elif [ $INSTALLDEV_RULE -nt $STAMP ]; then
+    $SCRIPTS/unpackagedev $1
+  fi
+
+  [ -f $PACKAGE -a $PACKAGE -nt $STAMP ] && $SCRIPTS/uninstalldev $1
+fi
+
+if [ "$FORCE" != true -a -f $STAMP ]; then
+  echo "$1 already installed, skipping..." >&$VERBOSE_OUT
+  exit 0
+fi
+
+printf "%${INDENT}c INSTALLDEV  $1\n" >&$SILENT_OUT
+export INDENT=$((${INDENT:-1}+$INDENT_SIZE))
+
+$SCRIPTS/packagedev $1
+
+for p in $PKG_DEV_DEPENDS; do
+  $SCRIPTS/installdev $p
+done
+
+if [ -f $PACKAGE ]; then
+  $SCRIPTS/build opkg-host
+
+  $ROOT/$TOOLCHAIN/bin/opkg --offline-root $ROOT/$TOOLCHAIN \
+                            install $PACKAGE >&$VERBOSE_OUT
+
+  # opkg installs the control file with the same timestamp of the package
+  # this breaks our scripts, so we touch the control file to make sure it's
+  # more recent than the package
+  touch $STAMP
+
+  # Remove old $ROOT/$TOOLCHAIN from downloaded opk after installing it
+  if [ -L $DEVPKGROOT/$PKG_OPK_DEV ] ; then
+    b=$ROOT/$TOOLCHAIN
+    special_list="$LIB_PREFIX/bin/gpg-error-config $LIB_PREFIX/bin/xml2-config $LIB_PREFIX/bin/libpng-config $LIB_PREFIX/lib/python2.7/config/Makefile $LIB_PREFIX/bin/freetype-config $LIB_PREFIX/bin/sdl-config $ROOT/$TOOLCHAIN/lib/perl/5.12.3/perllocal.pod"
+    mkdir -p $ROOT/binaries-dl/binaries-$TARGET_MACHINE/temp
+    cd $ROOT/binaries-dl/binaries-$TARGET_MACHINE/temp
+    ln -sf $DEVPKGROOT/$PKG_OPK_DEV $PKG_OPK_DEV
+    ar x $PKG_OPK_DEV
+    i=""
+    suff="pm pc la cfg hh h"
+    for suf in $suff; do
+    j=`tar -ztf data.tar.gz  | grep ".${suf}" | sed 's|./||'`
+    [ -n "$j" ] && i="$i $j"
+    done
+    cd -
+    rm $ROOT/binaries-dl/binaries-$TARGET_MACHINE/temp/*
+
+    for a in `find $ROOT/$TOOLCHAIN/bin -type f -readable -writable -executable` ; do
+    sed -e 's|/.\S*toolchain|'"$b"'|g' -i $a
+    done
+
+    for a in $i ; do 
+      [ -f $b/$a ] && sed -e 's|/.\S*toolchain|'"$b"'|g' -i $b/$a
+    done
+
+    for a in $special_list ; do
+      [ -f $a ] && sed -e 's|/.\S*toolchain|'"$b"'|g' -i $a
+    done
+  fi
+fi
+
+exit 0

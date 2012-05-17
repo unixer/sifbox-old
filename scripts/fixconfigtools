@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+# Avoid infinite loop
+get_meta configtools
+[ "$*" = "$PKG_BUILD_DIR" ] && exit 0
+
+$SCRIPTS/build configtools
+
+for i in $@; do
+  [ -f "$i/config.guess" ] && cp -f $PKG_BUILD_DIR/config.guess $i
+  [ -f "$i/config.sub" ]   && cp -f $PKG_BUILD_DIR/config.sub   $i
+  [ -f "$i/configure.guess" ] && cp -f $PKG_BUILD_DIR/config.guess $i/configure.guess
+  [ -f "$i/configure.sub" ]   && cp -f $PKG_BUILD_DIR/config.sub   $i/configure.sub
+done
+
+exit 0

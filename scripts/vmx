@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+if [ "$1" = build ]; then
+  $SCRIPTS/checkdeps build || exit 1
+
+  make iso
+  rm -rf $VMX_NAME
+  mkdir -p $VMX_NAME
+  cp $UTILS/openbricks-vmx.vmx $VMX_NAME
+  cp $UTILS/openbricks-vmx.nvram $VMX_NAME
+  cp $UTILS/openbricks-hdd* $VMX_NAME
+  sed -i "s%ide1:0.fileName.*%ide1:0.fileName = \"$ROOT/$ISO\"%" $VMX_NAME/openbricks-vmx.vmx
+elif [ "$1" = play ]; then
+  $SCRIPTS/checkdeps vmx || exit 1
+  vmplayer $VMX_NAME/openbricks-vmx.vmx
+fi

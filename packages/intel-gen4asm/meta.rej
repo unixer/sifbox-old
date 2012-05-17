@@ -1,0 +1,8 @@
+--- packages/intel-gen4asm/meta	Tue Apr 10 17:51:50 2012 +0200
++++ packages/intel-gen4asm/meta	Tue Apr 10 10:41:42 2012 +0300
+@@ -2,4 +2,4 @@
+ PKG_VERSION=20100421
+ PKG_URL="$DISTRO_SRCS/intel-gen4asm-${PKG_VERSION}.tar.bz2"
+ PKG_REV=1
+-PKG_BUILD_DEPENDS="ccache"
++PKG_BUILD_DEPENDS="toolchain ccache"

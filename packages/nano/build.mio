@@ -1,0 +1,21 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+
+LDFLAGS=`echo $LDFLAGS | sed -e "s|-Wl,--as-needed||"`
+LDFLAGS="$LDFLAGS -ltinfo"
+
+#cd $PKG_BUILD
+do_configure --host=$TARGET_NAME \
+            --build=$HOST_NAME \
+            --prefix=/usr \
+            --sysconfdir=/etc \
+            --localstatedir=/var \
+	    --datarootdir=/usr/share \
+
+
+make
+make_install

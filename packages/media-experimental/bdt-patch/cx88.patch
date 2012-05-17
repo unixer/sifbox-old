@@ -1,0 +1,201 @@
+diff -uN a/drivers/media/video/cx88/cx88-cards.c b/drivers/media/video/cx88/cx88-cards.c
+--- a/drivers/media/video/cx88/cx88-cards.c	2011-06-22 11:45:32.000000000 +0800
++++ b/drivers/media/video/cx88/cx88-cards.c	2011-10-28 23:04:54.000000000 +0800
+@@ -2237,6 +2237,18 @@
+ 		} },
+ 		.mpeg           = CX88_MPEG_DVB,
+ 	},
++	[CX88_BOARD_BST_PS8312] = {
++		.name           = "Bestunar PS8312 DVB-S/S2",
++		.tuner_type     = UNSET,
++		.radio_type     = UNSET,
++		.tuner_addr     = ADDR_UNSET,
++		.radio_addr     = ADDR_UNSET,
++		.input          = {{
++			.type   = CX88_VMUX_DVB,
++			.vmux   = 0,
++		} },
++		.mpeg           = CX88_MPEG_DVB,
++	},
+ };
+ 
+ /* ------------------------------------------------------------------ */
+@@ -2726,6 +2738,10 @@
+ 		.subvendor = 0x1822,
+ 		.subdevice = 0x0023,
+ 		.card      = CX88_BOARD_TWINHAN_VP1027_DVBS,
++	}, {
++		.subvendor = 0x14f1,
++		.subdevice = 0x8312,
++		.card      = CX88_BOARD_BST_PS8312,
+ 	},
+ };
+ 
+@@ -3454,7 +3470,13 @@
+ 		msleep(100);
+ 		cx_write(MO_SRST_IO, 1);
+ 		msleep(100);
+-		break;
++		break;
++	case  CX88_BOARD_BST_PS8312:
++		cx_write(MO_GP1_IO, 0x808000);
++		msleep(100);
++		cx_write(MO_GP1_IO, 0x808080);
++		msleep(100);		
++		break;	
+ 	} /*end switch() */
+ 
+ 
+diff -uN a/drivers/media/video/cx88/cx88-dvb.c b/drivers/media/video/cx88/cx88-dvb.c
+--- a/drivers/media/video/cx88/cx88-dvb.c	2011-06-30 05:36:40.000000000 +0800
++++ b/drivers/media/video/cx88/cx88-dvb.c	2012-02-13 14:40:16.000000000 +0800
+@@ -54,6 +54,7 @@
+ #include "stv0288.h"
+ #include "stb6000.h"
+ #include "cx24116.h"
++#include "m88ds3103.h"
+ #include "stv0900.h"
+ #include "stb6100.h"
+ #include "stb6100_proc.h"
+@@ -458,6 +459,56 @@
+ 		return core->prev_set_voltage(fe, voltage);
+ 	return 0;
+ }
++/*CX88_BOARD_BST_PS8312*/
++static int bst_dvbs_set_voltage(struct dvb_frontend *fe,
++				      fe_sec_voltage_t voltage)
++{
++	struct cx8802_dev *dev= fe->dvb->priv;
++	struct cx88_core *core = dev->core;
++
++	cx_write(MO_GP1_IO, 0x111111);
++	switch (voltage) {
++		case SEC_VOLTAGE_13:
++			cx_write(MO_GP1_IO, 0x020200);
++			break;
++		case SEC_VOLTAGE_18:
++			cx_write(MO_GP1_IO, 0x020202);
++			break;
++		case SEC_VOLTAGE_OFF:
++			cx_write(MO_GP1_IO, 0x111100);
++			break;
++	}
++
++	if (core->prev_set_voltage)
++		return core->prev_set_voltage(fe, voltage);
++	return 0;
++}
++
++static int bst_dvbs_set_voltage_v2(struct dvb_frontend *fe,
++				      fe_sec_voltage_t voltage)
++{
++	struct cx8802_dev *dev= fe->dvb->priv;
++	struct cx88_core *core = dev->core;
++
++	cx_write(MO_GP1_IO, 0x111101);
++	switch (voltage) {
++		case SEC_VOLTAGE_13:
++			cx_write(MO_GP1_IO, 0x020200);
++			break;
++		case SEC_VOLTAGE_18:
++
++			cx_write(MO_GP1_IO, 0x020202);
++			break;
++		case SEC_VOLTAGE_OFF:
++
++			cx_write(MO_GP1_IO, 0x111110);
++			break;
++	}
++
++	if (core->prev_set_voltage)
++		return core->prev_set_voltage(fe, voltage);
++	return 0;
++}
+ 
+ static int vp1027_set_voltage(struct dvb_frontend *fe,
+ 				    fe_sec_voltage_t voltage)
+@@ -700,6 +751,11 @@
+ 	.set_ts_params = ds3000_set_ts_param,
+ };
+ 
++static struct m88ds3103_config dvbsky_ds3103_config = {
++	.demod_address = 0x68,
++	.set_ts_params = ds3000_set_ts_param,
++};
++
+ static const struct stv0900_config prof_7301_stv0900_config = {
+ 	.demod_address = 0x6a,
+ /*	demod_mode = 0,*/
+@@ -1458,6 +1514,36 @@
+ 		if (fe0->dvb.frontend != NULL)
+ 			fe0->dvb.frontend->ops.set_voltage =
+ 							tevii_dvbs_set_voltage;
++		break;
++	case CX88_BOARD_BST_PS8312:
++		fe0->dvb.frontend = dvb_attach(m88ds3103_attach,
++						&dvbsky_ds3103_config,
++						&core->i2c_adap);
++		if (fe0->dvb.frontend != NULL)
++		{
++			int ret;
++			u8 b0[] = { 0x60 };
++			u8 b1[2] = { 0 };
++			struct i2c_msg msg[] = {
++				{
++				.addr = 0x50,
++				.flags = 0,
++				.buf = b0,
++				.len = 1
++				}, {
++				.addr = 0x50,
++				.flags = I2C_M_RD,
++				.buf = b1,
++				.len = 2
++				}
++			};
++			ret = i2c_transfer(&core->i2c_adap, msg, 2);
++			printk("PS8312: config = %02x, %02x", b1[0],b1[1]);
++			if(b1[0] == 0xaa)
++				fe0->dvb.frontend->ops.set_voltage = bst_dvbs_set_voltage_v2;
++			else			
++				fe0->dvb.frontend->ops.set_voltage = bst_dvbs_set_voltage;
++		}
+ 		break;
+ 	case CX88_BOARD_OMICOM_SS4_PCI:
+ 	case CX88_BOARD_TBS_8920:
+diff -uN a/drivers/media/video/cx88/cx88.h b/drivers/media/video/cx88/cx88.h
+--- a/drivers/media/video/cx88/cx88.h	2011-07-15 07:43:20.000000000 +0800
++++ b/drivers/media/video/cx88/cx88.h	2011-10-28 23:20:50.000000000 +0800
+@@ -244,6 +244,7 @@
+ #define CX88_BOARD_TEVII_S464              86
+ #define CX88_BOARD_WINFAST_DTV2000H_PLUS   87
+ #define CX88_BOARD_WINFAST_DTV1800H_XC4000 88
++#define CX88_BOARD_BST_PS8312              (CX88_BOARD_WINFAST_DTV1800H_XC4000+1)
+ 
+ enum cx88_itype {
+ 	CX88_VMUX_COMPOSITE1 = 1,
+diff -uN a/drivers/media/video/cx88/cx88-input.c b/drivers/media/video/cx88/cx88-input.c
+--- a/drivers/media/video/cx88/cx88-input.c	2011-06-22 11:45:33.000000000 +0800
++++ b/drivers/media/video/cx88/cx88-input.c	2011-11-11 18:01:50.000000000 +0800
+@@ -415,6 +415,10 @@
+ 		rc_type          = RC_TYPE_NEC;
+ 		ir->sampling     = 0xff00; /* address */
+ 		break;
++	case CX88_BOARD_BST_PS8312: 
++		ir_codes         = RC_MAP_DVBSKY;
++		ir->sampling     = 0xff00; /* address */
++		break;	
+ 	}
+ 
+ 	if (!ir_codes) {
+diff -uN a/drivers/media/video/cx88/Kconfig b/drivers/media/video/cx88/Kconfig
+--- a/drivers/media/video/cx88/Kconfig	2011-01-10 23:24:45.000000000 +0800
++++ b/drivers/media/video/cx88/Kconfig	2012-02-13 14:40:06.000000000 +0800
+@@ -57,6 +57,7 @@
+ 	select DVB_ISL6421 if !DVB_FE_CUSTOMISE
+ 	select DVB_S5H1411 if !DVB_FE_CUSTOMISE
+ 	select DVB_CX24116 if !DVB_FE_CUSTOMISE
++	select DVB_M88DS3103 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0299 if !DVB_FE_CUSTOMISE
+ 	select DVB_STV0288 if !DVB_FE_CUSTOMISE
+ 	select DVB_STB6000 if !DVB_FE_CUSTOMISE

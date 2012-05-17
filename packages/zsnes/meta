@@ -1,0 +1,13 @@
+PKG_NAME=zsnes
+PKG_URL="http://zsnes.sf.net/zsnes151bsrc.tar.bz2"
+PKG_VERSION=0.151b
+PKG_REV=1
+PKG_ARCH=i386
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_DEPENDS="SDL zlib"
+PKG_BUILD_DEPENDS="toolchain nasm"
+PKG_USE="xorg cxx"
+PKG_PRIORITY=optional
+PKG_SECTION=games
+PKG_SHORTDESC="free SNES emulator"
+PKG_LONGDESC="ZSNES is a Super Nintendo emulator"

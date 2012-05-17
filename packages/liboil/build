@@ -1,0 +1,19 @@
+#!/bin/sh
+
+. config/options
+
+if [ "$TARGET_ARCH" = arm ]; then
+  VFP_CONFIG="--enable-vfp"
+  export as_cv_unaligned_access=no
+else
+  VFP_CONFIG="--disable-vfp"
+  export as_cv_unaligned_access=yes
+fi
+
+cd $BUILD/$1*
+do_configure \
+            --disable-gtk-doc \
+            $VFP_CONFIG \
+
+make
+make_install

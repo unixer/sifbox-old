@@ -1,0 +1,187 @@
+#!/bin/sh
+
+. config/options
+#export MAKEFLAGS=-j1
+
+unset LDFLAGS
+
+cd $BUILD
+[ -d "linux" ] || ln -s $1-3* linux
+
+cd $(kernel_path)
+
+#Prova esperimental
+rm -Rf drivers/media/dvb/{ddbridge,ngene}
+rm -Rf drivers/staging/media/cxd2099
+rm -Rf drivers/staging/cxd2099
+cp -r $ROOT/$PACKAGES/$1/mediaexperimental/{ddbridge,ngene} drivers/media/dvb/
+cp -r $ROOT/$PACKAGES/$1/mediaexperimental/cxd2099 drivers/staging/media/
+cp $ROOT/$PACKAGES/$1/mediaexperimental/tda18212dd* drivers/media/dvb/frontends/
+cp $ROOT/$PACKAGES/$1/mediaexperimental/stv0367dd* drivers/media/dvb/frontends/
+cp $ROOT/$PACKAGES/$1/mediaexperimental/compat.h drivers/media/dvb/frontends/
+cp $ROOT/$PACKAGES/$1/mediaexperimental/config-compat.h drivers/media/dvb/frontends/ 
+DRIVERVERSION=`ls -d ../$1-[0-9]* | grep -r linux-3 | sed "s,../linux-,$2,g"`
+cp $ROOT/$PACKAGES/$1/mediaexperimental/ddbridge/ddbridge-core.c.${DRIVERVERSION} drivers/media/dvb/ddbridge/ddbridge-core.c 
+cp $ROOT/$PACKAGES/$1/mediaexperimental/ngene/ngene-cards.c.${DRIVERVERSION} drivers/media/dvb/ngene/ngene-cards.c 
+cp $ROOT/$PACKAGES/$1/mediaexperimental/stv0367dd.c.${DRIVERVERSION} drivers/media/dvb/frontends/stv0367dd.c 
+cp $ROOT/$PACKAGES/$1/mediaexperimental/tda18212dd.c.${DRIVERVERSION} drivers/media/dvb/frontends/tda18212dd.c 
+rm -Rf drivers/media/common/saa716x
+cp -r $ROOT/$PACKAGES/$1/mediaexperimental/saa716x drivers/media/common
+#mkdir -p drivers/media/dvb/linux
+#cp $ROOT/$PACKAGES/$1/mediaexperimental/kernel_version.h drivers/media/dvb/linux
+patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/stv0367dd-tda18212dd.frontend-kconfig.diff
+patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/stv0367dd-tda18212dd.frontend-makefile.diff  
+patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/saa716x.common-kconfig.diff
+patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/saa716x.common-makefile.diff
+patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/saa716x.include-osd.diff
+#patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/stv090x_ucblocks_ber.diff
+#patch -d.. -p1 < $ROOT/$PACKAGES/$1/mediaexperimental/stv090x_stv0903_not_set_registers_of_second_path.diff
+patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/drxk_lockstatus_fix.diff
+#FINE
+#FIRMWARE RTL
+cp -r $ROOT/$PACKAGES/$1/firmware/rtl_nic firmware/
+#FINE FIRMWARE
+
+echo "ENTER"
+read enterKey
+
+#ADD SUPPORT TBS
+[ -d "drivers/media/dvb/tbs" ] || mkdir drivers/media/dvb/tbs
+if [ "$TARGET_ARCH" = "i386" ]; then
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6980fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6980fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6981fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6981fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6921fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6921fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs8921ctrl.o.x86_r3 drivers/media/dvb/tbs/tbs8921ctrl.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs8921fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs8921fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5921ctrl.o.x86_r3 drivers/media/dvb/tbs/tbs5921ctrl.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5921fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs5921fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbsctrl.o.x86_r3 drivers/media/dvb/tbs/tbsctrl.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6925ctrl_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6925ctrl_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs62x0fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs62x0fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6984fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6984fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6992_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6992_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6922fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6922fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6928fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6928fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs8922ctrl.o.x86_r3 drivers/media/dvb/tbs/tbs8922ctrl.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs8922fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs8922fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5922ctrl.o.x86_r3 drivers/media/dvb/tbs/tbs5922ctrl.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5922fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs5922fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5880ctrl.o.x86_r3 drivers/media/dvb/tbs/tbs5880ctrl.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5880fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs5880fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6982fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6982fe_driver.o
+cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6991fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6991fe_driver.o
+echo "TBS drivers configured for x86 platform."
+fi
+
+#COPIA SORGENTI
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5880.c drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5880ctrl.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5880.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5921ctrl.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5922ctrl.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox22.c drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox22.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox2.c drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox2ci.c drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox2ci.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox2.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox.c drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qbox.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qboxs2.c drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qboxs2.h drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qboxs3.c drivers/media/dvb/tbs/
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs-qboxs3.h drivers/media/dvb/tbs/
+#[ -d "drivers/media/dvb/tbs-usb" ] || mkdir drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/dvb-usb.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/dvb-usb-ids.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5880fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5921fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs5922fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs62x0fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6921fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6922fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6925ctrl.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6928fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6980fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6981fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6982fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6984fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6991fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6992_cfg.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs6992.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs8921fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbs8922fe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbsfe.c drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbsfe.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/kmem_wrap.c drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/saa716x_input.* drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/saa716x_tbs.* drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbsci-i2c.* drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbsci.* drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbsctrl.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/tbsmac.* drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/saa716x_priv.h drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/.config drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/Kconfig drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/sorgenti/Makefile drivers/media/dvb/tbs
+patch -p1 < $ROOT/$PACKAGES/$1/tbs/99_make.patch
+cp $ROOT/$PACKAGES/$1/tbs/built-in.o drivers/media/dvb/tbs
+cp $ROOT/$PACKAGES/$1/tbs/.built-in.o.cmd drivers/media/dvb/tbs
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/01_Makefile_add_tbs.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/02_Kconfig_add_tbs.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/03_Makefile_add_tbs-dvb-usb.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/04_Kconfig_add_tbs-dvb-usb.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/05_Makefile_add_tbs-cx88.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/06_Kconfig_add_tbs-cx88.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/07_Makefile_add_tbs-common-saa716x.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/tbs/08_Kconfig_add_tbs-common-saa716x.patch
+
+case $TARGET_ARCH in
+  i386|x86_64)  IMAGE=bzImage  ;;
+  mips|powerpc) IMAGE=vmlinux  ;;
+  powerpc64)    IMAGE=zImage   ;;
+  arm)
+    . $CONFIG_MACHINE/meta
+    [ -n "$MACHINE_UBOOT_CONFIG" ] && IMAGE=uImage || IMAGE=zImage
+    ;;
+esac
+#patch -p1 < $ROOT/$PACKAGES/$1/999_enabletun.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/99_disablemeida.diff
+
+make $IMAGE
+make modules
+
+install_dir="`pwd`/.install"
+debug_dir="`pwd`/.install-debuginfo/usr/lib/debug"
+rm -rf $install_dir $debug_dir
+mkdir -p $install_dir $debug_dir
+
+make modules_install \
+  INSTALL_MOD_PATH=.install \
+  DEPMOD=$ROOT/$TOOLCHAIN/bin/depmod \
+
+kmod_dir="$install_dir/lib/modules/$(kernel_version)"
+
+if [ -d .install/lib/firmware ]; then
+  mv .install/lib/firmware .install/firmware
+else
+  mkdir -p .install/firmware
+fi
+rm -f $kmod_dir/build $kmod_dir/source $kmod_dir/modules.*
+strip_kmods "$kmod_dir" "$debug_dir"
+
+mkdir -p .install/boot
+case $TARGET_ARCH in
+  arm|powepc64)
+    cp arch/$TARGET_ARCH/boot/$IMAGE .install/boot
+    ;;
+  mips|powerpc)
+    cp vmlinux .install/boot
+    $STRIP .install/boot/$IMAGE
+    ;;
+  i386|x86_64)
+    cp arch/$TARGET_ARCH/boot/$IMAGE .install/boot/vmlinuz
+    ;;
+esac
+
+exit 0

@@ -1,0 +1,80 @@
+#!/bin/sh
+
+. config/options
+
+clean ()
+{
+  printf "%${INDENT}c CLEAN    $1\n" >&$SILENT_OUT
+  export INDENT=$((${INDENT:-1}+$INDENT_SIZE))
+
+  if [ "$CLEAN_SOURCES" = true ]; then
+    rm -rf $SOURCES/$1
+    return
+  fi
+
+  get_meta $1
+
+  if [ "$FULL" = true ]; then
+    rm -rf $BUILD_BASE*/$STAMPS_NOARCH/$1*
+    rm -rf $BUILD_BASE*/$PKG_NAME-$PKG_VERSION
+    rm -rf $BUILD_BASE*/$1-[r0-9]*
+    rm -rf $BUILD_BASE*/$1
+    rm -rf $STAMPS_NOARCH/$1
+    rm -rf $SOURCES/$1
+  else
+    if [ "$1" != toolchain ]; then
+      rm -rf $PKG_BUILD_DIR
+      rm -rf $BUILD/$1-[r0-9]*
+      rm -rf $BUILD/$1
+    fi
+    rm -f $STAMPS/$1*/unpack
+    rm -f $STAMPS/$1*/build
+
+    # we uninstall before unpackage, because unpackage uses the opk file
+    # as stamp, and in some cases (i.e. PKG_VERSION changes) it could point
+    # to a nonexisting file while a package is actually installed
+    $SCRIPTS/uninstall $1
+    $SCRIPTS/unpackage $1
+    if [ "$1" != opkg-host ]; then
+      $SCRIPTS/uninstalldev $1
+      $SCRIPTS/unpackagedev $1
+    fi
+  fi
+
+  unset INDENT
+}
+
+if [ "$1" = "--full" ]; then
+  FULL=true
+  shift
+elif [ "$1" = "--sources" ]; then
+  CLEAN_SOURCES=true
+  shift
+elif [ "$1" = "--quick" ]; then
+  QUICK=true
+  shift
+fi
+
+if [ -z "$1" ]; then
+  if [ "$QUICK" = true ]; then
+    rm -rf $BUILD $BINROOT
+    exit 0
+  fi
+  for i in $PACKAGES/*; do clean ${i#$PACKAGES/}; done
+  $SCRIPTS/unpackagedev opkg-host
+  rm -rf $BUILD/toolchain
+  rm -rf $BUILD/iso
+  rm -rf $BUILD/rootfs
+  rm -rf $BUILD/packages
+  rm -rf $BUILD/devpackages
+  rm -rf $BUILD/initrd
+  if [ "$FULL" = true ]; then
+    rm -rf $CCACHE_DIR
+    rm -rf $BUILD_NOARCH
+    rm -f $STAMPS_NOARCH/kconfiginit
+  fi
+else
+  clean $1
+fi
+
+exit 0

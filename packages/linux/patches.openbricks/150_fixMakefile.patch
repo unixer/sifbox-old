@@ -1,0 +1,11 @@
+--- linux-3.2.6/Makefile.org	2012-02-26 16:33:51.938919242 +0100
++++ linux-3.2.6/Makefile	2012-02-26 16:34:35.528919235 +0100
+@@ -537,7 +537,7 @@
+ PHONY += include/config/auto.conf
+ 
+ include/config/auto.conf:
+-	$(Q)test -e include/generated/autoconf.h -a -e $@ || (		\
++	@test -a include/linux/autoconf.h -a -e $@ || ( 		\ 
+ 	echo;								\
+ 	echo "  ERROR: Kernel configuration is invalid.";		\
+ 	echo "         include/generated/autoconf.h or $@ are missing.";\

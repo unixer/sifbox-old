@@ -1,0 +1,130 @@
+#!/bin/sh
+
+check_timestamp () {
+  for patch in $1/*; do
+    if [ $patch -nt $STAMP ]; then
+      rm -f $STAMP
+      break
+    fi
+  done
+}
+
+. config/options
+
+if [ -z "$1" ]; then
+  echo "usage: $0 package_name"
+  exit 1
+fi
+
+$SCRIPTS/get $1
+
+mkdir -p $BUILD
+
+[ ! -d $SOURCES/$1 -a ! -d $PACKAGES/$1/sources ] && exit 0
+
+UNPACK_RULE=$PACKAGES/$1/unpack
+# check for platform-specific package rule overlay
+PLATFORM_UNPACK="$PLATFORM_PACKAGES/$1/unpack"
+[ -r "$PLATFORM_UNPACK" ] && UNPACK_RULE="$PLATFORM_UNPACK"
+# check for machine-specific package rule overlay
+MACHINE_UNPACK="$MACHINE_PACKAGES/$1/unpack"
+[ -r "$MACHINE_UNPACK" ] && UNPACK_RULE="$MACHINE_UNPACK"
+# check for flavour-specific package overlay
+FLAVOUR_UNPACK="$FLAVOUR_PACKAGES/$1/unpack"
+[ -r "$FLAVOUR_UNPACK" ] && UNPACK_RULE="$FLAVOUR_UNPACK"
+
+mkdir -p $STAMPS/$1
+STAMP=$STAMPS/$1/unpack
+
+[ -f $STAMP -a -f $PACKAGES/$1/need_unpack ] && $PACKAGES/$1/need_unpack $@
+
+# if the package if overridden at machine, platform or flavour level 
+# use those patches
+if [ -r "$MACHINE_PACKAGES/$1/meta" ]; then
+  PBASE=$MACHINE_PACKAGES/$1/patches
+elif [ -r "$PLATFORM_PACKAGES/$1/meta" ]; then
+  PBASE=$PLATFORM_PACKAGES/$1/patches
+elif [ -r "$FLAVOUR_PACKAGES/$1/meta" ]; then
+  PBASE=$FLAVOUR_PACKAGES/$1/patches
+else
+  PBASE=$PACKAGES/$1/patches
+fi
+
+check_timestamp "$PBASE"
+[ -f $STAMP ] && exit 0
+
+# ensure we get rid of all previous package version before unpacking
+$SCRIPTS/clean $1
+
+printf "%${INDENT}c UNPACK   $1\n" >&$SILENT_OUT
+export INDENT=$((${INDENT:-1}+$INDENT_SIZE))
+
+get_meta $1
+
+if [ "$PKG_OPK_ARCH" = unsupported ]; then
+  echo "$1 is not supported on $TARGET_ARCH, aborting."
+  exit 1
+fi
+
+rm -rf $PKG_BUILD_DIR
+mkdir -p $PKG_BUILD_DIR
+
+if [ -f $PACKAGE_URL -o -n "$PKG_URL" ]; then
+  $SCRIPTS/extract $1 "*.tar.xz"  $PKG_BUILD_DIR
+  $SCRIPTS/extract $1 "*.tar.bz2" $PKG_BUILD_DIR
+  $SCRIPTS/extract $1 "*.tar.gz"  $PKG_BUILD_DIR
+  $SCRIPTS/extract $1 "*.tgz"     $PKG_BUILD_DIR
+  $SCRIPTS/extract $1 "*.tar"     $PKG_BUILD_DIR
+  $SCRIPTS/extract $1 "*.zip"     $PKG_BUILD_DIR
+fi
+
+# move the extracted files up one level
+PKGTMPDIR=`find $PKG_BUILD_DIR -maxdepth 1 -type d ! -wholename $PKG_BUILD_DIR`
+if [ -d "$PKGTMPDIR" ] && [ "$PKGTMPDIR" != "." -a "$PKGTMPDIR" != ".." ]; then
+  # warning: this will skip dotfiles (usually stuff like .cvsignore)
+  mv $PKGTMPDIR/* $PKG_BUILD_DIR
+  # explicitly copy over .auto directory as some packages (e.g. libdvdcss)
+  # require it
+  [ -d "$PKGTMPDIR/.auto" ] && mv $PKGTMPDIR/.auto $PKG_BUILD_DIR
+  rm -rf $PKGTMPDIR
+fi
+
+[ -d $PACKAGES/$1/sources ] && cp -PRf $PACKAGES/$1/sources/* $PKG_BUILD_DIR
+
+PDIRS="$PBASE"
+
+# if there are patches at machine/platform level but the package is not
+# overridden let's apply them
+[ -d "$MACHINE_PACKAGES/$1/patches" -a ! -f "$MACHINE_PACKAGES/$1/meta" ] && \
+  PDIRS="$PDIRS $MACHINE_PACKAGES/$1/patches"
+[ -d "$PLATFORM_PACKAGES/$1/patches" -a ! -f "$PLATFORM_PACKAGES/$1/meta" ] && \
+  PDIRS="$PDIRS $PLATFORM_PACKAGES/$1/patches"
+
+[ -n "$TARGET_ARCH" ] && PDIRS="$PDIRS $PBASE/$TARGET_ARCH"
+[ -n "$TARGET_PLATFORM" ] && PDIRS="$PDIRS $PBASE/$TARGET_PLATFORM"
+for d in $PBASE/\!*; do
+  P=`echo $d | sed 's/^.*!//'`
+  [ "$TARGET_ARCH" = "$P" -o "$TARGET_PLATFORM" = "$P" ] || \
+    PDIRS="$PDIRS $d"
+done
+for d in $PDIRS; do
+  if [ -f $d/series ]; then
+    for i in `cat $d/series`; do
+      [ -f $d/$i ] && apply_patch $1 $d/$i
+    done
+  else
+    for i in $d/*.diff $d/*.patch; do
+      [ -f $i ] && apply_patch $1 $i
+    done
+  fi
+done
+
+$SCRIPTS/fixconfigtools $PKG_BUILD_DIR
+
+[ -f $UNPACK_RULE ] && $UNPACK_RULE $@ >&$VERBOSE_OUT
+
+rm -f $STAMPS/$1/build
+$SCRIPTS/unpackage $1
+$SCRIPTS/unpackagedev $1
+
+create_stamp $STAMP

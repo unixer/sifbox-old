@@ -1,0 +1,201 @@
+diff -Naur bst-kconfig-2.6.34+git20100608/scripts/kconfig/gconf.c bst-kconfig-2.6.34+git20100608a/scripts/kconfig/gconf.c
+--- bst-kconfig-2.6.34+git20100608/scripts/kconfig/gconf.c	2010-06-22 12:52:53.000000000 +0200
++++ bst-kconfig-2.6.34+git20100608a/scripts/kconfig/gconf.c	2010-08-08 17:51:51.024794800 +0200
+@@ -266,7 +266,7 @@
+ 					  /*"style", PANGO_STYLE_OBLIQUE, */
+ 					  NULL);
+ 
+-	sprintf(title, _("Linux Kernel v%s Configuration"),
++	sprintf(title, _("OpenBricks v%s Configuration"),
+ 		getenv("KERNELVERSION"));
+ 	gtk_window_set_title(GTK_WINDOW(main_wnd), title);
+ 
+@@ -718,8 +718,8 @@
+ {
+ 	GtkWidget *dialog;
+ 	const gchar *intro_text = _(
+-	    "Welcome to gkc, the GTK+ graphical kernel configuration tool\n"
+-	    "for Linux.\n"
++	    "Welcome to gkc, the GTK+ graphical configuration tool\n"
++	    "for OpenBricks.\n"
+ 	    "For each option, a blank box indicates the feature is disabled, a\n"
+ 	    "check indicates it is enabled, and a dot indicates that it is to\n"
+ 	    "be compiled as a module.  Clicking on the box will cycle through the three states.\n"
+diff -Naur bst-kconfig-2.6.34+git20100608/scripts/kconfig/mconf.c bst-kconfig-2.6.34+git20100608a/scripts/kconfig/mconf.c
+--- bst-kconfig-2.6.34+git20100608/scripts/kconfig/mconf.c	2010-06-22 12:52:53.000000000 +0200
++++ bst-kconfig-2.6.34+git20100608a/scripts/kconfig/mconf.c	2010-08-08 17:53:46.089009789 +0200
+@@ -25,10 +25,10 @@
+ static const char mconf_readme[] = N_(
+ "Overview\n"
+ "--------\n"
+-"Some kernel features may be built directly into the kernel.\n"
+-"Some may be made into loadable runtime modules.  Some features\n"
++"Some OpenBricks features may be built directly into the rootfs.\n"
++"Some may be made into installable opk packages.  Some features\n"
+ "may be completely removed altogether.  There are also certain\n"
+-"kernel parameters which are not really features, but must be\n"
++"OpenBricks parameters which are not really features, but must be\n"
+ "entered in as decimal or hexadecimal numbers or possibly text.\n"
+ "\n"
+ "Menu items beginning with following braces represent features that\n"
+@@ -37,10 +37,10 @@
+ "  { } can be built in or modularized (selected by other feature)\n"
+ "  - - are selected by other feature,\n"
+ "while *, M or whitespace inside braces means to build in, build as\n"
+-"a module or to exclude the feature respectively.\n"
++"a package or to exclude the feature respectively.\n"
+ "\n"
+ "To change any of these features, highlight it with the cursor\n"
+-"keys and press <Y> to build it in, <M> to make it a module or\n"
++"keys and press <Y> to build it in, <M> to make it a package or\n"
+ "<N> to removed it.  You may also press the <Space Bar> to cycle\n"
+ "through the available options (ie. Y->N->M->Y).\n"
+ "\n"
+@@ -115,7 +115,7 @@
+ "-----------------------------\n"
+ "Menuconfig supports the use of alternate configuration files for\n"
+ "those who, for various reasons, find it necessary to switch\n"
+-"between different kernel configurations.\n"
++"between different OpenBricks configurations.\n"
+ "\n"
+ "At the end of the main menu you will find two options.  One is\n"
+ "for saving the current configuration to a file of your choosing.\n"
+@@ -148,8 +148,8 @@
+ "\n"
+ "Optional personality available\n"
+ "------------------------------\n"
+-"If you prefer to have all of the kernel options listed in a single\n"
+-"menu, rather than the default multimenu hierarchy, run the menuconfig\n"
++"If you prefer to have all of the OpenBricks configuration options listed in a\n"
++"single menu, rather than the default multimenu hierarchy, run the menuconfig\n"
+ "with MENUCONFIG_MODE environment variable set to single_menu. Example:\n"
+ "\n"
+ "make MENUCONFIG_MODE=single_menu menuconfig\n"
+@@ -205,11 +205,11 @@
+ 	"last retrieved.  Leave blank to abort."),
+ load_config_help[] = N_(
+ 	"\n"
+-	"For various reasons, one may wish to keep several different kernel\n"
++	"For various reasons, one may wish to keep several different OpenBricks\n"
+ 	"configurations available on a single machine.\n"
+ 	"\n"
+ 	"If you have saved a previous configuration in a file other than the\n"
+-	"kernel's default, entering the name of the file here will allow you\n"
++	"OpenBricks's default, entering the name of the file here will allow you\n"
+ 	"to modify that configuration.\n"
+ 	"\n"
+ 	"If you are uncertain, then you have probably never used alternate\n"
+@@ -219,7 +219,7 @@
+ 	"as an alternate.  Leave blank to abort."),
+ save_config_help[] = N_(
+ 	"\n"
+-	"For various reasons, one may wish to keep different kernel\n"
++	"For various reasons, one may wish to keep different OpenBricks\n"
+ 	"configurations available on a single machine.\n"
+ 	"\n"
+ 	"Entering a file name here will allow you to later retrieve, modify\n"
+@@ -305,7 +305,7 @@
+ 	sym = sym_lookup("KERNELVERSION", 0);
+ 	sym_calc_value(sym);
+ 	size = snprintf(menu_backtitle, sizeof(menu_backtitle),
+-	                _("%s - Linux Kernel v%s Configuration"),
++	                _("%s - OpenBricks v%s Configuration"),
+ 		        config_filename, sym_get_string_value(sym));
+ 	if (size >= sizeof(menu_backtitle))
+ 		menu_backtitle[sizeof(menu_backtitle)-1] = '\0';
+@@ -832,7 +832,7 @@
+ 		if (conf_get_changed())
+ 			res = dialog_yesno(NULL,
+ 					   _("Do you wish to save your "
+-					     "new kernel configuration?\n"
++					     "new OpenBricks configuration?\n"
+ 					     "<ESC><ESC> to continue."),
+ 					   6, 60);
+ 		else
+@@ -844,20 +844,20 @@
+ 	case 0:
+ 		if (conf_write(filename)) {
+ 			fprintf(stderr, _("\n\n"
+-				"Error during writing of the kernel configuration.\n"
+-				"Your kernel configuration changes were NOT saved."
++				"Error during writing of the OpenBricks configuration.\n"
++				"Your OpenBricks configuration changes were NOT saved."
+ 				"\n\n"));
+ 			return 1;
+ 		}
+ 	case -1:
+ 		printf(_("\n\n"
+-			"*** End of Linux kernel configuration.\n"
+-			"*** Execute 'make' to build the kernel or try 'make help'."
++			"*** End of OpenBricks configuration.\n"
++			"*** Execute 'make' to build OpenBricks or try 'make help'."
+ 			"\n\n"));
+ 		break;
+ 	default:
+ 		fprintf(stderr, _("\n\n"
+-			"Your kernel configuration changes were NOT saved."
++			"Your OpenBricks configuration changes were NOT saved."
+ 			"\n\n"));
+ 	}
+ 
+diff -Naur bst-kconfig-2.6.34+git20100608/scripts/kconfig/menu.c bst-kconfig-2.6.34+git20100608a/scripts/kconfig/menu.c
+--- bst-kconfig-2.6.34+git20100608/scripts/kconfig/menu.c	2010-06-22 12:52:53.000000000 +0200
++++ bst-kconfig-2.6.34+git20100608a/scripts/kconfig/menu.c	2010-12-22 09:11:27.713810185 +0100
+@@ -10,7 +10,7 @@
+ #include "lkc.h"
+ 
+ static const char nohelp_text[] = N_(
+-	"There is no help available for this kernel option.\n");
++	"There is no help available for this option.\n");
+ 
+ struct menu rootmenu;
+ static struct menu **last_entry_ptr;
+diff -Naur bst-kconfig-2.6.34+git20100608/scripts/kconfig/qconf.cc bst-kconfig-2.6.34+git20100608a/scripts/kconfig/qconf.cc
+--- bst-kconfig-2.6.34+git20100608/scripts/kconfig/qconf.cc	2010-06-22 12:52:53.000000000 +0200
++++ bst-kconfig-2.6.34+git20100608a/scripts/kconfig/qconf.cc	2010-08-08 17:54:06.517002207 +0200
+@@ -1275,7 +1275,7 @@
+ 	char title[256];
+ 
+ 	QDesktopWidget *d = configApp->desktop();
+-	snprintf(title, sizeof(title), _("Linux Kernel v%s Configuration"),
++	snprintf(title, sizeof(title), _("OpenBricks v%s Configuration"),
+ 		getenv("KERNELVERSION"));
+ 	setCaption(title);
+ 
+@@ -1631,10 +1631,10 @@
+ 
+ void ConfigMainWindow::showIntro(void)
+ {
+-	static const QString str = _("Welcome to the qconf graphical kernel configuration tool for Linux.\n\n"
++	static const QString str = _("Welcome to the qconf graphical configuration tool for OpenBricks.\n\n"
+ 		"For each option, a blank box indicates the feature is disabled, a check\n"
+ 		"indicates it is enabled, and a dot indicates that it is to be compiled\n"
+-		"as a module.  Clicking on the box will cycle through the three states.\n\n"
++		"as a package.  Clicking on the box will cycle through the three states.\n\n"
+ 		"If you do not see an option (e.g., a device driver) that you believe\n"
+ 		"should be present, try turning on Show All Options under the Options menu.\n"
+ 		"Although there is no cross reference yet to help you figure out what other\n"
+diff -Naur bst-kconfig-2.6.34+git20100608/scripts/kconfig/zconf.tab.c_shipped bst-kconfig-2.6.34+git20100608a/scripts/kconfig/zconf.tab.c_shipped
+--- bst-kconfig-2.6.34+git20100608/scripts/kconfig/zconf.tab.c_shipped	2010-06-22 12:52:53.000000000 +0200
++++ bst-kconfig-2.6.34+git20100608a/scripts/kconfig/zconf.tab.c_shipped	2010-08-08 17:51:51.024794800 +0200
+@@ -2224,7 +2224,7 @@
+ 	modules_sym = sym_lookup(NULL, 0);
+ 	modules_sym->type = S_BOOLEAN;
+ 	modules_sym->flags |= SYMBOL_AUTO;
+-	rootmenu.prompt = menu_add_prompt(P_MENU, "Linux Kernel Configuration", NULL);
++	rootmenu.prompt = menu_add_prompt(P_MENU, "OpenBricks Configuration", NULL);
+ 
+ #if YYDEBUG
+ 	if (getenv("ZCONF_DEBUG"))
+diff -Naur bst-kconfig-2.6.34+git20100608/scripts/kconfig/zconf.y bst-kconfig-2.6.34+git20100608a/scripts/kconfig/zconf.y
+--- bst-kconfig-2.6.34+git20100608/scripts/kconfig/zconf.y	2010-06-22 12:52:53.000000000 +0200
++++ bst-kconfig-2.6.34+git20100608a/scripts/kconfig/zconf.y	2010-08-08 17:51:51.024794800 +0200
+@@ -479,7 +479,7 @@
+ 	modules_sym = sym_lookup(NULL, 0);
+ 	modules_sym->type = S_BOOLEAN;
+ 	modules_sym->flags |= SYMBOL_AUTO;
+-	rootmenu.prompt = menu_add_prompt(P_MENU, "Linux Kernel Configuration", NULL);
++	rootmenu.prompt = menu_add_prompt(P_MENU, "OpenBricks Configuration", NULL);
+ 
+ #if YYDEBUG
+ 	if (getenv("ZCONF_DEBUG"))

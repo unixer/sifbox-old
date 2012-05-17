@@ -1,0 +1,17 @@
+#!/bin/sh
+
+. config/options
+
+$SCRIPTS/build linux
+
+cd $BUILD/$1*
+
+rm include/linux/types.h
+
+do_configure \
+            --enable-devel \
+            --disable-ipv6 \
+            --with-kernel=$(kernel_path) \
+
+make
+make_install

@@ -1,0 +1,16 @@
+PKG_NAME=vdr-live
+PKG_URL_REV=ad26ae4f
+#PKG_VERSION=0.2.0+${PKG_URL_REV}
+PKG_VERSION=f2d099676a25f6e238c3ad75f8f19b667f9627fb
+#PKG_URL_PROTO=git
+#PKG_URL="git://projects.vdr-developer.org/vdr-plugin-live.git"
+PKG_URL="http://projects.vdr-developer.org/git/vdr-plugin-live.git/snapshot/vdr-plugin-live-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_BUILD_DEPENDS="toolchain gettext"
+PKG_RUN_DEPENDS="$TARGET_LIBC vdr"
+PKG_DEPENDS="tntnet pcre"
+#PKG_DEPENDS="pcre"
+PKG_PRIORITY=optional
+PKG_SECTION=multimedia
+PKG_SHORTDESC="VDR -- live plugin"
+PKG_LONGDESC="vdr-live is a plugin for VDR, the Video Disk Recorder. It provides a plugin based WEB frontend to control your VDR."

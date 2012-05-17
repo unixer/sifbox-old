@@ -1,0 +1,13 @@
+#!/bin/sh
+
+. config/options
+
+export ac_cv_path_HAVELIBUSB=$ROOT/$TOOLCHAIN/bin/libusb-config
+
+cd $BUILD/$1*
+export LIBS="-lusb"
+do_configure \
+            --disable-libftdipp \
+
+make
+make_install

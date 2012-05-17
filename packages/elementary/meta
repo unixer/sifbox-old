@@ -1,0 +1,13 @@
+PKG_NAME=elementary
+PKG_VERSION=r56610
+PKG_URL="$DISTRO_SRCS/elementary-${PKG_VERSION}.tar.bz2"
+PKG_REV=1
+PKG_DEPENDS="ecore eet eina evas edje efreet ethumb"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_USE="uclibc"
+PKG_DEPENDS_uclibc="libiconv"
+PKG_PRIORITY=optional
+PKG_SECTION=libs
+PKG_SHORTDESC="The Elementary widget set library"
+PKG_LONGDESC="Elementary is a widget set based on the Enlightenment Foundation Libraries, primarily aimed at creating graphical user interfaces for mobile and embedded devices."

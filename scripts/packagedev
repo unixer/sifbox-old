@@ -1,0 +1,78 @@
+#!/bin/sh
+
+. config/options
+
+add_control() {
+  local KEY="$1"
+  local VAL="$2"
+
+  [ -n "$KEY" -a -n "$VAL" ] && \
+    echo "${KEY}: $VAL" >> $INSTALL/CONTROL/control
+
+  return 0
+}
+
+[ -n "$REPO" ] && $SCRIPTS/get-opk $1
+
+get_meta $1
+
+# check for platform-specific package overlay
+INSTALLDEV_RULE=$PACKAGES/$1/installdev
+PLATFORM_INSTALLDEV="$PLATFORM_PACKAGES/$1/installdev"
+[ -r "$PLATFORM_INSTALLDEV" ] && INSTALLDEV_RULE="$PLATFORM_INSTALLDEV"
+MACHINE_INSTALLDEV="$MACHINE_PACKAGES/$1/installdev"
+[ -r "$MACHINE_INSTALLDEV" ] && INSTALLDEV_RULE="$MACHINE_INSTALLDEV"
+
+# check for flavour-specific package overlay
+FLAVOUR_INSTALLDEV="$FLAVOUR_PACKAGES/$1/installdev"
+[ -r "$FLAVOUR_INSTALLDEV" ] && INSTALLDEV_RULE="$FLAVOUR_INSTALLDEV"
+
+mkdir -p $DEVPKGROOT
+STAMP="$DEVPKGROOT/$PKG_OPK_DEV"
+
+if [ -f $STAMP -a $INSTALLDEV_RULE -nt $STAMP ]; then
+  $SCRIPTS/uninstalldev $1
+  rm -f $STAMP
+fi
+
+if [ -f $STAMP ]; then
+  echo "$1 (dev) is already packaged, skipping..." >&$VERBOSE_OUT
+  exit 0
+fi
+
+if [ ! -f $INSTALLDEV_RULE ]; then
+  echo "$1 is not a dev package, skipping..." >&$VERBOSE_OUT
+  exit 0
+fi
+
+printf "%${INDENT}c PACKAGEDEV  $1\n" >&$SILENT_OUT
+export INDENT=$((${INDENT:-1}+$INDENT_SIZE))
+
+rm -f $STAMP
+
+export INSTALL="$DEVPKGROOT_STAGE/$1"
+
+rm -rf $INSTALL
+mkdir -p $INSTALL/CONTROL
+
+# build
+$SCRIPTS/build $1
+
+# install to staging
+$INSTALLDEV_RULE $1 >&$VERBOSE_OUT
+
+# build opk package
+add_control "Package" "${PKG_NAME}"
+add_control "Version" "${PKG_VERSION}-${PKG_REV}dev${PKG_OPK_ARCH}"
+add_control "Architecture" "`uname -m`"
+add_control "Depends" "$PKG_OPK_DEV_DEPENDS"
+add_control "Priority" "extra"
+add_control "Section" "devel"
+add_control "Maintainer" "The SifTeam (http://forum.sifteam.eu)"
+add_control "Source" "https://github.com/unixer/sifbox/"
+add_control "Description" "Devel files for ${PKG_NAME}"
+
+$SCRIPTS/build opkg-utils
+
+mkdir -p $DEVPKGROOT
+opkg-build -O -o root -g root $INSTALL $DEVPKGROOT >&$VERBOSE_OUT

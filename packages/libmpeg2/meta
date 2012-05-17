@@ -1,0 +1,13 @@
+PKG_NAME=libmpeg2
+PKG_VERSION=0.5.1
+PKG_URL="http://libmpeg2.sourceforge.net/files/libmpeg2-${PKG_VERSION}.tar.gz"
+PKG_REV=1
+PKG_RUN_DEPENDS="$TARGET_LIBC"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_USE="xorg sdl"
+PKG_DEPENDS_xorg="libX11"
+PKG_DEPENDS_sdl="SDL"
+PKG_PRIORITY=optional
+PKG_SECTION=libs
+PKG_SHORTDESC="MPEG1 and MPEG2 video decoder library"
+PKG_LONGDESC="libmpeg2 is a library which can decode MPEG1 and MPEG2 video streams"

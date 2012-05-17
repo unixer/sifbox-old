@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*/wpa_supplicant
+make
+
+export BINDIR=/usr/sbin
+make_install

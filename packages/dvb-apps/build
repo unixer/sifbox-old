@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*/util/scan
+make CC="$CC" \
+     CFLAGS="$CFLAGS" \
+     LFLAGS="$LDFLAGS"

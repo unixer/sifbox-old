@@ -1,0 +1,11 @@
+--- xine-ui-r3073/src/xitk/Makefile.org	2012-04-05 15:46:53.773900029 +0200
++++ xine-ui-r3073/src/xitk/Makefile	2012-04-05 15:47:28.923900023 +0200
+@@ -216,7 +216,7 @@
+ INTL_MACOSX_LIBS = 
+ JPEG_CFLAGS = 
+ JPEG_LIBS = -ljpeg
+-LDFLAGS =   -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/lib -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/lib -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/local/lib 
++LDFLAGS =   -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/lib -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/lib -L/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/local/lib -lrt -lm 
+ LIBICONV = 
+ LIBINTL = /root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/local/lib/libintl.so /root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/lib/libc.so -Wl,-rpath -Wl,/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/local/lib -Wl,-rpath -Wl,/root/openbricks/build/build.i386.eglibc/toolchain/i686-openbricks-linux-gnu/sysroot/usr/lib
+ LIBOBJS =  ${LIBOBJDIR}strlcat$U.o ${LIBOBJDIR}strlcpy$U.o
