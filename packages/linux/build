@@ -14,7 +14,9 @@ cd $(kernel_path)
 rm -Rf drivers/media/dvb/{ddbridge,ngene}
 rm -Rf drivers/staging/media/cxd2099
 rm -Rf drivers/staging/cxd2099
-cp -r $ROOT/$PACKAGES/$1/mediaexperimental/{ddbridge,ngene} drivers/media/dvb/
+#cp -r $ROOT/$PACKAGES/$1/mediaexperimental/{ddbridge,ngene} drivers/media/dvb/
+cp -r $ROOT/$PACKAGES/$1/mediaexperimental/ddbridge drivers/media/dvb/
+cp -r $ROOT/$PACKAGES/$1/mediaexperimental/ngene drivers/media/dvb/
 cp -r $ROOT/$PACKAGES/$1/mediaexperimental/cxd2099 drivers/staging/media/
 cp $ROOT/$PACKAGES/$1/mediaexperimental/tda18212dd* drivers/media/dvb/frontends/
 cp $ROOT/$PACKAGES/$1/mediaexperimental/stv0367dd* drivers/media/dvb/frontends/
