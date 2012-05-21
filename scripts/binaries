@@ -1,0 +1,34 @@
+#!/bin/sh
+
+. config/options
+
+[ "$TARGET_ISO" = yes ] && $SCRIPTS/iso
+[ "$TARGET_FLAT" = yes ] && $SCRIPTS/flat
+[ "$TARGET_PXE" = yes ] && $SCRIPTS/pxe
+[ "$TARGET_VMX" = yes ] && $SCRIPTS/vmx build
+[ "$TARGET_EXT2FS" = yes ] && $SCRIPTS/ext2fs
+[ "$TARGET_INITRAMFS" = yes ] && $SCRIPTS/initramfs
+[ "$TARGET_SNOWBALL_EMMC" = yes ] && $SCRIPTS/mksnowball
+[ "$TARGET_TARBALL" = yes ] && $SCRIPTS/tarball
+[ "$TARGET_OMAP_TARBALL" = yes ] && $SCRIPTS/omap-tarball
+
+[ "$PACKAGE_REPO" = yes ] && $SCRIPTS/index
+
+echo ""
+echo ""
+echo "#########################################################################"
+echo "##"
+echo "## Build completed successfully !!"
+echo "##  + Flavour:      $DISTRONAME"
+echo "##  + Version:      $DISTRO_VERSION"
+echo "##  + Architecture: $TARGET_ARCH"
+echo "##  + Platform:     $TARGET_PLATFORM"
+echo "##  + Board:        $TARGET_MACHINE"
+echo "##"
+echo "## Binary Location: $BINROOT"
+echo "##"
+echo "#########################################################################"
+echo ""
+echo ""
+
+exit 0
