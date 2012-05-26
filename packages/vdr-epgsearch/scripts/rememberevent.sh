@@ -1,54 +1,56 @@
+#!/bin/bash
 #
-# rememberevent.sh - v.0.1
+# rememberevent.sh
 #
-# source: http://vdrportal.de/board/thread.php?threadid=27095
+# source: vdr-plugin epgsearch
 #
 # add this lines to your epgsearchcmds.conf:
 # folgende zeilen in die epgsearchcmds.conf eintragen:
 #
-# remember event?               : /usr/local/bin/rememberevent.sh 0
-# remember event? (inc. switch) : /usr/local/bin/rememberevent.sh 1
+# remember event               : /usr/local/bin/rememberevent.sh 0
+# remember event (inc. switch) : /usr/local/bin/rememberevent.sh 1
+# show event list              : /usr/local/bin/rememberevent.sh -ls
+# remove all events?           : /usr/local/bin/rememberevent.sh -rm
 
 # CONFIG START
-  MINSBEFORE=1 # minutes before event for announcement
+  ATD_SPOOL=/var/spool/atjobs
+
+# default settings
+  MINSBEFORE=1  # minutes before event for announcement
+  COLUMNS=17    # columns for the epg entry
+  FORMAT=MET    # date format, eg.: UTC/MET
 # CONFIG END
 
-PATH=$PATH:/usr/bin
+PATH=/usr/local/bin:$PATH
 
-# translate to format HH:MM
-switch_time=`date -d "1970-01-01 UTC $3 seconds" +"%H:%M"`
-
-# seconds since 1970-01-01 minus minutes before remembering
-secs=$(($3-$MINSBEFORE*60))
-
-# now in seconds since 1970-01-01
-secs_now=`date +%s`
-
-if [ $secs -le $secs_now ]; then
-    if grep -qs "^OSDLanguage = 1" /etc/vdr/setup.conf ; then
-        echo "/usr/lib/vdr/svdrpsend.pl MESG '$2 lÃ¤t schon!'" | at now
-    else
-        echo "/usr/lib/vdr/svdrpsend.pl MESG '$2 already runs!'" | at now
-    fi
-    exit
-fi
-
-# translate to format HH:MM
-announce_time=`date -d "1970-01-01 UTC $secs seconds" +"%H:%M"`
-
-# add command to at queue for announcement
-echo "/usr/lib/vdr/svdrpsend.pl MESG '$switch_time: $2'" | at $announce_time
-
-# also switch at event begin?
-if [ $1 -eq 1 ]; then
-    # add command to at queue
-    echo "/usr/lib/vdr/svdrpsend.pl CHAN $5" | at $switch_time
-else
-    # announce again
-    if grep -qs "^OSDLanguage = 1" /etc/vdr/setup.conf ; then
-        echo "/usr/lib/vdr/svdrpsend.pl MESG '$2 beginnt!'" | at $switch_time
-    else
-        echo "/usr/lib/vdr/svdrpsend.pl MESG '$2 starts!'" | at $switch_time
-    fi
-fi
+case $1 in
+    -ls)
+        grep -s ^'#[0-2][0-9]:[0-5][0-9]#' $ATD_SPOOL/* | sort -t. +1 | cut -d'#' -f3
+        ;;
+    -rm)
+        find $ATD_SPOOL -exec grep -qs ^'#[0-2][0-9]:[0-5][0-9]#' \{} \; -exec rm -f \{} \;
+        ;;
+      *)
+        switch_time=`date -d "1970-01-01 $FORMAT $3 seconds" +"%a.%d %H:%M"`
+        entry="#${switch_time#* }#$(printf "%-10s%-0s\n" "${6:0:9}" "$switch_time ${2:0:$COLUMNS}")"
+        secs=$(($3-$MINSBEFORE*60))
+        secs_now=`date +%s`
+        if [ $secs -le $secs_now ]; then
+            echo "svdrpsend MESG '$2 already runs!' >/dev/null" | at now
+        else
+            if [ -z "$(find $ATD_SPOOL -exec grep -qs "^$entry$" \{} \; -exec rm -v \{} \;)" ]; then
+                at $(date -d "1970-01-01 $FORMAT $secs seconds" +"%H:%M %m/%d/%Y") <<EOT
+                svdrpsend MESG '${switch_time#* }: $2' >/dev/null
+                sleep $(($MINSBEFORE*60))s
+                if [ $1 -eq 1 ] ; then
+                    svdrpsend CHAN $5 >/dev/null
+                else
+                    svdrpsend MESG '$2 starts!' >/dev/null
+                fi
+$entry
+EOT
+            fi
+        fi
+        ;;
+esac
 

@@ -18,9 +18,9 @@ do_symlink() {
 
 cd $BUILD/$1*
 #PER KERNEL =>3.3
-cd $(kernel_path)/arch/x86/include
-cp generated/asm/unistd*.h ./asm
-cd -
+#cd $(kernel_path)/arch/x86/include
+#cp generated/asm/unistd*.h ./asm
+#cd -
 #FINE
 # Kernel module
 (cd usr/src/nv; make module CC=$CC SYSSRC=$(kernel_path) SYSOUT=$(kernel_path))

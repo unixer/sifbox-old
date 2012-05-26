@@ -1,10 +1,9 @@
 #!/bin/sh
 
 . config/options
+. $PACKAGES/$1/meta
 
-export MAKEFLAGS=-j1
-
-cd $BUILD/$1*
+cd $BUILD/${PKG_NAME}-${PKG_VERSION}
 
 tar xjvf linux-tbs-drivers.tar.bz2
 
@@ -15,5 +14,3 @@ chmod -R +x linux v4l
 [ "$TARGET_ARCH" = "x86_64" ] && sh ./v4l/tbs-x86_64.sh
 
 make DIR=$(kernel_path) 
-
-

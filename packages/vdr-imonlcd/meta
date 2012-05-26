@@ -1,11 +1,11 @@
 PKG_NAME=vdr-imonlcd
-#PKG_VERSION=0.0.5
-PKG_VERSION=a65492626c3de310cabb5f47af07774c3c473255
-#PKG_URL_PROTO=git
+PKG_VERSION=0.0.5
+#PKG_VERSION=a65492626c3de310cabb5f47af07774c3c473255
+PKG_URL_PROTO=git
 #PKG_URL="http://projects.vdr-developer.org/attachments/download/294/vdr-imonlcd-${PKG_VERSION}.tgz"
-#PKG_URL="http://projects.vdr-developer.org/attachments/download/408/vdr-imonlcd-0.0.5.tgz"
-#PKG_URL="git://projects.vdr-developer.org/vdr-plugin-imonlcd.git"
-PKG_URL="http://projects.vdr-developer.org/git/vdr-plugin-imonlcd.git/snapshot/vdr-plugin-imonlcd-${PKG_VERSION}.tar.bz2"
+#PKG_URL="http://projects.vdr-developer.org/attachments/download/408/vdr-imonlcd-${PKG_VERSION}.tgz"
+PKG_URL="git://projects.vdr-developer.org/vdr-plugin-imonlcd.git"
+#PKG_URL="http://projects.vdr-developer.org/git/vdr-plugin-imonlcd.git/snapshot/vdr-plugin-imonlcd-${PKG_VERSION}.tar.bz2"
 PKG_REV=1
 PKG_DEPENDS="$TARGET_LIBC vdr freetype"
 PKG_RUN_DEPENDS="$TARGET_LIBC vdr freetype"

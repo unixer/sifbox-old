@@ -1,12 +1,22 @@
-. config/options $1
+# /bin/sh
 
-VER=`ls $BUILD/rootfs/lib/modules`
+. config/options
+. $PACKAGES/$1/meta
 
-mkdir -p $INSTALL/lib/modules/$VER/tbs
+# Drivers
+DIR=$INSTALL/lib/modules/$(kernel_version)/tbs
+mkdir -p $DIR
 
-find $BUILD/$1*/linux-tbs-drivers -name \*.ko -exec cp {} $INSTALL/lib/modules/$VER/tbs \;
- 
+# Copy all
+cp $BUILD/${PKG_NAME}-${PKG_VERSION}/linux-tbs-drivers/v4l/*.ko $DIR
 
+# Copy only select tbs drivers
+#TBS_DRIVERS="dvb-core.ko dvb-usb.ko tbs*.ko dvb-usb-tbs*.ko saa716x_*.ko rc-tbs-nec.ko cx23885.ko stv090x.ko rc-core.ko cx2341x.ko videobuf-*.ko videodev.ko media.ko btcx-risc.ko tveeprom.ko v4l2*.ko"
+
+#for i in $TBS_DRIVERS; do
+#  cp $BUILD/$1*/linux-tbs-drivers/v4l/$i $DIR
+#done
+
+# Firmware 
 mkdir -p $INSTALL/firmware/
-cp $BUILD/$1*/*.fw $INSTALL/firmware/
-
+cp $BUILD/${PKG_NAME}-${PKG_VERSION}/*.fw $INSTALL/firmware/

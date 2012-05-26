@@ -1,0 +1,8 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+mkdir -p .install/firmware/zd1211
+cp -PR zd1211* .install/firmware/zd1211

@@ -1,0 +1,9 @@
+PKG_NAME=firmware-arm-imx5
+PKG_VERSION=11.05.01
+PKG_URL="$DISTRO_FW/ARM/freescale/firmware-imx5-${PKG_VERSION}.tar.gz"
+PKG_ARCH=arm
+PKG_LICENSE=non-free
+PKG_PRIORITY=optional
+PKG_SECTION=firmware
+PKG_SHORTDESC="Firmware for Freescale i.MX5 SDMA and VPU units."
+PKG_LONGDESC=""

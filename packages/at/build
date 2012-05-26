@@ -1,20 +1,21 @@
 #!/bin/sh
 
 . config/options
+CFLAGS="$CFLAGS -fPIC -ll"
+CXXFLAGS="$CXXFLAGS -fPIC -ll"
+LDFLAGS="$LDFLAGS -fPIC -ll"
 
 cd $BUILD/$1*
-
-export SENDMAIL=/bin/true
-
 do_configure \
-	--prefix=/usr \
-	--with-daemon_username=nobody \
-	--with-daemon_groupname=nogroup \
-	--with-jobdir=/var/spool/cron/atjobs \
-	--with-atspool=/var/spool/cron/atspool \
-	CXXFLAGS=-Wunused-function \ 
-	LDFLAGS=-Wunused-function \
-	CFLAGS=$CFLAGS 
+	--with-jobdir=/var/spool/atjobs \
+	--with-atspool=/var/spool \
+	--with-etcdir=/etc \
+	--build=$HOST \
+	--host=$HOST \
+	--target=$HOST \
+	--enable-FEATURE \
+	--with-daemon_username=root \
+	--with-daemon_groupname=root
 
-make -lfl
-#make_install
+make  
+make_install

@@ -1,0 +1,103 @@
+#!/bin/sh
+
+. config/options
+
+export MAKEFLAGS=-j1
+
+$SCRIPTS/build linux
+
+cd $BUILD/$1*
+
+make download
+make untar
+
+if [ "$TARGET_ARCH" = "i386" ]; then
+cp $ROOT/$PACKAGES/$1/v4l/tbs6980fe_driver.o.x86_r3 ./v4l/tbs6980fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6981fe_driver.o.x86_r3 ./v4l/tbs6981fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6921fe_driver.o.x86_r3 ./v4l/tbs6921fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8921ctrl.o.x86_r3 ./v4l/tbs8921ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8921fe_driver.o.x86_r3 ./v4l/tbs8921fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5921ctrl.o.x86_r3 ./v4l/tbs5921ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5921fe_driver.o.x86_r3 ./v4l/tbs5921fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbsctrl.o.x86_r3 ./v4l/tbsctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6925ctrl_driver.o.x86_r3 ./v4l/tbs6925ctrl_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs62x0fe_driver.o.x86_r3 ./v4l/tbs62x0fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6984fe_driver.o.x86_r3 ./v4l/tbs6984fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6992_driver.o.x86_r3 ./v4l/tbs6992_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6922fe_driver.o.x86_r3 ./v4l/tbs6922fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6928fe_driver.o.x86_r3 ./v4l/tbs6928fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8922ctrl.o.x86_r3 ./v4l/tbs8922ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8922fe_driver.o.x86_r3 ./v4l/tbs8922fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5922ctrl.o.x86_r3 ./v4l/tbs5922ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5922fe_driver.o.x86_r3 ./v4l/tbs5922fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5880ctrl.o.x86_r3 ./v4l/tbs5880ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5880fe_driver.o.x86_r3 ./v4l/tbs5880fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6982fe_driver.o.x86_r3 ./v4l/tbs6982fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6991fe_driver.o.x86_r3 ./v4l/tbs6991fe_driver.o
+echo "TBS drivers configured for x86 platform."
+fi
+
+if [ "$TARGET_ARCH" = "x86_64" ]; then 
+cp $ROOT/$PACKAGES/$1/v4l/tbs6980fe_driver.o.x86_64 ./v4l/tbs6980fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6981fe_driver.o.x86_64 ./v4l/tbs6981fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6921fe_driver.o.x86_64 ./v4l/tbs6921fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8921ctrl.o.x86_64 ./v4l/tbs8921ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8921fe_driver.o.x86_64 ./v4l/tbs8921fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5921ctrl.o.x86_64 ./v4l/tbs5921ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5921fe_driver.o.x86_64 ./v4l/tbs5921fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbsctrl.o.x86_64 ./v4l/tbsctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6925ctrl_driver.o.x86_64 ./v4l/tbs6925ctrl_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs62x0fe_driver.o.x86_64 ./v4l/tbs62x0fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6984fe_driver.o.x86_64 ./v4l/tbs6984fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6992_driver.o.x86_64 ./v4l/tbs6992_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6922fe_driver.o.x86_64 ./v4l/tbs6922fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6928fe_driver.o.x86_64 ./v4l/tbs6928fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8922ctrl.o.x86_64 ./v4l/tbs8922ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs8922fe_driver.o.x86_64 ./v4l/tbs8922fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5922ctrl.o.x86_64 ./v4l/tbs5922ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5922fe_driver.o.x86_64 ./v4l/tbs5922fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5880ctrl.o.x86_64 ./v4l/tbs5880ctrl.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs5880fe_driver.o.x86_64 ./v4l/tbs5880fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6982fe_driver.o.x86_64 ./v4l/tbs6982fe_driver.o
+cp $ROOT/$PACKAGES/$1/v4l/tbs6991fe_driver.o.x86_64 ./v4l/tbs6991fe_driver.o
+echo "TBS drivers configured for x86_64 platform."
+fi
+
+#patch -p1 < $ROOT/$PACKAGES/$1/support_bst.diff
+patch -p1 < $ROOT/$PACKAGES/$1/support_A867.diff
+#patch -p1 < $ROOT/$PACKAGES/$1/support_tbs.diff
+#patch -p1 < $ROOT/$PACKAGES/$1/support_tbs-kmem_wrap.c.diff
+#patch -p1 < $ROOT/$PACKAGES/$1/support_experimental_tbs.diff
+#patch -p1 < $ROOT/$PACKAGES/$1/cx23885.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/cx88.h.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/ds3000.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/support_AF9035.diff
+#patch -p1 < $ROOT/$PACKAGES/$1/support_tbs-qbox.patch
+#patch -p1 < $ROOT/$PACKAGES/$1/support_dvbloop.diff
+
+#echo "ENTER"
+#pwd
+#read enterKey
+
+make \
+  KDIR=$(kernel_path) \
+  KERNELRELEASE=$(kernel_version) \
+  SRCDIR=$(kernel_path) \
+  OUTDIR=$(kernel_path) \
+
+install_dir="$PWD/.install"
+debug_dir="$PWD/.install-debuginfo/usr/lib/debug"
+rm -rf $install_dir $debug_dir
+
+#make modules_install \
+#  INSTALL_MOD_PATH=.install \
+#  DEPMOD=$ROOT/$TOOLCHAIN/bin/depmod $KERNELRELEASE \
+
+make install \
+  DESTDIR=$install_dir \
+  KERNELRELEASE=$(kernel_version) \
+
+mv $install_dir/lib/firmware $install_dir/firmware
+#rm -f $install_dir/lib/modules/$(kernel_version)/modules.*
+
+#strip_kmods "$install_dir/lib/modules/$(kernel_version)" "$debug_dir"

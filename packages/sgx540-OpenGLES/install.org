@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. config/options
+
+cd $BUILD/$1*
+
+do_install usr/lib/lib*.so*
+
+if pkg_uses $1 devtools && pkg_uses $1 xorg; then
+  do_install usr/bin
+fi
+
+if pkg_uses $1 xorg; then
+  do_install usr/share/sgx-lib
+  mkdir -p $INSTALL/usr/share/X11/xorg.conf.d
+  cp -P $ROOT/$PACKAGES/$1/config/99-pvr.conf $INSTALL/usr/share/X11/xorg.conf.d
+  do_install usr/lib/xorg/modules/drivers/*.so
+fi
+
+exit 0

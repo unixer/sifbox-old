@@ -1,0 +1,8 @@
+PKG_NAME=firmware-dvb-tevii
+PKG_VERSION=100315
+PKG_URL="$DISTRO_FW/DVB/tevii-${PKG_VERSION}.tar.bz2"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_PRIORITY=optional
+PKG_SECTION=firmware
+PKG_SHORTDESC="TeVii DVB firmware files"
+PKG_LONGDESC="This package contains TeVii DVB firmware files for S470 S471 S480 S630 S660."

@@ -81,6 +81,9 @@ description of the config file format.
                <command name="Arresta sistema" execute="/usr/bin/vdr-dbus-send /Remote remote.HitKey string:'Power' &amp;> /dev/null &amp; " />
 
 	<menu name="Informazioni di sistema">
+              <menu name="Pacchetti di sistema">
+                    <command name="Lista paccetti" execute="opkg list | grep vdr"/>
+              </menu>
 	      <menu name="Oscam Info">
 	            <command name="Oscam Last Log" execute="tail -n 40 /var/log/oscam/oscam.log" />
 	            <command name="Diritti Scheda" execute="dbclient -y -i /root/.ssh/id_rsa root@HTPCServer /usr/local/bin/OscamRight.sh" />

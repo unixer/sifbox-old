@@ -1,7 +1,9 @@
 PKG_NAME=timezone-data
-PKG_VERSION=2012c
+#PKG_VERSION=2012c
+PKG_VERSION=2012b
 CODE_VERSION=2012b
-PKG_URL="ftp://munnari.oz.au/pub/tzcode${CODE_VERSION}.tar.gz ftp://munnari.oz.au/pub/tzdata${PKG_VERSION}.tar.gz"
+#PKG_URL="ftp://munnari.oz.au/pub/tzcode${CODE_VERSION}.tar.gz ftp://munnari.oz.au/pub/tzdata${PKG_VERSION}.tar.gz"
+PKG_URL="ftp://munnari.oz.au/pub/oldtz/tzcode${CODE_VERSION}.tar.gz ftp://munnari.oz.au/pub/oldtz/tzdata${PKG_VERSION}.tar.gz"
 PKG_REV=1
 PKG_BUILD_DEPENDS="ccache make"
 PKG_PRIORITY=optional

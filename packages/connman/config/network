@@ -15,6 +15,9 @@ GATEWAY=""
 # List of DNS servers (e.g. "192.168.1.253;192.168.1.254")
 DNS_SERVER=""
 
+# Setting Bcast:192.168.1.255  Mask:255.255.255.0
+NET_PREFIX=24
+
 SSID=""
 
 # "true" or ""

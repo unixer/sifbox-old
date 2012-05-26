@@ -1,0 +1,11 @@
+PKG_NAME=nss
+PKG_VERSION=3.13.3
+PKG_URL="http://ftp.mozilla.org/pub/mozilla.org/security/nss/releases/NSS_3_13_3_RTM/src/$PKG_NAME-$PKG_VERSION-with-nspr-4.9.tar.gz"
+PKG_REV=1
+PKG_ARCH="i386 x86_64"
+PKG_DEPENDS="$TARGET_LIBC"
+PKG_BUILD_DEPENDS="toolchain"
+PKG_PRIORITY=optional
+PKG_SECTION=net
+PKG_SHORTDESC="nss: Network Security Services (NSS)"
+PKG_LONGDESC="Network Security Services (NSS) is a set of libraries designed to support cross-platform development of security-enabled client and server applications."

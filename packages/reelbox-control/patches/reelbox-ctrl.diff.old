@@ -1,0 +1,27 @@
+diff -urN a/Makefile b/Makefile
+--- a/Makefile	2012-03-12 21:58:57.000000000 +0100
++++ b/Makefile	2012-03-13 10:07:28.000000000 +0100
+@@ -1,4 +1,4 @@
+-include ../../Make.config
++
+ 
+ LIRC_DEVICE       = /dev/lircd
+ 
+@@ -9,14 +9,14 @@
+ ifeq ($(UBUNTU10),true)
+     USER_INPUT_DEVICE := /dev/uinput
+ else
+-    USER_INPUT_DEVICE := /dev/input/uinput
++    USER_INPUT_DEVICE := /dev/uinput
+ endif
+-    USER_INPUT_DEVICE := /dev/input/uinput
++    USER_INPUT_DEVICE := /dev/uinput
+ BINPATH = /usr/sbin
+ 
+ INCLUDES =
+ DEFINES += -g -DUSER_INPUT_DEVICE=\"$(USER_INPUT_DEVICE)\"
+-DEFINES += -DFP_DEVICE=\"$(FP_DEVICE)\" -Wall
++DEFINES += -DFP_DEVICE=\"/dev/frontpannel\" -Wall
+ LDFLAGS += -lpthread -lusb -g
+ 
+ CFLAGS += -Wno-unused-result -Wno-unused-variable

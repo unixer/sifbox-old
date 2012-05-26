@@ -1,8 +1,9 @@
 PKG_NAME=linux
-PKG_VERSION=3.2.16
+PKG_VERSION=3.2.18
 #PKG_VERSION=3.3.5
 #PKG_URL="http://www.kernel.org/pub/linux/kernel/v3.0/testing/linux-${PKG_VERSION}.tar.bz2"
 PKG_URL="http://www.kernel.org/pub/linux/kernel/v3.x/linux-${PKG_VERSION}.tar.xz"
+#PKG_URL="http://95.225.138.70/sifbox/linux-${PKG_VERSION}.tar.gz"
 PKG_REV=1
 PKG_BUILD_DEPENDS="toolchain module-init-tools"
 PKG_USE="alsa arm bluetooth dab dvb ethernet hwmon gameport ipv6 lirc lvm mmc ms pata pccard ppt radio rtc sata usb usbnet v4l wifi intel mga nouveau poulsbo r128 radeon savage sis tdfx unichrome vmwgfx tidsp"

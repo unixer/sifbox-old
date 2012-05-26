@@ -10,6 +10,7 @@ cp $PACKAGES/$1/config/passwd $INSTALL/etc
 cp $PACKAGES/$1/config/shadow $INSTALL/etc
 cp $PACKAGES/$1/config/group $INSTALL/etc
 cp $PACKAGES/$1/config/profile $INSTALL/etc
+cp $PACKAGES/$1/config/syslog.conf $INSTALL/etc
 cp $PACKAGES/$1/config/funcs $INSTALL/etc
 cp $PACKAGES/$1/config/ntpd.conf $INSTALL/etc
 cp $PACKAGES/$1/scripts/assign-ip $INSTALL/bin

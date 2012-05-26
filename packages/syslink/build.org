@@ -1,0 +1,20 @@
+#!/bin/sh
+
+. config/options
+
+get_meta $1
+if [ -d $ROOT/$BUILD/$1-$PKG_VERSION/debian/patches ] ; then
+  while read i ; do
+    if [ -f  "$ROOT/$BUILD/$1-$PKG_VERSION/debian/patches/$i" ] ; then 
+      apply_patch $1 "$ROOT/$BUILD/$1-$PKG_VERSION/debian/patches/$i"
+    fi
+  done < $ROOT/$BUILD/$1-$PKG_VERSION/debian/patches/series
+fi
+
+cd $BUILD/$1*/syslink
+do_autoconf
+do_configure \
+  --disable-debug \
+
+make
+make_install

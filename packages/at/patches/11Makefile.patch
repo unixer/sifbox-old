@@ -1,0 +1,11 @@
+--- at-3.1.8/Makefile.in.org	2012-05-17 19:31:59.402267683 +0200
++++ at-3.1.8/Makefile.in	2012-05-17 19:32:12.774271757 +0200
+@@ -5,7 +5,7 @@
+ VPATH 		= $(srcdir)
+ 
+ install_prefix	=
+-prefix		= @prefix@
++prefix		= ./.install
+ exec_prefix	= @exec_prefix@
+ bindir		= @bindir@
+ sbindir		= @sbindir@

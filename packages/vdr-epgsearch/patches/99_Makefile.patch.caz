@@ -1,0 +1,11 @@
+--- vdr-epgsearch-0.9.25.beta22/Makefile	2012-03-05 12:38:56.692037275 +0100
++++ vdr-epgsearch-0.9.25.beta22/Makefile.mod	2012-03-05 12:38:47.302037271 +0100
+@@ -60,7 +60,7 @@
+ ### The C++ compiler and options:
+ 
+ CXX      ?= g++
+-CXXFLAGS ?= -g -O2 -Wall -Woverloaded-virtual -Wno-parentheses -Wno-format-y2k
++CXXFLAGS ?= -fPIC -g -O2 -Wall -Woverloaded-virtual -Wno-parentheses -Wno-format-y2k
+ 
+ ### The directory environment:
+ 

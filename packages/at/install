@@ -4,4 +4,10 @@
 
 cd $BUILD/$1*
 
-do_install usr/bin
+do_install bin
+do_install sbin
+mkdir -p $INSTALL/var/spool/atjobs
+touch $INSTALL/var/spool/.SEQ
+touch $INSTALL/var/spool/atjobs/.SEQ
+mkdir -p $INSTALL/etc
+cp $ROOT/$PACKAGES/$1/config/* $INSTALL/etc

@@ -1,0 +1,27 @@
+082_8139too-wol.diff
+
+From: Benjamin Zores <ben@q6600.(none)>
+
+
+---
+ drivers/net/8139too.c |    7 -------
+ 1 files changed, 0 insertions(+), 7 deletions(-)
+
+diff --git a/drivers/net/ethernet/realtek/8139too.c b/drivers/net/ethernet/realtek/8139too.c
+index 97d8068..b8ed178 100644
+--- a/drivers/net/ethernet/realtek/8139too.c
++++ b/drivers/net/ethernet/realtek/8139too.c
+@@ -1386,13 +1386,6 @@ static void rtl8139_hw_start (struct net_device *dev)
+ 
+ 	rtl_check_media (dev, 1);
+ 
+-	if (tp->chipset >= CH_8139B) {
+-		/* Disable magic packet scanning, which is enabled
+-		 * when PM is enabled in Config1.  It can be reenabled
+-		 * via ETHTOOL_SWOL if desired.  */
+-		RTL_W8 (Config3, RTL_R8 (Config3) & ~Cfg3_Magic);
+-	}
+-
+ 	netdev_dbg(dev, "init buffer addresses\n");
+ 
+ 	/* Lock Config[01234] and BMCR register writes */

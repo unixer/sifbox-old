@@ -1,0 +1,50 @@
+#!/bin/sh
+
+. config/options
+export MAKEFLAGS=-j1
+export WORKINGDIR=$PWD &&
+export BUILD_OPT=1 &&
+
+cd $BUILD/$1*/mozilla/security/nss
+setup_toolchain host
+
+[ "`uname -m`" = "x86_64" ] && HOST_USE_64="USE_64=1"
+
+# make host part for nsinstall binary and created library signatures
+make nss_build_all CC=$CC LDFLAGS="$LDFLAGS" $HOST_USE_64
+
+# save host binary
+pwd
+cp ../coreconf/nsinstall/Linux2.6_x86_64_host-gcc_glibc_PTH_64_OPT.OBJ/nsinstall nsinstall-host
+NSINSTALL_HOST=`pwd`/nsinstall-host
+
+# save library signatures to be used on target
+# the .chk file format is cross platform (so I read)
+find ./ -name "lib*.chk" -exec cp {} ../../dist/ \;
+# clean up host part
+rm -rf `find ../../../ -type d -name Linux*_DBG.OBJ`
+
+[ "$TARGET_ARCH" = "x86_64" ] && TARGET_USE_64="USE_64=1"
+
+setup_toolchain target
+
+NSPR_CONFIGURE_OPTS="--host=$TARGET_NAME --build=$HOST_NAME --target=$TARGET_NAME"
+NSPR_CONFIGURE_OPTS="$NSPR_CONFIGURE_OPTS --prefix=/usr --enable-strip --with-pthreads" \
+make nss_build_all \
+  NSINSTALL=$NSINSTALL_HOST \
+  BUILD_OPT=1 $TARGET_USE_64 \
+  OS_TEST=$TARGET_ARCH \
+  CPU_ARCH_TAG=$TARGET_ARCH \
+  USE_SYSTEM_ZLIB=1 ZLIB_LIBS=-lz \
+  CC=$CC CCC=$CXX RANLIB=$RANLIB \
+  V=1
+
+pwd
+read enterKey
+#make_install
+cd ../../dist
+pwd
+mv Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ .install
+#do_configure
+
+#make_install

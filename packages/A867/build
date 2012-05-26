@@ -1,0 +1,7 @@
+#!/bin/sh
+
+. config/options
+export MAKEFLAGS=-j1
+
+cd $BUILD/$1*
+make V=1 CC=$CC KDIR=$(kernel_path)

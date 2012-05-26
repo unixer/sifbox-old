@@ -17,9 +17,9 @@ do_symlink() {
 }
 
 #PER KERNEL => 3.3
-cd $(kernel_path)/arch/x86/include
-cp generated/asm/unistd*.h ./asm
-cd -
+#cd $(kernel_path)/arch/x86/include
+#cp generated/asm/unistd*.h ./asm
+#cd -
 #FINE
 
 cd $BUILD/$1*

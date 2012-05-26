@@ -1,0 +1,24 @@
+#!/bin/sh
+
+. config/options
+export LD_LIBRARY_PATH=$SYSROOT_PREFIX/usr/local/lib:$LD_LIBRARY_PATH
+
+cd $BUILD/$1*
+do_configure \
+	--host=$HOST \
+	--build=$HOST \
+	--target=$HOST \
+	--without-gnome \
+	--without-ppp \
+	--disable-ppp \
+	--without-gcrypt \
+	--with-distro=gentoo \
+        --with-wpa_supplicant=/usr/sbin/wpa_supplicant \
+        --with-dhcdbd=/sbin/dhcdbd \
+        --with-ip=/sbin/ip.iproute2 \
+        NSS_CFLAGS="-I $SYSROOT_PREFIX" \
+
+make
+
+make_install
+

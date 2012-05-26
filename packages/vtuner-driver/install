@@ -1,0 +1,12 @@
+#!/bin/sh
+
+. config/options
+VER=`ls $BUILD/rootfs/lib/modules`
+
+cd $BUILD/$1*
+mkdir -p $INSTALL/lib/modules/$VER/
+DIR=$INSTALL/lib/modules/$(kernel_version)/vtuner
+mkdir -p $DIR
+cp *.ko $INSTALL/lib/modules/$VER/vtuner
+
+#do_install usr/bin

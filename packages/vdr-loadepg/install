@@ -11,6 +11,14 @@ echo "PLUGIN=${NAME}" > $INSTALL/etc/vdr/plugins.d/50_$NAME
 echo "OPTIONS=\"--config=/etc/vdr/plugins/loadepg\"" >> $INSTALL/etc/vdr/plugins.d/50_$NAME
 echo "ENABLED=yes" >> $INSTALL/etc/vdr/plugins.d/50_$NAME
 
+for loc in $INCLUDED_LOCALES; do
+  LOCALE=`echo $loc|cut -f1 -d.`
+  if [ -d $BUILD/vdr-loadepg*/locale/$LOCALE ]; then
+    mkdir -p $INSTALL/usr/share/locale/$LOCALE
+    cp -PR $BUILD/vdr-loadepg*/locale/$LOCALE/* $INSTALL/usr/share/locale/$LOCALE/
+  fi
+done
+
 
 mkdir -p $INSTALL/etc/vdr/plugins/loadepg
 cp -PR $BUILD/$1*/conf/* $INSTALL/etc/vdr/plugins/loadepg

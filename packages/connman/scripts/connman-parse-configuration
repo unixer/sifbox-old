@@ -9,8 +9,12 @@ profile=/var/lib/connman/default.profile
 
 mkdir -p /var/lib/connman
 
-hostname="`cat /etc/hostname`"
-echo "127.0.0.1 localhost $hostname" > /etc/hosts 
+if [ -f /etc/hosts ]; then
+  echo "OK"
+else
+  hostname="`cat /etc/hostname`"
+  echo "127.0.0.1 localhost $hostname" > /etc/hosts
+fi
 
 [ -z "$IFACE" ] && IFACE=eth0 || IFACE=`echo $IFACE | tr '[A-Z]' '[a-z]'`
 [ -f /sys/class/net/$IFACE/address ] && \
@@ -23,6 +27,8 @@ if [ "$NETWORK" = "WLAN" ]; then
   elif [ "$SECURITY" = "PSK" -a -n "$PASSPHRASE" ]; then
     MODE="managed_psk"
   elif [ "$SECURITY" = "RSN" -a -n "$PASSPHRASE" ]; then
+    MODE="managed_psk"
+  elif [ "$SECURITY" = "WPA" -a -n "$PASSPHRASE" ]; then
     MODE="managed_psk"
   else
     MODE="managed_none"
@@ -49,12 +55,22 @@ if [ -z "$ADDRESS" ]; then
 fi
 
 ip=`echo $ADDRESS | cut -f1 -d/`
-prefix=`echo $ADDRESS | cut -f2 -d/`
+#prefix=`echo $ADDRESS | cut -f2 -d/`
 
 echo "IPv4.method=manual" >> $profile
 echo "IPv4.local_address=$ip" >> $profile
-[ -n "$prefix" ] && echo "IPv4.netmask_prefixlen=$prefix" >> $profile
+[ -n "$NET_PREFIX" ] && echo "IPv4.netmask_prefixlen=$NET_PREFIX" >> $profile
 [ -n "$GATEWAY" ] && echo "IPv4.gateway=$GATEWAY" >> $profile
 [ -n "$DNS_SERVER" ] && echo "Nameservers=$DNS_SERVER;" >> $profile
+
+# set hwclock
+if [ -f /proc/driver/rtc ]; then
+  (
+  # sleep 30 seconds before hw clock is synced
+  usleep 30000000
+  # progress "syncing hardware clock with system clock"
+  /sbin/hwclock --systohc
+  )&
+fi
 
 exit 0

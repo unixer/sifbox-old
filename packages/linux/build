@@ -14,9 +14,7 @@ cd $(kernel_path)
 rm -Rf drivers/media/dvb/{ddbridge,ngene}
 rm -Rf drivers/staging/media/cxd2099
 rm -Rf drivers/staging/cxd2099
-#cp -r $ROOT/$PACKAGES/$1/mediaexperimental/{ddbridge,ngene} drivers/media/dvb/
-cp -r $ROOT/$PACKAGES/$1/mediaexperimental/ddbridge drivers/media/dvb/
-cp -r $ROOT/$PACKAGES/$1/mediaexperimental/ngene drivers/media/dvb/
+cp -r $ROOT/$PACKAGES/$1/mediaexperimental/{ddbridge,ngene} drivers/media/dvb/
 cp -r $ROOT/$PACKAGES/$1/mediaexperimental/cxd2099 drivers/staging/media/
 cp $ROOT/$PACKAGES/$1/mediaexperimental/tda18212dd* drivers/media/dvb/frontends/
 cp $ROOT/$PACKAGES/$1/mediaexperimental/stv0367dd* drivers/media/dvb/frontends/
@@ -42,10 +40,8 @@ patch -d.. -p0 < $ROOT/$PACKAGES/$1/mediaexperimental/drxk_lockstatus_fix.diff
 #FINE
 #FIRMWARE RTL
 cp -r $ROOT/$PACKAGES/$1/firmware/rtl_nic firmware/
+cp -r $ROOT/$PACKAGES/$1/firmware/dvb-fe-ds* firmware/
 #FINE FIRMWARE
-
-echo "ENTER"
-read enterKey
 
 #ADD SUPPORT TBS
 [ -d "drivers/media/dvb/tbs" ] || mkdir drivers/media/dvb/tbs
@@ -72,7 +68,7 @@ cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5880ctrl.o.x86_r3 drivers/media/dvb/tbs/tb
 cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs5880fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs5880fe_driver.o
 cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6982fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6982fe_driver.o
 cp $ROOT/$PACKAGES/$1/tbs/prebuild/tbs6991fe_driver.o.x86_r3 drivers/media/dvb/tbs/tbs6991fe_driver.o
-echo "TBS drivers configured for x86 platform."
+echo "TBS drivers configured for x86_64 platform."
 fi
 
 #COPIA SORGENTI

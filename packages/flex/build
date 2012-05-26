@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+
+
+cd $BUILD/$1*
+setup_toolchain target
+
+do_configure \
+	--host=i686 \
+	--enable-shared \
+	--disable-static \
+	--disable-rpath \
+	--with-gnu-ld
+
+patch -p1 < $ROOT/$PACKAGES/$1/undeine.patch
+make
+make_install

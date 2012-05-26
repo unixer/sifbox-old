@@ -1,0 +1,237 @@
+Submitted By:            Armin K. <krejzi at email dot com>
+Date:                    2012-05-12
+Initial Package Version: 0.9.4.0
+Upstream Status:         In upstream SVN
+Origin:                  Upstream
+Description:             libnm-glib: initialize GError, else invalid free() crash can occur (rh #809123)
+                         libnm-glib: more ensure_inited() fixing
+
+--- NetworkManager.orig/libnm-glib/nm-access-point.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager/libnm-glib/nm-access-point.c	2012-05-12 21:34:29.109433414 +0200
+@@ -464,6 +464,8 @@
+ {
+ 	NMAccessPoint *ap = NM_ACCESS_POINT (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_FLAGS:
+ 		g_value_set_uint (value, nm_access_point_get_flags (ap));
+--- NetworkManager.orig/libnm-glib/nm-active-connection.c	2012-03-12 22:25:57.000000000 +0100
++++ NetworkManager/libnm-glib/nm-active-connection.c	2012-05-12 21:34:29.110433435 +0200
+@@ -394,6 +394,8 @@
+ {
+ 	NMActiveConnection *self = NM_ACTIVE_CONNECTION (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_CONNECTION:
+ 		g_value_set_string (value, nm_active_connection_get_connection (self));
+--- NetworkManager.orig/libnm-glib/nm-client.c	2012-03-21 18:29:52.000000000 +0100
++++ NetworkManager/libnm-glib/nm-client.c	2012-05-12 21:34:29.112433477 +0200
+@@ -1502,6 +1502,8 @@
+ 	NMClient *self = NM_CLIENT (object);
+ 	NMClientPrivate *priv = NM_CLIENT_GET_PRIVATE (self);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_VERSION:
+ 		g_value_set_string (value, nm_client_get_version (self));
+--- NetworkManager.orig/libnm-glib/nm-device-bond.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-bond.c	2012-05-12 21:34:29.115433540 +0200
+@@ -241,6 +241,8 @@
+ {
+ 	NMDeviceBond *device = NM_DEVICE_BOND (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_bond_get_hw_address (device));
+--- NetworkManager.orig/libnm-glib/nm-device-bt.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-bt.c	2012-05-12 21:34:29.116433561 +0200
+@@ -303,6 +303,8 @@
+ {
+ 	NMDeviceBt *device = NM_DEVICE_BT (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_bt_get_hw_address (device));
+--- NetworkManager.orig/libnm-glib/nm-device.c	2012-03-23 21:54:25.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device.c	2012-05-12 21:34:29.131433877 +0200
+@@ -313,6 +313,8 @@
+ 	NMDevice *device = NM_DEVICE (object);
+ 	NMDevicePrivate *priv = NM_DEVICE_GET_PRIVATE (device);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_DEVICE_TYPE:
+ 		g_value_set_uint (value, nm_device_get_device_type (device));
+--- NetworkManager.orig/libnm-glib/nm-device-ethernet.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-ethernet.c	2012-05-12 21:34:29.117433582 +0200
+@@ -311,6 +311,8 @@
+ {
+ 	NMDeviceEthernet *device = NM_DEVICE_ETHERNET (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_ethernet_get_hw_address (device));
+--- NetworkManager.orig/libnm-glib/nm-device-infiniband.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-infiniband.c	2012-05-12 21:34:29.117433582 +0200
+@@ -250,6 +250,8 @@
+ {
+ 	NMDeviceInfiniband *device = NM_DEVICE_INFINIBAND (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_infiniband_get_hw_address (device));
+--- NetworkManager.orig/libnm-glib/nm-device-modem.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-modem.c	2012-05-12 21:34:29.121433666 +0200
+@@ -205,6 +205,8 @@
+ {
+ 	NMDeviceModem *self = NM_DEVICE_MODEM (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_MODEM_CAPS:
+ 		g_value_set_uint (value, nm_device_modem_get_modem_capabilities (self));
+--- NetworkManager.orig/libnm-glib/nm-device-olpc-mesh.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-olpc-mesh.c	2012-05-12 21:34:29.122433687 +0200
+@@ -257,6 +257,8 @@
+ {
+ 	NMDeviceOlpcMesh *device = NM_DEVICE_OLPC_MESH (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_olpc_mesh_get_hw_address (device));
+--- NetworkManager.orig/libnm-glib/nm-device-vlan.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-vlan.c	2012-05-12 21:34:29.125433751 +0200
+@@ -264,6 +264,8 @@
+ {
+ 	NMDeviceVlan *device = NM_DEVICE_VLAN (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_vlan_get_hw_address (device));
+--- NetworkManager.orig/libnm-glib/nm-device-wifi.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-wifi.c	2012-05-12 21:34:29.126433772 +0200
+@@ -501,6 +501,8 @@
+ {
+ 	NMDeviceWifi *self = NM_DEVICE_WIFI (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_wifi_get_hw_address (self));
+--- NetworkManager.orig/libnm-glib/nm-device-wimax.c	2012-03-20 21:40:12.000000000 +0100
++++ NetworkManager/libnm-glib/nm-device-wimax.c	2012-05-12 21:34:29.129433835 +0200
+@@ -444,6 +444,8 @@
+ {
+ 	NMDeviceWimax *self = NM_DEVICE_WIMAX (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_HW_ADDRESS:
+ 		g_value_set_string (value, nm_device_wimax_get_hw_address (self));
+--- NetworkManager.orig/libnm-glib/nm-dhcp4-config.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager/libnm-glib/nm-dhcp4-config.c	2012-05-12 21:34:29.131433877 +0200
+@@ -132,6 +132,8 @@
+ {
+ 	NMDHCP4Config *self = NM_DHCP4_CONFIG (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_OPTIONS:
+ 		g_value_set_boxed (value, nm_dhcp4_config_get_options (self));
+--- NetworkManager.orig/libnm-glib/nm-dhcp6-config.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager/libnm-glib/nm-dhcp6-config.c	2012-05-12 21:34:29.134433941 +0200
+@@ -132,6 +132,8 @@
+ {
+ 	NMDHCP6Config *self = NM_DHCP6_CONFIG (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_OPTIONS:
+ 		g_value_set_boxed (value, nm_dhcp6_config_get_options (self));
+--- NetworkManager.orig/libnm-glib/nm-ip4-config.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager/libnm-glib/nm-ip4-config.c	2012-05-12 21:34:29.140434068 +0200
+@@ -187,6 +187,8 @@
+ 	NMIP4Config *self = NM_IP4_CONFIG (object);
+ 	NMIP4ConfigPrivate *priv = NM_IP4_CONFIG_GET_PRIVATE (self);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_ADDRESSES:
+ 		nm_utils_ip4_addresses_to_gvalue (priv->addresses, value);
+--- NetworkManager.orig/libnm-glib/nm-ip6-config.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager/libnm-glib/nm-ip6-config.c	2012-05-12 21:34:29.141434089 +0200
+@@ -268,6 +268,8 @@
+ 	NMIP6Config *self = NM_IP6_CONFIG (object);
+ 	NMIP6ConfigPrivate *priv = NM_IP6_CONFIG_GET_PRIVATE (self);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_ADDRESSES:
+ 		nm_utils_ip6_addresses_to_gvalue (priv->addresses, value);
+--- NetworkManager.orig/libnm-glib/nm-remote-settings.c	2012-03-21 18:31:38.000000000 +0100
++++ NetworkManager/libnm-glib/nm-remote-settings.c	2012-05-12 21:34:29.142434110 +0200
+@@ -109,7 +109,7 @@
+ _nm_remote_settings_ensure_inited (NMRemoteSettings *self)
+ {
+ 	NMRemoteSettingsPrivate *priv = NM_REMOTE_SETTINGS_GET_PRIVATE (self);
+-	GError *error;
++	GError *error = NULL;
+ 
+ 	if (!priv->inited) {
+ 		if (!g_initable_init (G_INITABLE (self), NULL, &error)) {
+@@ -1061,6 +1061,8 @@
+ {
+ 	NMRemoteSettingsPrivate *priv = NM_REMOTE_SETTINGS_GET_PRIVATE (object);
+ 
++	_nm_remote_settings_ensure_inited (NM_REMOTE_SETTINGS (object));
++
+ 	switch (prop_id) {
+ 	case PROP_BUS:
+ 		g_value_set_boxed (value, priv->bus);
+--- NetworkManager.orig/libnm-glib/nm-vpn-connection.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager/libnm-glib/nm-vpn-connection.c	2012-05-12 21:34:29.145434173 +0200
+@@ -211,6 +211,8 @@
+ {
+ 	NMVPNConnection *self = NM_VPN_CONNECTION (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_VPN_STATE:
+ 		g_value_set_uint (value, nm_vpn_connection_get_vpn_state (self));
+--- NetworkManager.orig/libnm-glib/nm-wimax-nsp.c	2012-02-27 16:57:16.000000000 +0100
++++ NetworkManager/libnm-glib/nm-wimax-nsp.c	2012-05-12 21:34:29.146434194 +0200
+@@ -247,6 +247,8 @@
+ {
+ 	NMWimaxNsp *nsp = NM_WIMAX_NSP (object);
+ 
++	_nm_object_ensure_inited (NM_OBJECT (object));
++
+ 	switch (prop_id) {
+ 	case PROP_NAME:
+ 		g_value_set_string (value, nm_wimax_nsp_get_name (nsp));

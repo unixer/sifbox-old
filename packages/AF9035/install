@@ -1,0 +1,18 @@
+#!/bin/sh
+
+. config/options
+VER=`ls $BUILD/rootfs/lib/modules`
+
+
+cd $BUILD/$1*
+
+mkdir -p $INSTALL/lib/modules/$VER/
+DIR=$INSTALL/lib/modules/$(kernel_version)/AF9035
+mkdir -p $DIR
+cp dvb-usb-a867.ko $INSTALL/lib/modules/$VER/AF9035
+cp dvb-usb-af9035.ko $INSTALL/lib/modules/$VER/AF9035
+cp mxl5007t.ko $INSTALL/lib/modules/$VER/AF9035
+cp tua9001.ko $INSTALL/lib/modules/$VER/AF9035
+cp tuner_tda18218.ko $INSTALL/lib/modules/$VER/AF9035
+
+

@@ -12,6 +12,14 @@ echo "PLUGIN=${NAME}" > $INSTALL/etc/vdr/plugins.d/50_$NAME
 echo "OPTIONS=\"-t 30\"" >> $INSTALL/etc/vdr/plugins.d/50_$NAME
 echo "ENABLED=yes" >> $INSTALL/etc/vdr/plugins.d/50_$NAME
 
+for loc in $INCLUDED_LOCALES; do
+  LOCALE=`echo $loc|cut -f1 -d.`
+  if [ -d locale/$LOCALE ]; then
+    mkdir -p $INSTALL/usr/share/locale/$LOCALE
+    cp -PR locale/$LOCALE/* $INSTALL/usr/share/locale/$LOCALE/
+  fi
+done
+
 
 mkdir -p $INSTALL/etc/vdr/plugins/xvdr
 cp -P $BUILD/$1*/xvdr/allowed_hosts.conf $INSTALL/etc/vdr/plugins/xvdr

@@ -44,6 +44,8 @@ rm -f $SYSUNITS/systemd-update-utmp-runlevel.service
 rm -f $SYSUNITS/systemd-update-utmp-shutdown.service
 rm -f $SYSUNITS/shutdown.target.wants/systemd-update-utmp-shutdown.service
 rm -f $SYSUNITS/runlevel?.target.wants/systemd-update-utmp-runlevel.service
+rm .install/lib/systemd/system/media.mount
+rm .install/lib/systemd/system/local-fs.target.wants/media.mount
 
 # enable tmpfs over /tmp mount
 ln -s ../tmp.mount $SYSUNITS/local-fs.target.wants/

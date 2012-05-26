@@ -1,0 +1,99 @@
+#!/bin/sh
+
+. config/options
+export MAKEFLAGS=-j1
+#export WORKINGDIR=$PWD &&
+#export BUILD_OPT=1 &&
+
+cd $BUILD/$1*
+setup_toolchain host
+
+[ "`uname -m`" = "x86_64" ] && HOST_USE_64="USE_64=1"
+
+mkdir -p objdir-host
+cd objdir-host
+# copy include dir, otherwise out-of-dir build fails
+cp -PR ../mozilla/*  .
+cd security/nss
+
+# make host part for nsinstall binary and created library signatures
+make nss_build_all CC=$CC LDFLAGS="$LDFLAGS" $HOST_USE_64
+
+# save host binary
+#cp ../coreconf/nsinstall/Linux2.6_x86_64_host-gcc_glibc_PTH_64_OPT.OBJ/nsinstall nsinstall-host
+cp ../coreconf/nsinstall/Linux2.6_x86_64_host-gcc_glibc_PTH_64_DBG.OBJ/nsinstall nsinstall-host
+
+NSINSTALL_HOST=`pwd`/nsinstall-host
+
+# save library signatures to be used on target
+# the .chk file format is cross platform (so I read)
+find ./ -name "lib*.chk" -exec cp {} ../../dist/ \;
+
+# can't run in crosscompile (remove it from target)
+#sed -i "/shlibsign/d" cmd/manifest.mn
+
+# clean up host part
+#rm -rf `find ../../../ -type d -name Linux*_DBG.OBJ`
+cd ../../
+
+mkdir -p .install/bin
+mkdir -p .install/include/md
+mkdir -p .install/include/obsolete
+mkdir -p .install/include/private
+mkdir -p .install/lib
+mkdir -p .install/public/nss
+mkdir -p .install/public/dbm
+
+cp -p dist/public/nss/* .install/public/nss
+cp -p dist/public/dbm/* .install/public/dbm
+cp -p dist/Linux2.6_x86_64_host-gcc_glibc_PTH_64_DBG.OBJ/bin/* .install/bin/
+cp -p dist/Linux2.6_x86_64_host-gcc_glibc_PTH_64_DBG.OBJ/include/*.h .install/include/
+cp -p dist/Linux2.6_x86_64_host-gcc_glibc_PTH_64_DBG.OBJ/lib/* .install/lib/
+cp -p dist/Linux2.6_x86_64_host-gcc_glibc_PTH_64_DBG.OBJ/include/md/* .install/include/md/
+cp -p dist/Linux2.6_x86_64_host-gcc_glibc_PTH_64_DBG.OBJ/include/obsolete/* .install/include/obsolete
+cp -p dist/Linux2.6_x86_64_host-gcc_glibc_PTH_64_DBG.OBJ/include/private/* .install/include/private
+echo "FINE HOST"
+echo $SYSROOT_PREFIX
+cp -r .install/bin/* $SYSROOT_PREFIX/usr/bin
+cp -r .install/include/* $SYSROOT_PREFIX/usr/include
+cp -r .install/lib/* $SYSROOT_PREFIX/usr/lib
+
+[ "$TARGET_ARCH" = "x86_64" ] && TARGET_USE_64="USE_64=1"
+
+setup_toolchain target
+
+cd ..
+mkdir objdir-target
+cd objdir-target
+
+cp -PR ../mozilla/*  .
+cd security/nss
+
+NSPR_CONFIGURE_OPTS="--host=$TARGET_NAME --build=$HOST_NAME --target=$TARGET_NAME"
+NSPR_CONFIGURE_OPTS="$NSPR_CONFIGURE_OPTS --prefix=/usr --enable-strip --with-pthreads" \
+
+make nss_build_all \
+  NSINSTALL=$NSINSTALL_HOST \
+  BUILD_OPT=1 $TARGET_USE_64 \
+  OS_TEST=$TARGET_ARCH \
+  CPU_ARCH_TAG=$TARGET_ARCH \
+  USE_SYSTEM_ZLIB=1 ZLIB_LIBS=-lz \
+  CC=$CC CCC=$CXX RANLIB=$RANLIB \
+  V=1
+
+cd ../../
+pwd
+#mv Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ .install
+mkdir -p .install/bin
+mkdir -p .install/include/md
+mkdir -p .install/include/obsolete
+mkdir -p .install/include/private
+mkdir -p .install/lib
+cp -p dist/Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ/bin/* .install/bin/
+cp -p dist/Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ/include/*.h .install/include/
+cp -p dist/Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ/lib/* .install/lib/
+cp -p dist/Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ/include/md/* .install/include/md/
+cp -p dist/Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ/include/obsolete/* .install/include/obsolete
+cp -p dist/Linux2.6_x86_64_x86_64-openbricks-linux-gnu-gcc_glibc_PTH_64_OPT.OBJ/include/private/* .install/include/private
+
+echo $TOOLCHAIN
