@@ -22,14 +22,16 @@ rm -rf PLUGINS/src/dvbhddevice
 #cp svdrpsend.pl svdrpsend
 #cp /root/openbricks/packages/vdr/config/Make.config .
 cp $ROOT/$PACKAGES/$1/config/Make.config .
-cat >> Make.config <<EOF
+cat > Make.config <<EOF
 PREFIX=/usr
 PLUGINLIBDIR=/usr/lib/vdr/plugins
 VIDEODIR=/media/video
 CONFDIR=/etc/vdr
 LOCDIR=/usr/share/locale
+DVBDIR=$SYSROOT_PREFIX/usr
 LIBS += -lintl
 EOF
+cat $ROOT/$PACKAGES/$1/config/Make.config >> Make.config
 
 [ "$TARGET_LIBC" = "uclibc" ] && echo 'LIBS += -liconv' >>Make.config
 

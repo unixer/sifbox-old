@@ -32,7 +32,8 @@ endif
 ### The directory environment:
 
 MLDDIR   = $(abspath $(shell path=$$(pwd)/../../..; if [ -e $$path/vdr/src ]; then echo $$path; else echo $$path/../../..; fi))
-DVBDIR   = $(MLDDIR)/dvb
+#DVBDIR   = $(MLDDIR)/dvb
+DVBDIR	 = /root/openbricks/build/build.i386.eglibc/media-experimental-media_build_experimental/linux/
 MANDIR   = /usr/local/man
 BINDIR   = /usr/local/bin
 PREFIX   = /usr

@@ -8,11 +8,14 @@ do_configure \
             --build=$HOST_NAME \
             --prefix=/usr \
             --sysconfdir=/etc \
+	    --enable-daemon \
             --enable-shared \
             --disable-static \
             --disable-libudev \
             --enable-libusb \
-            --enable-usbdropdir=$PCSCD_ADDON_DIR/drivers
+	    --with-systemdsystemunitdir=/lib/systemd/system \
+            --enable-usbdropdir=/usr/lib/pcsc/drivers
 
 make
 make_install
+

@@ -5,4 +5,6 @@
 cd $BUILD/samba-*/source3
 
 do_install usr/bin/smbtree
-do_install usr/sbin/mount.cifs
+#do_install usr/sbin/mount.cifs
+mkdir -p $INSTALL/sbin
+cp .install/usr/sbin/mount.cifs $INSTALL/sbin
